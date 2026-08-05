@@ -14,7 +14,6 @@ export class AuthService {
   async validateUser(email: string, pass: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      console.log(`[AuthService] Usuario no encontrado con email: ${email}`);
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
@@ -23,8 +22,6 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(pass, formattedHash);
 
     if (!isPasswordValid) {
-      console.log(`[AuthService] Password incorrecto para: ${email}`);
-      console.log(`[AuthService] Hash almacenado en BD: ${user.password}`);
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
