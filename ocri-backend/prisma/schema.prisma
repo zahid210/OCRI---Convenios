@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model agreement_reports {
+  id                      BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id            BigInt     @db.UnsignedBigInt
+  title                   String?    @db.VarChar(255)
+  date                    DateTime   @db.Date
+  oficio_path             String?    @db.VarChar(255)
+  oficio_original_name    String?    @db.VarChar(255)
+  respuesta_path          String?    @db.VarChar(255)
+  respuesta_original_name String?    @db.VarChar(255)
+  created_at              DateTime?  @db.Timestamp(0)
+  updated_at              DateTime?  @db.Timestamp(0)
+  agreements              agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agreement_reports_agreement_id_foreign")
+
+  @@index([agreement_id], map: "agreement_reports_agreement_id_foreign")
+}
+
+model agreement_types {
+  id         BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String       @db.VarChar(255)
+  created_at DateTime?    @db.Timestamp(0)
+  updated_at DateTime?    @db.Timestamp(0)
+  agreements agreements[]
+}
+
+model agreements {
+  id                     BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  title                  String              @db.VarChar(255)
+  name                   String?             @db.Text
+  resolution_number      String?             @unique(map: "agreements_resolution_number_unique") @db.VarChar(255)
+  institution_id         BigInt              @db.UnsignedBigInt
+  agreement_type_id      BigInt              @db.UnsignedBigInt
+  start_date             DateTime?           @db.Date
+  end_date               DateTime?           @db.Date
+  status                 String              @default("Vigente") @db.VarChar(255)
+  situation              String?             @db.Text
+  dictamen_path          String?             @db.VarChar(255)
+  dictamen_original_name String?             @db.VarChar(255)
+  created_at             DateTime?           @db.Timestamp(0)
+  updated_at             DateTime?           @db.Timestamp(0)
+  agreement_reports      agreement_reports[]
+  agreement_types        agreement_types     @relation(fields: [agreement_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agreements_agreement_type_id_foreign")
+  institutions           institutions        @relation(fields: [institution_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agreements_institution_id_foreign")
+  documents              documents[]
+  oficios                oficios[]
+  roadmap_items          roadmap_items[]
+  work_plans             work_plans[]
+
+  @@index([agreement_type_id], map: "agreements_agreement_type_id_foreign")
+  @@index([end_date], map: "agreements_end_date_index")
+  @@index([institution_id], map: "agreements_institution_id_foreign")
+  @@index([start_date], map: "agreements_start_date_index")
+  @@index([status], map: "agreements_status_index")
+}
+
+model asistencia {
+  id             BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  practicante_id BigInt       @db.UnsignedBigInt
+  fecha          DateTime     @db.Date
+  hora_entrada   DateTime?    @db.Time(0)
+  hora_salida    DateTime?    @db.Time(0)
+  created_at     DateTime?    @db.Timestamp(0)
+  updated_at     DateTime?    @db.Timestamp(0)
+  practicantes   practicantes @relation(fields: [practicante_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "asistencia_practicante_id_foreign")
+
+  @@index([fecha], map: "asistencia_fecha_index")
+  @@index([practicante_id], map: "asistencia_practicante_id_foreign")
+}
+
+model cache {
+  key        String @id @db.VarChar(255)
+  value      String @db.MediumText
+  expiration Int
+
+  @@index([expiration], map: "cache_expiration_index")
+}
+
+model cache_locks {
+  key        String @id @db.VarChar(255)
+  owner      String @db.VarChar(255)
+  expiration Int
+
+  @@index([expiration], map: "cache_locks_expiration_index")
+}
+
+model documents {
+  id           BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id BigInt     @db.UnsignedBigInt
+  name         String     @db.VarChar(255)
+  file_path    String     @db.VarChar(255)
+  extension    String?    @db.VarChar(255)
+  created_at   DateTime?  @db.Timestamp(0)
+  updated_at   DateTime?  @db.Timestamp(0)
+  agreements   agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "documents_agreement_id_foreign")
+
+  @@index([agreement_id], map: "documents_agreement_id_foreign")
+}
+
+model failed_jobs {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
+  connection String   @db.Text
+  queue      String   @db.Text
+  payload    String   @db.LongText
+  exception  String   @db.LongText
+  failed_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model institutions {
+  id         BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String       @db.VarChar(255)
+  country    String       @db.VarChar(255)
+  type       String       @default("Pública") @db.VarChar(255)
+  created_at DateTime?    @db.Timestamp(0)
+  updated_at DateTime?    @db.Timestamp(0)
+  agreements agreements[]
+
+  @@index([country], map: "institutions_country_index")
+  @@index([name], map: "institutions_name_index")
+  @@index([type], map: "institutions_type_index")
+}
+
+model job_batches {
+  id             String  @id @db.VarChar(255)
+  name           String  @db.VarChar(255)
+  total_jobs     Int
+  pending_jobs   Int
+  failed_jobs    Int
+  failed_job_ids String  @db.LongText
+  options        String? @db.MediumText
+  cancelled_at   Int?
+  created_at     Int
+  finished_at    Int?
+}
+
+model jobs {
+  id           BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  queue        String @db.VarChar(255)
+  payload      String @db.LongText
+  attempts     Int    @db.UnsignedTinyInt
+  reserved_at  Int?   @db.UnsignedInt
+  available_at Int    @db.UnsignedInt
+  created_at   Int    @db.UnsignedInt
+
+  @@index([queue], map: "jobs_queue_index")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model oficios {
+  id                 BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id       BigInt         @db.UnsignedBigInt
+  roadmap_item_id    BigInt?        @db.UnsignedBigInt
+  area_name          String         @db.VarChar(255)
+  directed_to        String         @db.VarChar(255)
+  oficio_number      String         @db.VarChar(255)
+  file_path          String?        @db.VarChar(255)
+  file_original_name String?        @db.VarChar(255)
+  type               oficios_type   @default(opinion)
+  created_at         DateTime?      @db.Timestamp(0)
+  updated_at         DateTime?      @db.Timestamp(0)
+  body_html          String?        @db.LongText
+  status             String         @default("draft") @db.VarChar(255)
+  agreements         agreements     @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "oficios_agreement_id_foreign")
+  roadmap_items      roadmap_items? @relation(fields: [roadmap_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "oficios_roadmap_item_id_foreign")
+
+  @@index([agreement_id], map: "oficios_agreement_id_foreign")
+  @@index([created_at], map: "oficios_created_at_index")
+  @@index([oficio_number], map: "oficios_oficio_number_index")
+  @@index([roadmap_item_id], map: "oficios_roadmap_item_id_foreign")
+}
+
+model password_reset_tokens {
+  email      String    @id @db.VarChar(255)
+  token      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+}
+
+model practicantes {
+  id         BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  nombre     String       @unique(map: "practicantes_nombre_unique") @db.VarChar(255)
+  dni        String?      @unique(map: "practicantes_dni_unique") @db.VarChar(8)
+  created_at DateTime?    @db.Timestamp(0)
+  updated_at DateTime?    @db.Timestamp(0)
+  asistencia asistencia[]
+}
+
+model roadmap_documents {
+  id              BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  roadmap_item_id BigInt        @db.UnsignedBigInt
+  file_path       String        @db.VarChar(255)
+  original_name   String        @db.VarChar(255)
+  type            String        @default("entrada") @db.VarChar(255)
+  created_at      DateTime?     @db.Timestamp(0)
+  updated_at      DateTime?     @db.Timestamp(0)
+  roadmap_items   roadmap_items @relation(fields: [roadmap_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "roadmap_documents_roadmap_item_id_foreign")
+
+  @@index([roadmap_item_id], map: "roadmap_documents_roadmap_item_id_foreign")
+}
+
+model roadmap_items {
+  id                BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id      BigInt              @db.UnsignedBigInt
+  area_name         String              @db.VarChar(255)
+  is_completed      Boolean             @default(false)
+  order             Int                 @default(0)
+  envio_tipo        String?             @db.VarChar(255)
+  numero_expediente String?             @db.VarChar(255)
+  created_at        DateTime?           @db.Timestamp(0)
+  updated_at        DateTime?           @db.Timestamp(0)
+  oficios           oficios[]
+  roadmap_documents roadmap_documents[]
+  agreements        agreements          @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "roadmap_items_agreement_id_foreign")
+
+  @@index([agreement_id], map: "roadmap_items_agreement_id_foreign")
+}
+
+model sessions {
+  id            String  @id @db.VarChar(255)
+  user_id       BigInt? @db.UnsignedBigInt
+  ip_address    String? @db.VarChar(45)
+  user_agent    String? @db.Text
+  payload       String  @db.LongText
+  last_activity Int
+
+  @@index([last_activity], map: "sessions_last_activity_index")
+  @@index([user_id], map: "sessions_user_id_index")
+}
+
+model users {
+  id                        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name                      String    @db.VarChar(255)
+  email                     String    @unique(map: "users_email_unique") @db.VarChar(255)
+  email_verified_at         DateTime? @db.Timestamp(0)
+  password                  String    @db.VarChar(255)
+  two_factor_secret         String?   @db.Text
+  two_factor_recovery_codes String?   @db.Text
+  two_factor_confirmed_at   DateTime? @db.Timestamp(0)
+  remember_token            String?   @db.VarChar(100)
+  created_at                DateTime? @db.Timestamp(0)
+  updated_at                DateTime? @db.Timestamp(0)
+  role                      String    @default("admin") @db.VarChar(255)
+}
+
+model work_plans {
+  id            BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id  BigInt     @db.UnsignedBigInt
+  file_path     String     @db.VarChar(255)
+  original_name String     @db.VarChar(255)
+  created_at    DateTime?  @db.Timestamp(0)
+  updated_at    DateTime?  @db.Timestamp(0)
+  agreements    agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "work_plans_agreement_id_foreign")
+
+  @@index([agreement_id], map: "work_plans_agreement_id_foreign")
+}
+
+enum oficios_type {
+  opinion
+  final
+}
