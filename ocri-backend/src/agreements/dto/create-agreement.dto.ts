@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsNumber,
   IsDateString,
-  MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 

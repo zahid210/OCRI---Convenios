@@ -57,13 +57,19 @@ export default function CreateAgreementPage() {
     useEffect(() => {
         async function loadAuxData() {
             try {
-                const [instRes, typeRes] = await Promise.all([
-                    fetcher<Institution[]>('/agreements/aux/institutions').catch(() => []),
-                    fetcher<AgreementType[]>('/agreements/aux/types').catch(() => []),
+                const [instRes, typeRes, countriesRes] = await Promise.all([
+                    fetcher<Institution[]>('/agreements/lookups/institutions').catch(() => []),
+                    fetcher<AgreementType[]>('/agreements/lookups/types').catch(() => []),
+                    fetcher<string[]>('/institutions/countries').catch(() => []),
                 ]);
 
                 setInstitutions(instRes || []);
                 setTypes(typeRes || []);
+
+                // Fusionar países existentes en la BD con la lista por defecto
+                if (countriesRes && countriesRes.length > 0) {
+                    setCountries((prev) => Array.from(new Set([...prev, ...countriesRes])));
+                }
 
                 if (instRes && instRes.length > 0) setInstitutionId(instRes[0].id.toString());
                 if (typeRes && typeRes.length > 0) setAgreementTypeId(typeRes[0].id.toString());
@@ -146,8 +152,8 @@ export default function CreateAgreementPage() {
 
             setInstitutionId(newInst.id.toString());
 
-            if (isCustomCountry && !countries.includes(finalCountry)) {
-                setCountries((prev) => [...prev, finalCountry]);
+            if (!countries.includes(finalCountry)) {
+                setCountries((prev) => Array.from(new Set([...prev, finalCountry])));
             }
 
             setNewInstName('');
@@ -165,6 +171,13 @@ export default function CreateAgreementPage() {
     // Enviar Formulario Principal de Convenio
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validación previa en frontend
+        if (!institutionId || !agreementTypeId) {
+            alert('Por favor, selecciona una institución y un tipo de convenio.');
+            return;
+        }
+
         setSaving(true);
 
         try {
@@ -172,8 +185,10 @@ export default function CreateAgreementPage() {
             formData.append('resolution_number', resolutionNumber.trim().toUpperCase());
             formData.append('name', name.trim().toUpperCase());
             formData.append('title', title.trim().toUpperCase());
-            formData.append('institution_id', institutionId);
-            formData.append('agreement_type_id', agreementTypeId);
+
+            // Convertimos explícitamente a número antes de anexarlo al FormData
+            formData.append('institution_id', Number(institutionId).toString());
+            formData.append('agreement_type_id', Number(agreementTypeId).toString());
 
             if (startDate) formData.append('start_date', startDate);
             if (endDate) formData.append('end_date', endDate);

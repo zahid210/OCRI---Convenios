@@ -33,6 +33,9 @@ export class UpdateAgreementDto {
   resolution_number?: string;
 
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value !== undefined ? Number(value) : undefined,
+  )
   @IsNumber({}, { message: 'institution_id debe ser un número' })
   institution_id?: number;
 

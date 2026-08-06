@@ -8,7 +8,9 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AgreementsService } from './agreements.service';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
@@ -39,6 +41,12 @@ export class AgreementsController {
   }
 
   @Post()
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'dictamen', maxCount: 1 },
+      { name: 'document', maxCount: 1 },
+    ]),
+  )
   create(@Body() createAgreementDto: CreateAgreementDto) {
     return this.agreementsService.create(createAgreementDto);
   }

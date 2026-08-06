@@ -32,7 +32,11 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
     const data = await response.json();
 
     if (!response.ok) {
-        throw new Error(data.message || 'Error al procesar la petición');
+        const errorMessage = Array.isArray(data.message)
+            ? data.message.join(' | ')
+            : data.message || 'Error al procesar la petición';
+
+        throw new Error(errorMessage);
     }
 
     return data as T;

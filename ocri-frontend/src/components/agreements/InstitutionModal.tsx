@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import { Institution } from '@/types/agreements';
+import { fetcher } from '@/lib/api';
 
 interface InstitutionModalProps {
     isOpen: boolean;
@@ -18,16 +20,40 @@ export default function InstitutionModal({
                                          }: InstitutionModalProps) {
     const [name, setName] = useState('');
     const [type, setType] = useState('Universidad Nacional');
-    const [countrySelect, setCountrySelect] = useState('');
-    const [countryInput, setCountryInput] = useState('');
-    const [isNewCountry, setIsNewCountry] = useState(false);
+    const [customCountry, setCustomCountry] = useState('');
+    const [isCustomCountry, setIsCustomCountry] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Ajuste de estado derivado de props durante el render (Evita useEffect y errores de linter)
+    const [prevCountries, setPrevCountries] = useState(countries);
+    const [selectedCountry, setSelectedCountry] = useState(countries?.[0] || 'PERÚ');
+
+    if (countries !== prevCountries) {
+        setPrevCountries(countries);
+        if (countries && countries.length > 0 && !countries.includes(selectedCountry)) {
+            setSelectedCountry(countries[0]);
+        }
+    }
 
     if (!isOpen) return null;
 
+    const resetForm = () => {
+        setName('');
+        setCustomCountry('');
+        setIsCustomCountry(false);
+        if (countries && countries.length > 0) {
+            setSelectedCountry(countries[0]);
+        }
+    };
+
+    const handleClose = () => {
+        resetForm();
+        onClose();
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const finalCountry = isNewCountry ? countryInput.trim().toUpperCase() : countrySelect;
+        const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
 
         if (!name.trim() || !finalCountry || !type) {
             alert('Por favor, completa todos los campos de la institución.');
@@ -36,89 +62,107 @@ export default function InstitutionModal({
 
         setLoading(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/agreements/aux/institutions`, {
+            const newInst = await fetcher<Institution>('/institutions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim().toUpperCase(), country: finalCountry, type }),
+                body: JSON.stringify({
+                    name: name.trim().toUpperCase(),
+                    country: finalCountry,
+                    type,
+                }),
             });
 
-            if (!res.ok) throw new Error('Error al registrar la institución');
-            const newInst: Institution = await res.json();
-
             onCreated(newInst);
+            resetForm();
             onClose();
-            setName('');
-            setCountrySelect('');
-            setCountryInput('');
         } catch (err) {
-            console.error(err);
-            alert('Ocurrió un error al guardar la institución.');
+            console.error('Error al registrar institución:', err);
+            alert(err instanceof Error ? err.message : 'Error al registrar la institución.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-2xl border border-zinc-200 dark:border-zinc-700">
-                <div className="mb-6">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Registrar Nueva Institución</h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Ingresa los datos básicos para añadirla al directorio.</p>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white border border-gray-200 w-full max-w-md p-6 shadow-xl space-y-4 relative">
+                <button
+                    type="button"
+                    onClick={handleClose}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                    <X className="h-5 w-5" />
+                </button>
+
+                <div>
+                    <h3 className="text-base font-semibold text-gray-800">
+                        Registrar Nueva Institución
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                        Ingresa los datos básicos para añadirla al directorio.
+                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Nombre de la Institución</label>
+                    <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold uppercase text-gray-600">
+                            Nombre de la Institución <span className="text-red-500">*</span>
+                        </label>
                         <input
                             type="text"
                             required
                             value={name}
                             onChange={(e) => setName(e.target.value.toUpperCase())}
                             placeholder="EJ. UNIVERSIDAD NACIONAL DE INGENIERÍA"
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
+                            className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                         />
                     </div>
 
-                    <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">País</label>
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
+                                País <span className="text-red-500">*</span>
+                            </label>
                             <button
                                 type="button"
-                                onClick={() => setIsNewCountry(!isNewCountry)}
-                                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                onClick={() => setIsCustomCountry(!isCustomCountry)}
+                                className="text-xs font-semibold text-blue-600 hover:underline"
                             >
-                                {isNewCountry ? '📋 Seleccionar existente' : '✍️ Escribir país nuevo'}
+                                {isCustomCountry ? '📋 Seleccionar existente' : '✍️ Escribir país nuevo'}
                             </button>
                         </div>
 
-                        {!isNewCountry ? (
+                        {!isCustomCountry ? (
                             <select
-                                value={countrySelect}
-                                onChange={(e) => setCountrySelect(e.target.value)}
-                                className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={selectedCountry}
+                                onChange={(e) => setSelectedCountry(e.target.value)}
+                                className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                             >
-                                <option value="">-- Selecciona un país --</option>
                                 {countries.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
+                                    <option key={c} value={c}>
+                                        {c}
+                                    </option>
                                 ))}
                             </select>
                         ) : (
                             <input
                                 type="text"
-                                value={countryInput}
-                                onChange={(e) => setCountryInput(e.target.value.toUpperCase())}
+                                required
+                                value={customCountry}
+                                onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
                                 placeholder="EJ. ARGENTINA"
-                                className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
+                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                             />
                         )}
                     </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Tipo de Institución</label>
+                    <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold uppercase text-gray-600">
+                            Tipo de Institución <span className="text-red-500">*</span>
+                        </label>
                         <select
                             value={type}
                             onChange={(e) => setType(e.target.value)}
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                         >
                             <option value="Universidad Nacional">Universidad Nacional</option>
                             <option value="Universidad Privada">Universidad Privada</option>
@@ -128,20 +172,27 @@ export default function InstitutionModal({
                         </select>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-700">
+                    <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-semibold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                            onClick={handleClose}
+                            className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-colors"
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 transition-colors cursor-pointer"
                         >
-                            {loading ? 'Guardando...' : 'Guardar y Seleccionar'}
+                            {loading ? (
+                                <>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <span>Guardando...</span>
+                                </>
+                            ) : (
+                                'Guardar y Seleccionar'
+                            )}
                         </button>
                     </div>
                 </form>
