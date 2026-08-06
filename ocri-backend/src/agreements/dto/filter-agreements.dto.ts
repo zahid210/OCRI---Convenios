@@ -1,7 +1,14 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsNumber } from 'class-validator';
 
 export class FilterAgreementsDto {
+  @IsOptional()
+  @IsNumber()
+  page?: number;
+
+  @IsOptional()
+  @IsNumber()
+  per_page?: number;
+
   @IsOptional()
   @IsString()
   search?: string;
@@ -11,14 +18,10 @@ export class FilterAgreementsDto {
   status?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
+  @IsNumber()
+  institution_id?: number;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  per_page?: number = 15;
+  @IsNumber()
+  agreement_type_id?: number;
 }

@@ -1,155 +1,231 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
+import { UpdateAgreementDto } from './dto/update-agreement.dto';
+import { FilterAgreementsDto } from './dto/filter-agreements.dto';
+
+const agreementIncludes: Prisma.agreementsInclude = {
+  institutions: true,
+  agreement_types: true,
+  documents: true,
+  work_plans: true,
+  roadmap_items: {
+    include: {
+      roadmap_documents: true,
+    },
+  },
+  oficios: true,
+  agreement_reports: true,
+};
 
 @Injectable()
 export class AgreementsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Convierte BigInt a Number en los objetos retornados por Prisma
-   * evitando el error de serialización JSON en Node.js y satisfaciendo ESLint.
-   */
   private serializeBigInt<T>(obj: unknown): T {
     const jsonString = JSON.stringify(obj, (_, value) =>
       typeof value === 'bigint' ? Number(value) : (value as unknown),
     );
-    const parsed: unknown = JSON.parse(jsonString);
-    return parsed as T;
+    return JSON.parse(jsonString) as T;
   }
 
   async findAll(filters: FilterAgreementsDto) {
-    const { search, status, page = 1, per_page = 15 } = filters;
-    const skip = (page - 1) * per_page;
+    const page = Number(filters.page) || 1;
+    const perPage = Number(filters.per_page) || 10;
+    const skip = (page - 1) * perPage;
 
     const where: Prisma.agreementsWhereInput = {};
 
-    // 1. Búsqueda por texto general
-    if (search) {
-      const searchLower = search.trim();
+    if (filters.search) {
+      const searchTerm = filters.search.trim();
       where.OR = [
-        { title: { contains: searchLower } },
-        { name: { contains: searchLower } },
-        { resolution_number: { contains: searchLower } },
-        { institutions: { name: { contains: searchLower } } },
-        { institutions: { country: { contains: searchLower } } },
+        { title: { contains: searchTerm } },
+        { resolution_number: { contains: searchTerm } },
+        { name: { contains: searchTerm } },
+        { institutions: { name: { contains: searchTerm } } },
+        { institutions: { country: { contains: searchTerm } } },
       ];
     }
 
-    // 2. Filtros de estado y alerta de 90 días
-    const now = new Date();
-    const ninetyDaysFromNow = new Date();
-    ninetyDaysFromNow.setDate(now.getDate() + 90);
+    if (filters.status) {
+      if (filters.status === 'Por Vencer') {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
 
-    if (status) {
-      if (status === 'Vencido') {
-        where.OR = [
-          { status: 'Vencido' },
-          {
-            status: 'Vigente',
-            end_date: { lt: now },
-          },
-        ];
-      } else if (status === 'Por Vencer') {
-        where.OR = [
-          { status: 'Por Vencer' },
-          {
-            status: 'Vigente',
-            end_date: {
-              gte: now,
-              lte: ninetyDaysFromNow,
-            },
-          },
-        ];
-      } else if (status === 'Vigente') {
-        where.status = 'Vigente';
-        where.OR = [
-          { end_date: null },
-          { end_date: { gt: ninetyDaysFromNow } },
-        ];
+        const warningDate = new Date(now);
+        warningDate.setDate(warningDate.getDate() + 90);
+
+        where.end_date = {
+          gte: now,
+          lte: warningDate,
+        };
       } else {
-        where.status = status;
+        where.status = filters.status;
       }
     }
 
-    // 3. Consulta paginada con relaciones auditadas según Prisma Schema
-    const [total, rawData] = await Promise.all([
+    if (filters.institution_id) {
+      where.institution_id = BigInt(filters.institution_id);
+    }
+
+    if (filters.agreement_type_id) {
+      where.agreement_type_id = BigInt(filters.agreement_type_id);
+    }
+
+    const [total, data] = await Promise.all([
       this.prisma.agreements.count({ where }),
       this.prisma.agreements.findMany({
         where,
-        take: per_page,
         skip,
-        orderBy: { updated_at: 'desc' },
-        include: {
-          institutions: true,
-          agreement_types: true,
-          documents: true,
-          roadmap_items: {
-            include: {
-              roadmap_documents: true,
-            },
-          },
-        },
+        take: perPage,
+        orderBy: { id: 'desc' },
+        include: agreementIncludes,
       }),
     ]);
 
-    return {
-      data: this.serializeBigInt<unknown[]>(rawData),
+    return this.serializeBigInt({
+      data,
       meta: {
         total,
         page,
-        per_page,
-        last_page: Math.ceil(total / per_page),
+        per_page: perPage,
+        last_page: Math.ceil(total / perPage),
       },
-    };
+    });
   }
 
   async findOne(id: number) {
     const agreement = await this.prisma.agreements.findUnique({
       where: { id: BigInt(id) },
-      include: {
-        institutions: true,
-        agreement_types: true,
-        documents: true,
-        roadmap_items: {
-          include: {
-            roadmap_documents: true,
-          },
-        },
-      },
+      include: agreementIncludes,
     });
 
     if (!agreement) {
-      throw new NotFoundException(`Convenio #${id} no encontrado`);
+      throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
     }
 
-    return this.serializeBigInt<unknown>(agreement);
+    return this.serializeBigInt(agreement);
   }
 
-  async create(createAgreementDto: CreateAgreementDto) {
-    const { start_date, end_date, institution_id, agreement_type_id, ...rest } =
-      createAgreementDto;
+  async create(dto: CreateAgreementDto) {
+    const agreementData: Prisma.agreementsCreateInput = {
+      title: dto.title.trim().toUpperCase(),
+      name: dto.name ? dto.name.trim().toUpperCase() : null,
+      resolution_number: dto.resolution_number
+        ? dto.resolution_number.trim().toUpperCase()
+        : null,
+      start_date: dto.start_date ? new Date(dto.start_date) : null,
+      end_date: dto.end_date ? new Date(dto.end_date) : null,
+      situation: dto.situation ? dto.situation.trim() : null,
+      status: dto.status ? dto.status.trim() : 'En Proceso',
+      institutions: {
+        connect: { id: BigInt(dto.institution_id) },
+      },
+      agreement_types: {
+        connect: { id: BigInt(dto.agreement_type_id) },
+      },
+    };
 
-    const agreement = await this.prisma.agreements.create({
-      data: {
-        ...rest,
-        institution_id: BigInt(institution_id),
-        agreement_type_id: BigInt(agreement_type_id),
-        resolution_number: rest.resolution_number.toUpperCase(),
-        name: rest.name.toUpperCase(),
-        title: rest.title.toUpperCase(),
-        status: rest.status || 'En Proceso',
-        start_date: start_date ? new Date(start_date) : null,
-        end_date: end_date ? new Date(end_date) : null,
-      },
-      include: {
-        institutions: true,
-        agreement_types: true,
-      },
+    const createdAgreement = await this.prisma.agreements.create({
+      data: agreementData,
+      include: agreementIncludes,
     });
 
-    return this.serializeBigInt<unknown>(agreement);
+    return this.serializeBigInt(createdAgreement);
+  }
+
+  async update(id: number, dto: UpdateAgreementDto) {
+    const agreementData: Prisma.agreementsUpdateInput = {};
+
+    if (dto.title) {
+      agreementData.title = dto.title.trim().toUpperCase();
+    }
+    if (dto.name !== undefined) {
+      agreementData.name = dto.name ? dto.name.trim().toUpperCase() : null;
+    }
+    if (dto.resolution_number !== undefined) {
+      agreementData.resolution_number = dto.resolution_number
+        ? dto.resolution_number.trim().toUpperCase()
+        : null;
+    }
+    if (dto.start_date !== undefined) {
+      agreementData.start_date = dto.start_date
+        ? new Date(dto.start_date)
+        : null;
+    }
+    if (dto.end_date !== undefined) {
+      agreementData.end_date = dto.end_date ? new Date(dto.end_date) : null;
+    }
+    if (dto.status !== undefined) {
+      agreementData.status = dto.status.trim();
+    }
+    if (dto.situation !== undefined) {
+      agreementData.situation = dto.situation ? dto.situation.trim() : null;
+    }
+
+    if (dto.institution_id !== undefined) {
+      agreementData.institutions = {
+        connect: { id: BigInt(dto.institution_id) },
+      };
+    }
+
+    if (dto.agreement_type_id !== undefined) {
+      agreementData.agreement_types = {
+        connect: { id: BigInt(dto.agreement_type_id) },
+      };
+    }
+
+    try {
+      const updatedAgreement = await this.prisma.agreements.update({
+        where: { id: BigInt(id) },
+        data: agreementData,
+        include: agreementIncludes,
+      });
+
+      return this.serializeBigInt(updatedAgreement);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
+      }
+      throw error;
+    }
+  }
+
+  async remove(id: number) {
+    try {
+      await this.prisma.agreements.delete({
+        where: { id: BigInt(id) },
+      });
+
+      return { message: `Convenio #${id} eliminado correctamente` };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
+      }
+      throw error;
+    }
+  }
+
+  async getInstitutionsLookup() {
+    const data = await this.prisma.institutions.findMany({
+      select: { id: true, name: true, country: true, type: true },
+      orderBy: { name: 'asc' },
+    });
+    return this.serializeBigInt(data);
+  }
+
+  async getAgreementTypesLookup() {
+    const data = await this.prisma.agreement_types.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+    return this.serializeBigInt(data);
   }
 }

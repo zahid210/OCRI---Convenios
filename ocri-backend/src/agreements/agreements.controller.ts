@@ -3,17 +3,30 @@ import {
   Get,
   Post,
   Body,
+  Patch,
   Param,
+  Delete,
   Query,
   ParseIntPipe,
 } from '@nestjs/common';
 import { AgreementsService } from './agreements.service';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
+import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 
 @Controller('agreements')
 export class AgreementsController {
   constructor(private readonly agreementsService: AgreementsService) {}
+
+  @Get('lookups/institutions')
+  getInstitutions() {
+    return this.agreementsService.getInstitutionsLookup();
+  }
+
+  @Get('lookups/types')
+  getAgreementTypes() {
+    return this.agreementsService.getAgreementTypesLookup();
+  }
 
   @Get()
   findAll(@Query() filters: FilterAgreementsDto) {
@@ -28,5 +41,18 @@ export class AgreementsController {
   @Post()
   create(@Body() createAgreementDto: CreateAgreementDto) {
     return this.agreementsService.create(createAgreementDto);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateAgreementDto: UpdateAgreementDto,
+  ) {
+    return this.agreementsService.update(id, updateAgreementDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.agreementsService.remove(id);
   }
 }

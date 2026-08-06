@@ -1,5 +1,4 @@
 import {
-  IsNotEmpty,
   IsString,
   IsOptional,
   IsNumber,
@@ -8,13 +7,14 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export class CreateAgreementDto {
-  @IsNotEmpty({ message: 'El título es obligatorio' })
+export class UpdateAgreementDto {
+  @IsOptional()
   @IsString()
+  @MinLength(1, { message: 'El título no puede estar vacío' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
-  title: string;
+  title?: string;
 
   @IsOptional()
   @IsString()
@@ -32,13 +32,13 @@ export class CreateAgreementDto {
   )
   resolution_number?: string;
 
-  @IsNotEmpty({ message: 'La institución es obligatoria' })
+  @IsOptional()
   @IsNumber({}, { message: 'institution_id debe ser un número' })
-  institution_id: number;
+  institution_id?: number;
 
-  @IsNotEmpty({ message: 'El tipo de convenio es obligatorio' })
+  @IsOptional()
   @IsNumber({}, { message: 'agreement_type_id debe ser un número' })
-  agreement_type_id: number;
+  agreement_type_id?: number;
 
   @IsOptional()
   @IsDateString(
