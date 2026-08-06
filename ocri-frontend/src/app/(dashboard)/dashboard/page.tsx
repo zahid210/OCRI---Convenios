@@ -21,7 +21,7 @@ interface Agreement {
     id: number;
     resolution_number?: string;
     title?: string;
-    institution?: {
+    institutions?: {
         name?: string;
         country?: string;
     };
@@ -46,10 +46,13 @@ export default function DashboardPage() {
     useEffect(() => {
         async function loadDashboardData() {
             try {
-                const data = await fetchApi<Agreement[] | AgreementsResponse>('/agreements').catch(() => []);
-                const agreements: Agreement[] = Array.isArray(data)
-                    ? data
-                    : data?.data || [];
+                const response = await fetchApi<Agreement[] | AgreementsResponse>('/agreements').catch(() => []);
+
+                const agreements: Agreement[] = Array.isArray(response)
+                    ? response
+                    : (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data))
+                        ? response.data
+                        : [];
 
                 const now = new Date();
                 const ninetyDaysFromNow = new Date();
@@ -83,7 +86,6 @@ export default function DashboardPage() {
                 setLoading(false);
             }
         }
-
         loadDashboardData();
     }, []);
 
@@ -185,10 +187,10 @@ export default function DashboardPage() {
                                                 {agreement.resolution_number || agreement.title || `Convenio #${agreement.id}`}
                                             </td>
                                             <td className="py-3 px-4 text-sm text-gray-600 hidden sm:table-cell">
-                                                {agreement.institution?.name || 'No especificada'}
+                                                {agreement.institutions?.name || 'No especificada'}
                                             </td>
                                             <td className="py-3 px-4 text-sm text-gray-600 hidden md:table-cell">
-                                                {agreement.institution?.country || 'N/D'}
+                                                {agreement.institutions?.country || 'N/D'}
                                             </td>
                                             <td className="py-3 px-4">
                                                 {agreement.status === 'En Proceso' ? (

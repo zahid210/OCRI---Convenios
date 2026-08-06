@@ -207,15 +207,16 @@ export default function AgreementsIndexPage() {
                             </tr>
                         ) : (
                             data?.data.map((agreement) => {
-                                const roadmap = (agreement as any).roadmap_items || (agreement as any).roadmapItems;
+                                const roadmap = agreement.roadmap_items;
                                 const pendingOpinions = roadmap
                                     ? roadmap
-                                        .filter((item: any) => {
-                                            const entrada = item.documents?.some((d: any) => d.type === 'entrada');
-                                            const salida = item.documents?.some((d: any) => d.type === 'salida');
+                                        .filter((item: { documents?: Array<{ type?: string }>; area_name?: string }) => {
+                                            const entrada = item.documents?.some((d: { type?: string }) => d.type === 'entrada');
+                                            const salida = item.documents?.some((d: { type?: string }) => d.type === 'salida');
                                             return !(entrada && salida);
                                         })
-                                        .map((i: any) => i.area_name)
+                                        .map((i: { area_name?: string }) => i.area_name || '')
+                                        .filter(Boolean)
                                     : [];
                                 const hasPending = pendingOpinions.length > 0;
 
@@ -243,7 +244,7 @@ export default function AgreementsIndexPage() {
                                     badgeClasses = 'bg-gray-100 text-gray-700 border-gray-200';
                                 }
 
-                                const inst = (agreement as any).institution || (agreement as any).institutions;
+                                const inst = agreement.institutions;
 
                                 return (
                                     <tr
