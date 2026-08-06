@@ -145,14 +145,9 @@ export default function LoginPage() {
                     </Button>
                 </form>
 
-                <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+                <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-center text-[11px] text-gray-400">
                     <span>Universidad Nacional del Centro del Perú</span>
-                    <div className="flex items-center gap-1 text-emerald-700">
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        <span>Seguro</span>
-                    </div>
                 </div>
-
             </div>
         </main>
     );
