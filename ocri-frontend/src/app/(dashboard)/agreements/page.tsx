@@ -161,7 +161,7 @@ export default function AgreementsIndexPage() {
                 </div>
             </div>
 
-            {/* Tabla con el diseño institucional y la estructura exacta de Laravel */}
+            {/* Tabla con el diseño institucional */}
             <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -179,7 +179,6 @@ export default function AgreementsIndexPage() {
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
                                 Estado
                             </th>
-                            {/* Columna sin texto para acciones idéntico a Laravel */}
                             <th className="py-4 text-right pr-12"></th>
                         </tr>
                         </thead>
@@ -208,14 +207,15 @@ export default function AgreementsIndexPage() {
                             </tr>
                         ) : (
                             data?.data.map((agreement) => {
-                                const pendingOpinions = agreement.roadmapItems
-                                    ? agreement.roadmapItems
-                                        .filter((item) => {
-                                            const entrada = item.documents?.some((d) => d.type === 'entrada');
-                                            const salida = item.documents?.some((d) => d.type === 'salida');
+                                const roadmap = (agreement as any).roadmap_items || (agreement as any).roadmapItems;
+                                const pendingOpinions = roadmap
+                                    ? roadmap
+                                        .filter((item: any) => {
+                                            const entrada = item.documents?.some((d: any) => d.type === 'entrada');
+                                            const salida = item.documents?.some((d: any) => d.type === 'salida');
                                             return !(entrada && salida);
                                         })
-                                        .map((i) => i.area_name)
+                                        .map((i: any) => i.area_name)
                                     : [];
                                 const hasPending = pendingOpinions.length > 0;
 
@@ -243,6 +243,8 @@ export default function AgreementsIndexPage() {
                                     badgeClasses = 'bg-gray-100 text-gray-700 border-gray-200';
                                 }
 
+                                const inst = (agreement as any).institution || (agreement as any).institutions;
+
                                 return (
                                     <tr
                                         key={agreement.id}
@@ -266,7 +268,7 @@ export default function AgreementsIndexPage() {
                                                                     </span>
                                                             </div>
                                                             <div className="space-y-1.5">
-                                                                {pendingOpinions.map((area, idx) => (
+                                                                {pendingOpinions.map((area: string, idx: number) => (
                                                                     <div key={idx} className="flex items-center gap-2 text-gray-700">
                                                                         <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
                                                                         <span>Falta opinión de <strong>{area}</strong></span>
@@ -300,12 +302,12 @@ export default function AgreementsIndexPage() {
                                         {/* Institución */}
                                         <td className="py-5">
                                             <div className="text-sm text-gray-800 line-clamp-1">
-                                                {agreement.institution?.name || 'No especificada'}
+                                                {inst?.name || 'No especificada'}
                                             </div>
                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
                                                 <span className="text-[10px] uppercase font-semibold text-gray-400">
-                                                        {agreement.institution?.country || 'PERÚ'}
+                                                        {inst?.country || 'PERÚ'}
                                                     </span>
                                             </div>
                                         </td>
@@ -330,7 +332,7 @@ export default function AgreementsIndexPage() {
                                             </div>
                                         </td>
 
-                                        {/* Acciones (Aparecen sólo al hacer hover en la fila, igual que en Laravel) */}
+                                        {/* Acciones */}
                                         <td className="py-5 pr-12">
                                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Link

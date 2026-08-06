@@ -96,10 +96,23 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         };
     }, [id]);
 
+    // Limpieza de ObjectURL para evitar fugas de memoria
+    useEffect(() => {
+        return () => {
+            if (pdfPreviewUrl) {
+                URL.revokeObjectURL(pdfPreviewUrl);
+            }
+        };
+    }, [pdfPreviewUrl]);
+
     // Manejador del Visor PDF al adjuntar nuevo documento
     const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
         setDocumentFile(file);
+
+        if (pdfPreviewUrl) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+        }
 
         if (file && file.type === 'application/pdf') {
             const url = URL.createObjectURL(file);
@@ -432,6 +445,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                         <button
                                             type="button"
                                             onClick={() => {
+                                                if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
                                                 setPdfPreviewUrl(null);
                                                 setDocumentFile(null);
                                             }}

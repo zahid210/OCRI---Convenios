@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -8,21 +8,20 @@ import {
     Save,
     FileText,
     Building2,
-    Calendar,
     Tag,
     Loader2,
     Paperclip,
     Plus,
-    X,
-    FileUp
+    X
 } from 'lucide-react';
 import { Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
 
 export default function CreateAgreementPage() {
     const router = useRouter();
+    const documentInputRef = useRef<HTMLInputElement>(null);
 
-    // Estados de Datos
+    // Estados de Datos Auxiliares
     const [institutions, setInstitutions] = useState<Institution[]>([]);
     const [types, setTypes] = useState<AgreementType[]>([]);
     const [countries, setCountries] = useState<string[]>([
@@ -31,7 +30,7 @@ export default function CreateAgreementPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // Estados de Formulario Principal
+    // Estados del Formulario Principal
     const [resolutionNumber, setResolutionNumber] = useState('');
     const [name, setName] = useState('');
     const [title, setTitle] = useState('');
@@ -54,6 +53,7 @@ export default function CreateAgreementPage() {
     const [customCountry, setCustomCountry] = useState('');
     const [savingInst, setSavingInst] = useState(false);
 
+    // Carga de Datos Auxiliares
     useEffect(() => {
         async function loadAuxData() {
             try {
@@ -76,9 +76,23 @@ export default function CreateAgreementPage() {
         loadAuxData();
     }, []);
 
-    // Manejador del Visor PDF
+    // Limpieza de ObjectURL para prevenir fugas de memoria
+    useEffect(() => {
+        return () => {
+            if (pdfPreviewUrl) {
+                URL.revokeObjectURL(pdfPreviewUrl);
+            }
+        };
+    }, [pdfPreviewUrl]);
+
+    // Manejador del Visor PDF y Selección de Documento
     const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
+
+        if (pdfPreviewUrl) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+        }
+
         setDocumentFile(file);
 
         if (file && file.type === 'application/pdf') {
@@ -86,6 +100,18 @@ export default function CreateAgreementPage() {
             setPdfPreviewUrl(url);
         } else {
             setPdfPreviewUrl(null);
+        }
+    };
+
+    // Limpiar PDF y reiniciar input
+    const handleClearPdf = () => {
+        if (pdfPreviewUrl) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+        }
+        setPdfPreviewUrl(null);
+        setDocumentFile(null);
+        if (documentInputRef.current) {
+            documentInputRef.current.value = '';
         }
     };
 
@@ -110,7 +136,6 @@ export default function CreateAgreementPage() {
                 }),
             });
 
-            // Actualizar lista local evitando claves duplicadas en React si la institución ya existía
             setInstitutions((prev) => {
                 const exists = prev.some((item) => Number(item.id) === Number(newInst.id));
                 if (exists) {
@@ -121,12 +146,10 @@ export default function CreateAgreementPage() {
 
             setInstitutionId(newInst.id.toString());
 
-            // Agregar país a lista si es nuevo
             if (isCustomCountry && !countries.includes(finalCountry)) {
                 setCountries((prev) => [...prev, finalCountry]);
             }
 
-            // Resetear modal y cerrar
             setNewInstName('');
             setCustomCountry('');
             setIsCustomCountry(false);
@@ -276,7 +299,6 @@ export default function CreateAgreementPage() {
                         </div>
 
                         <div className="p-6 space-y-6">
-                            {/* Selector de Institución + Botón Registrar Nueva */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-gray-600 flex items-center gap-1.5">
                                     <Building2 className="h-3.5 w-3.5 text-gray-400" />
@@ -306,7 +328,6 @@ export default function CreateAgreementPage() {
                                 </div>
                             </div>
 
-                            {/* Tipo de Convenio */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Tipo de Convenio <span className="text-red-500">*</span>
@@ -327,7 +348,7 @@ export default function CreateAgreementPage() {
                         </div>
                     </div>
 
-                    {/* Bloque 3: Acervo y Vigencia (Opcional con Visor PDF) */}
+                    {/* Bloque 3: Acervo y Vigencia */}
                     <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
                         <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
                             <Paperclip className="h-4 w-4 text-[#df9f1f]" />
@@ -337,7 +358,6 @@ export default function CreateAgreementPage() {
                         </div>
 
                         <div className="p-6 space-y-5">
-                            {/* Dictamen / Documento Original */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-amber-700">
                                     Dictamen / Documento Original (Opcional)
@@ -355,12 +375,12 @@ export default function CreateAgreementPage() {
 
                             <hr className="border-gray-200" />
 
-                            {/* Adjuntar Convenio Firmado */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-blue-700">
                                     Adjuntar Convenio Firmado (PDF)
                                 </label>
                                 <input
+                                    ref={documentInputRef}
                                     type="file"
                                     accept=".pdf"
                                     onChange={handleDocumentChange}
@@ -368,7 +388,6 @@ export default function CreateAgreementPage() {
                                 />
                             </div>
 
-                            {/* Fechas de Vigencia (Dinámicas si hay archivo subido) */}
                             {documentFile && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                     <div className="space-y-1.5">
@@ -398,18 +417,14 @@ export default function CreateAgreementPage() {
                                 </div>
                             )}
 
-                            {/* Visor de PDF Integrado */}
                             {pdfPreviewUrl && (
                                 <div className="mt-4 space-y-2">
                                     <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
                                         <span>Vista Previa del Documento</span>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setPdfPreviewUrl(null);
-                                                setDocumentFile(null);
-                                            }}
-                                            className="text-red-600 hover:underline"
+                                            onClick={handleClearPdf}
+                                            className="text-red-600 hover:underline cursor-pointer"
                                         >
                                             Quitar PDF
                                         </button>
@@ -439,7 +454,7 @@ export default function CreateAgreementPage() {
                     <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-60"
+                        className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-60 cursor-pointer"
                     >
                         {saving ? (
                             <>
@@ -560,7 +575,7 @@ export default function CreateAgreementPage() {
                                 <button
                                     type="submit"
                                     disabled={savingInst}
-                                    className="px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50"
+                                    className="px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 cursor-pointer"
                                 >
                                     {savingInst ? 'Guardando...' : 'Guardar y Seleccionar'}
                                 </button>

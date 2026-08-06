@@ -18,7 +18,6 @@ export class CreateAgreementDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(1, { message: 'El nombre no puede estar vacío' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
@@ -26,17 +25,18 @@ export class CreateAgreementDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(1, { message: 'El número de resolución no puede estar vacío' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
   resolution_number?: string;
 
   @IsNotEmpty({ message: 'La institución es obligatoria' })
+  @Transform(({ value }: { value: unknown }) => Number(value))
   @IsNumber({}, { message: 'institution_id debe ser un número' })
   institution_id: number;
 
   @IsNotEmpty({ message: 'El tipo de convenio es obligatorio' })
+  @Transform(({ value }: { value: unknown }) => Number(value))
   @IsNumber({}, { message: 'agreement_type_id debe ser un número' })
   agreement_type_id: number;
 
@@ -56,7 +56,6 @@ export class CreateAgreementDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(1, { message: 'El estado no puede ser una cadena vacía' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
@@ -64,7 +63,6 @@ export class CreateAgreementDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(1, { message: 'La situación no puede ser una cadena vacía' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
