@@ -5,6 +5,18 @@ import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination?: string;
+  filename?: string;
+  path?: string;
+  buffer?: Buffer;
+}
+
 const agreementIncludes: Prisma.agreementsInclude = {
   institutions: true,
   agreement_types: true,
@@ -108,7 +120,36 @@ export class AgreementsService {
     return this.serializeBigInt(agreement);
   }
 
-  async create(dto: CreateAgreementDto) {
+  async create(
+    dto: CreateAgreementDto,
+    files?: {
+      dictamen?: MulterFile[];
+      document?: MulterFile[];
+    },
+  ) {
+    const documentsToCreate: Prisma.documentsCreateWithoutAgreementsInput[] =
+      [];
+
+    if (files?.document && files.document.length > 0) {
+      const file = files.document[0];
+      const filePath = file.path ?? `resoluciones/${file.originalname}`;
+      documentsToCreate.push({
+        name: 'Documento Principal del Convenio',
+        file_path: filePath.replace(/\\/g, '/'),
+        extension: file.originalname.split('.').pop() ?? 'pdf',
+      });
+    }
+
+    if (files?.dictamen && files.dictamen.length > 0) {
+      const file = files.dictamen[0];
+      const filePath = file.path ?? `resoluciones/${file.originalname}`;
+      documentsToCreate.push({
+        name: 'Dictamen Legal',
+        file_path: filePath.replace(/\\/g, '/'),
+        extension: file.originalname.split('.').pop() ?? 'pdf',
+      });
+    }
+
     const agreementData: Prisma.agreementsCreateInput = {
       title: dto.title.trim().toUpperCase(),
       name: dto.name ? dto.name.trim().toUpperCase() : null,
@@ -125,6 +166,11 @@ export class AgreementsService {
       agreement_types: {
         connect: { id: BigInt(dto.agreement_type_id) },
       },
+      ...(documentsToCreate.length > 0 && {
+        documents: {
+          create: documentsToCreate,
+        },
+      }),
     };
 
     const createdAgreement = await this.prisma.agreements.create({
@@ -135,7 +181,14 @@ export class AgreementsService {
     return this.serializeBigInt(createdAgreement);
   }
 
-  async update(id: number, dto: UpdateAgreementDto) {
+  async update(
+    id: number,
+    dto: UpdateAgreementDto,
+    files?: {
+      dictamen?: MulterFile[];
+      document?: MulterFile[];
+    },
+  ) {
     const agreementData: Prisma.agreementsUpdateInput = {};
 
     if (dto.title) {
@@ -173,6 +226,35 @@ export class AgreementsService {
     if (dto.agreement_type_id !== undefined) {
       agreementData.agreement_types = {
         connect: { id: BigInt(dto.agreement_type_id) },
+      };
+    }
+
+    const documentsToCreate: Prisma.documentsCreateWithoutAgreementsInput[] =
+      [];
+
+    if (files?.document && files.document.length > 0) {
+      const file = files.document[0];
+      const filePath = file.path ?? `resoluciones/${file.originalname}`;
+      documentsToCreate.push({
+        name: 'Documento Actualizado / Adicional',
+        file_path: filePath.replace(/\\/g, '/'),
+        extension: file.originalname.split('.').pop() ?? 'pdf',
+      });
+    }
+
+    if (files?.dictamen && files.dictamen.length > 0) {
+      const file = files.dictamen[0];
+      const filePath = file.path ?? `resoluciones/${file.originalname}`;
+      documentsToCreate.push({
+        name: 'Dictamen Actualizado',
+        file_path: filePath.replace(/\\/g, '/'),
+        extension: file.originalname.split('.').pop() ?? 'pdf',
+      });
+    }
+
+    if (documentsToCreate.length > 0) {
+      agreementData.documents = {
+        create: documentsToCreate,
       };
     }
 

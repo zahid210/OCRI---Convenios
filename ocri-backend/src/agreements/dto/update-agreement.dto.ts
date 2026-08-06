@@ -40,6 +40,9 @@ export class UpdateAgreementDto {
   institution_id?: number;
 
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value !== undefined ? Number(value) : undefined,
+  ) // 👈 Agregado para transformar el string a número correctamente
   @IsNumber({}, { message: 'agreement_type_id debe ser un número' })
   agreement_type_id?: number;
 

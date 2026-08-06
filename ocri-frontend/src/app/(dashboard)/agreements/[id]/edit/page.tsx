@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { use } from 'react';
 import {
     ArrowLeft,
     Save,
@@ -17,15 +18,13 @@ import {
 } from 'lucide-react';
 import { Agreement, Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function EditAgreementPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
+    const documentInputRef = useRef<HTMLInputElement>(null);
 
+    // Estados de Datos Auxiliares
     const [institutions, setInstitutions] = useState<Institution[]>([]);
     const [types, setTypes] = useState<AgreementType[]>([]);
     const [countries, setCountries] = useState<string[]>([
@@ -46,6 +45,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     const [endDate, setEndDate] = useState('');
 
     // Archivos y Previsualización
+    const [dictamenFile, setDictamenFile] = useState<File | null>(null);
     const [documentFile, setDocumentFile] = useState<File | null>(null);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
@@ -58,15 +58,17 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     const [customCountry, setCustomCountry] = useState('');
     const [savingInst, setSavingInst] = useState(false);
 
+    // Carga de Datos y Auxiliares sincronizada con Create
     useEffect(() => {
         let isMounted = true;
 
         async function loadData() {
             try {
-                const [agRes, instRes, typeRes] = await Promise.all([
+                const [agRes, instRes, typeRes, countriesRes] = await Promise.all([
                     fetcher<Agreement>(`/agreements/${id}`),
-                    fetcher<Institution[]>('/agreements/aux/institutions').catch(() => []),
-                    fetcher<AgreementType[]>('/agreements/aux/types').catch(() => []),
+                    fetcher<Institution[]>('/agreements/lookups/institutions').catch(() => []),
+                    fetcher<AgreementType[]>('/agreements/lookups/types').catch(() => []),
+                    fetcher<string[]>('/institutions/countries').catch(() => []),
                 ]);
 
                 if (!isMounted) return;
@@ -82,8 +84,12 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
 
                 setInstitutions(instRes || []);
                 setTypes(typeRes || []);
+
+                if (countriesRes && countriesRes.length > 0) {
+                    setCountries((prev) => Array.from(new Set([...prev, ...countriesRes])));
+                }
             } catch (err) {
-                console.error('Error al cargar datos del convenio:', err);
+                console.error('Error al cargar datos del convenio o auxiliares:', err);
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -108,11 +114,12 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     // Manejador del Visor PDF al adjuntar nuevo documento
     const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
-        setDocumentFile(file);
 
         if (pdfPreviewUrl) {
             URL.revokeObjectURL(pdfPreviewUrl);
         }
+
+        setDocumentFile(file);
 
         if (file && file.type === 'application/pdf') {
             const url = URL.createObjectURL(file);
@@ -122,7 +129,19 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         }
     };
 
-    // Crear Nueva Institución en Caliente con deduplicación de estado local
+    // Limpiar PDF y reiniciar input
+    const handleClearPdf = () => {
+        if (pdfPreviewUrl) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+        }
+        setPdfPreviewUrl(null);
+        setDocumentFile(null);
+        if (documentInputRef.current) {
+            documentInputRef.current.value = '';
+        }
+    };
+
+    // Crear Nueva Institución en Caliente
     const handleSaveInstitution = async (e: React.FormEvent) => {
         e.preventDefault();
         const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
@@ -143,7 +162,6 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                 }),
             });
 
-            // Evitar claves duplicadas en React si la institución ya existía
             setInstitutions((prev) => {
                 const exists = prev.some((item) => Number(item.id) === Number(newInst.id));
                 if (exists) {
@@ -154,8 +172,8 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
 
             setInstitutionId(newInst.id.toString());
 
-            if (isCustomCountry && !countries.includes(finalCountry)) {
-                setCountries((prev) => [...prev, finalCountry]);
+            if (!countries.includes(finalCountry)) {
+                setCountries((prev) => Array.from(new Set([...prev, finalCountry])));
             }
 
             setNewInstName('');
@@ -192,26 +210,32 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     // Actualizar Convenio Principal
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!institutionId || !agreementTypeId) {
+            alert('Por favor, selecciona una institución y un tipo de convenio.');
+            return;
+        }
+
         setSaving(true);
         try {
             const formData = new FormData();
             formData.append('resolution_number', resolutionNumber.trim().toUpperCase());
             formData.append('name', name.trim().toUpperCase());
             formData.append('title', title.trim().toUpperCase());
-            formData.append('institution_id', institutionId);
-            formData.append('agreement_type_id', agreementTypeId);
+            formData.append('institution_id', Number(institutionId).toString());
+            formData.append('agreement_type_id', Number(agreementTypeId).toString());
 
             if (startDate) formData.append('start_date', startDate);
             if (endDate) formData.append('end_date', endDate);
+            if (dictamenFile) formData.append('dictamen', dictamenFile);
             if (documentFile) formData.append('document', documentFile);
 
             await fetcher(`/agreements/${id}`, {
-                method: 'POST', // Soporta Multipart/FormData para actualizar adjuntos
+                method: 'PATCH', // 👈 Método PATCH correcto alineado con NestJS
                 body: formData,
             });
 
             router.push('/agreements');
-            router.refresh();
         } catch (err) {
             console.error('Error al actualizar el convenio:', err);
             alert('Ocurrió un error al actualizar el convenio.');
@@ -230,7 +254,6 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                 });
 
                 router.push('/agreements');
-                router.refresh();
             } catch (err) {
                 console.error('Error al eliminar convenio:', err);
                 alert('Ocurrió un error al eliminar el convenio.');
@@ -243,7 +266,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     if (loading) {
         return (
             <div className="flex h-64 w-full items-center justify-center gap-3 text-sm text-gray-500">
-                <Loader2 className="h-5 w-5 animate-spin text-[#0b5a41]" />
+                <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
                 <span>Cargando datos del convenio...</span>
             </div>
         );
@@ -251,159 +274,159 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
 
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
-            {/* Header / Encabezado */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-5">
+            {/* Header Institucional */}
+            <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Editar Convenio</h1>
-                    <p className="text-xs text-gray-500">
-                        Modificando el registro: <span className="font-bold text-[#0b5a41]">{title || resolutionNumber}</span>
+                    <h1 className="text-xl font-normal text-gray-800">
+                        Editar Convenio Institucional
+                    </h1>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Modificando el registro: <span className="font-bold text-[#df9f1f]">{title || resolutionNumber}</span>
                     </p>
                 </div>
-                <Link href="/agreements">
-                    <Button variant="outline" size="sm" className="rounded-none border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-[#0b5a41]">
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Cancelar y Volver
-                    </Button>
+                <Link
+                    href="/agreements"
+                    className="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm transition-colors self-start sm:self-auto"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Volver al Directorio</span>
                 </Link>
             </div>
 
             <form onSubmit={handleUpdate} className="space-y-6">
                 {/* Bloque 1: Identificación del Documento */}
-                <Card className="rounded-none border border-gray-200 shadow-sm">
-                    <CardHeader className="bg-gray-50/50 border-b border-gray-200 py-4">
-                        <CardTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-[#0b5a41]" /> Identificación del Documento
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                            Ajusta los datos oficiales del documento o resolución.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-5">
+                <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-[#df9f1f]" />
+                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                                Identificación del Documento
+                            </h2>
+                        </div>
+                        <span className="text-xs text-gray-400 font-medium">* Campos obligatorios</span>
+                    </div>
+
+                    <div className="p-6 space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-gray-700">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
                                     N° de Convenio / Resolución <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
+                                </label>
+                                <input
                                     type="text"
                                     required
                                     value={resolutionNumber}
                                     onChange={(e) => setResolutionNumber(e.target.value.toUpperCase())}
-                                    className="rounded-none uppercase focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-gray-700">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Título Corto / Referencia <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
+                                </label>
+                                <input
                                     type="text"
                                     required
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value.toUpperCase())}
-                                    className="rounded-none uppercase focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase text-gray-700">
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
                                 Nombre Oficial del Convenio <span className="text-red-500">*</span>
-                            </Label>
+                            </label>
                             <textarea
                                 rows={3}
                                 required
                                 value={name}
                                 onChange={(e) => setName(e.target.value.toUpperCase())}
-                                className="w-full p-3 text-sm rounded-none border border-gray-200 bg-white uppercase text-gray-900 focus:outline-none focus:border-[#df9f1f] focus:ring-1 focus:ring-[#df9f1f] transition-all resize-none"
+                                className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase resize-none"
                             />
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
-                {/* Bloque 2: Categorización y Vigencia/Acervo */}
+                {/* Grid 2 Columnas: Categorización + Acervo / Adjuntos */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Categorización */}
-                    <Card className="rounded-none border border-gray-200 shadow-sm h-fit">
-                        <CardHeader className="bg-gray-50/50 border-b border-gray-200 py-4">
-                            <CardTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
-                                <Tag className="h-4 w-4 text-[#0b5a41]" /> Categorización
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-6">
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-gray-700 flex items-center gap-1.5">
-                                    <Building2 className="h-3.5 w-3.5 text-gray-400" /> Institución Aliada <span className="text-red-500">*</span>
-                                </Label>
+                    <div className="border border-gray-200 bg-white shadow-sm overflow-hidden h-fit">
+                        <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                            <Tag className="h-4 w-4 text-[#df9f1f]" />
+                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                                Categorización
+                            </h2>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600 flex items-center gap-1.5">
+                                    <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                                    Institución Aliada <span className="text-red-500">*</span>
+                                </label>
                                 <div className="flex items-center gap-2">
                                     <select
                                         required
                                         value={institutionId}
                                         onChange={(e) => setInstitutionId(e.target.value)}
-                                        className="flex-1 h-10 px-3 text-sm rounded-none border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-[#df9f1f] focus:ring-1 focus:ring-[#df9f1f]"
+                                        className="flex-1 h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                     >
                                         <option value="">Seleccione una institución...</option>
-                                        {institutions.map((i) => (
-                                            <option key={`inst-edit-${i.id}`} value={i.id}>
-                                                {i.name} {i.country ? `(${i.country})` : ''}
+                                        {institutions.map((inst) => (
+                                            <option key={`inst-edit-${inst.id}`} value={inst.id}>
+                                                {inst.name} {inst.country ? `(${inst.country})` : ''}
                                             </option>
                                         ))}
                                     </select>
-                                    <Button
+                                    <button
                                         type="button"
                                         onClick={() => setIsModalOpen(true)}
                                         title="Registrar nueva institución"
-                                        className="h-10 px-3 rounded-none bg-[#df9f1f] hover:bg-[#c98e1a] text-white shrink-0"
+                                        className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center transition-colors shrink-0"
                                     >
                                         <Plus className="h-4 w-4" />
-                                    </Button>
+                                    </button>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-gray-700">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Tipo de Convenio <span className="text-red-500">*</span>
-                                </Label>
+                                </label>
                                 <select
                                     required
                                     value={agreementTypeId}
                                     onChange={(e) => setAgreementTypeId(e.target.value)}
-                                    className="w-full h-10 px-3 text-sm rounded-none border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-[#df9f1f] focus:ring-1 focus:ring-[#df9f1f]"
+                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                 >
                                     <option value="">Seleccione tipo de convenio...</option>
-                                    {types.map((t) => (
-                                        <option key={`type-edit-${t.id}`} value={t.id}>{t.name}</option>
+                                    {types.map((type) => (
+                                        <option key={`type-edit-${type.id}`} value={type.id}>
+                                            {type.name}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
 
                     {/* Vigencia y Acervo Digital */}
-                    <Card className="rounded-none border border-gray-200 shadow-sm">
-                        <CardHeader className="bg-gray-50/50 border-b border-gray-200 py-4">
-                            <CardTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
-                                <Paperclip className="h-4 w-4 text-[#0b5a41]" /> Vigencia y Acervo Digital
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-6">
-                            {/* Subir Nuevo Documento */}
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-blue-700">
-                                    Subir un nuevo documento (PDF)
-                                </Label>
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={handleDocumentChange}
-                                    className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-800 hover:file:bg-blue-100 cursor-pointer border border-gray-200"
-                                />
-                            </div>
+                    <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                        <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                            <Paperclip className="h-4 w-4 text-[#df9f1f]" />
+                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                                Acervo y Vigencia
+                            </h2>
+                        </div>
 
+                        <div className="p-6 space-y-5">
                             {/* Listado de archivos actuales */}
                             {agreement?.documents && agreement.documents.length > 0 ? (
-                                <div className="pt-2 border-t border-gray-100">
-                                    <p className="text-xs font-bold text-gray-700 mb-2 uppercase">Archivos guardados actualmente:</p>
+                                <div className="space-y-2 pb-2">
+                                    <p className="text-xs font-semibold text-gray-700 uppercase">Archivos guardados actualmente:</p>
                                     <div className="space-y-2">
                                         {agreement.documents.map((doc: { id: number; name?: string; file_path?: string }) => (
                                             <div key={doc.id} className="flex items-center justify-between gap-2 text-xs bg-gray-50 p-2.5 border border-gray-200">
@@ -437,24 +460,55 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 <p className="text-xs text-gray-400 italic">No hay ningún archivo principal en el acervo digital.</p>
                             )}
 
-                            {/* Visor de PDF Dinámico si seleccionó uno nuevo */}
+                            <hr className="border-gray-200" />
+
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-blue-700">
+                                    Subir un nuevo documento (PDF)
+                                </label>
+                                <input
+                                    ref={documentInputRef}
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={handleDocumentChange}
+                                    className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-800 hover:file:bg-blue-100 cursor-pointer border border-gray-300"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-semibold uppercase text-gray-600">Fecha Inicio</label>
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-semibold uppercase text-gray-600">Fecha Fin</label>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    />
+                                </div>
+                            </div>
+
                             {pdfPreviewUrl && (
-                                <div className="space-y-2 pt-2">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 font-bold uppercase">
+                                <div className="mt-4 space-y-2">
+                                    <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
                                         <span>Vista Previa del Nuevo PDF</span>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
-                                                setPdfPreviewUrl(null);
-                                                setDocumentFile(null);
-                                            }}
-                                            className="text-red-600 hover:underline"
+                                            onClick={handleClearPdf}
+                                            className="text-red-600 hover:underline cursor-pointer"
                                         >
-                                            Quitar
+                                            Quitar PDF
                                         </button>
                                     </div>
-                                    <div className="w-full h-64 bg-gray-100 border border-gray-200 overflow-hidden">
+                                    <div className="w-full h-[280px] bg-gray-100 border border-gray-300 overflow-hidden">
                                         <iframe
                                             src={pdfPreviewUrl}
                                             className="w-full h-full border-0"
@@ -463,70 +517,46 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                     </div>
                                 </div>
                             )}
-
-                            {/* Fechas de Vigencia */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase text-gray-700">Fecha Inicio</Label>
-                                    <Input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                        className="rounded-none focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase text-gray-700">Fecha Fin</Label>
-                                    <Input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="rounded-none focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
-                                    />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Acciones de Edición y Borrado */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-gray-200">
-                    <Button
+                {/* Barra de Acciones Final */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <button
                         type="button"
-                        variant="outline"
                         onClick={handleDelete}
                         disabled={deleting}
-                        className="rounded-none border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                     >
-                        {deleting ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Trash2 className="mr-2 h-4 w-4" />
-                        )}
-                        Eliminar Convenio
-                    </Button>
+                        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        <span>Eliminar Convenio</span>
+                    </button>
 
-                    <div className="flex items-center justify-end gap-3">
-                        <Link href="/agreements">
-                            <Button type="button" variant="outline" className="rounded-none border-gray-200 text-gray-700 hover:bg-gray-50">
-                                Cancelar
-                            </Button>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/agreements"
+                            className="px-5 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
                         </Link>
-                        <Button
+                        <button
                             type="submit"
                             disabled={saving}
-                            className="rounded-none bg-[#0b5a41] text-white hover:bg-[#08422f] transition-colors"
+                            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-60 cursor-pointer"
                         >
                             {saving ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Guardando Cambios...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Save className="mr-2 h-4 w-4" /> Guardar Cambios
+                                    <Save className="h-4 w-4" />
+                                    <span>Guardar Cambios</span>
                                 </>
                             )}
-                        </Button>
+                        </button>
                     </div>
                 </div>
             </form>
@@ -544,7 +574,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                         </button>
 
                         <div>
-                            <h3 className="text-base font-bold text-gray-800">
+                            <h3 className="text-base font-semibold text-gray-800">
                                 Registrar Nueva Institución
                             </h3>
                             <p className="text-xs text-gray-500">
@@ -554,7 +584,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
 
                         <form onSubmit={handleSaveInstitution} className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-bold uppercase text-gray-700">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Nombre de la Institución <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -563,13 +593,13 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                     value={newInstName}
                                     onChange={(e) => setNewInstName(e.target.value.toUpperCase())}
                                     placeholder="EJ. UNIVERSIDAD NACIONAL DE INGENIERÍA"
-                                    className="w-full px-3 py-2 text-sm rounded-none border border-gray-200 focus:outline-none focus:border-[#df9f1f] text-gray-900 uppercase"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                                 />
                             </div>
 
                             <div className="space-y-1.5">
                                 <div className="flex items-center justify-between">
-                                    <label className="block text-xs font-bold uppercase text-gray-700">
+                                    <label className="block text-xs font-semibold uppercase text-gray-600">
                                         País <span className="text-red-500">*</span>
                                     </label>
                                     <button
@@ -585,7 +615,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                     <select
                                         value={selectedCountry}
                                         onChange={(e) => setSelectedCountry(e.target.value)}
-                                        className="w-full h-10 px-3 text-sm rounded-none border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-[#df9f1f]"
+                                        className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                     >
                                         {countries.map((c) => (
                                             <option key={c} value={c}>{c}</option>
@@ -598,20 +628,20 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                         value={customCountry}
                                         onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
                                         placeholder="EJ. ARGENTINA"
-                                        className="w-full px-3 py-2 text-sm rounded-none border border-gray-200 focus:outline-none focus:border-[#df9f1f] text-gray-900 uppercase"
+                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                                     />
                                 )}
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-bold uppercase text-gray-700">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Tipo de Institución <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     required
                                     value={newInstType}
                                     onChange={(e) => setNewInstType(e.target.value)}
-                                    className="w-full h-10 px-3 text-sm rounded-none border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-[#df9f1f]"
+                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                 >
                                     <option value="Universidad Nacional">Universidad Nacional</option>
                                     <option value="Universidad Privada">Universidad Privada</option>
@@ -625,14 +655,14 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-medium border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={savingInst}
-                                    className="px-4 py-2 text-xs font-bold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50"
+                                    className="px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 cursor-pointer"
                                 >
                                     {savingInst ? 'Guardando...' : 'Guardar y Seleccionar'}
                                 </button>
