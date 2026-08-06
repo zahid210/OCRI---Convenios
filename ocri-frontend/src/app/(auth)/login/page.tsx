@@ -7,7 +7,7 @@ import { fetchApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Lock, Mail, ArrowRight, ShieldCheck, Globe2 } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface LoginResponse {
     access_token: string;
@@ -58,133 +58,101 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="min-h-screen w-full lg:grid lg:grid-cols-12 bg-slate-50 text-slate-900 font-sans">
-            {/* Panel Izquierdo / Branding Institucional Claro */}
-            <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between bg-emerald-900 p-12 text-white overflow-hidden">
-                {/* Destellos decorativos sutiles */}
-                <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
-                <div className="absolute bottom-10 right-10 w-80 h-80 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none" />
+        <main className="relative min-h-screen w-full flex items-center justify-center bg-[#0b5a41] overflow-hidden font-sans p-6">
+            {/* Animación de resplandor suave opaco circular moviéndose por todo el background */}
+            <div className="absolute -top-40 -left-40 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none animate-[pulse_8s_ease-in-out_infinite]" />
+            <div className="absolute -bottom-40 -right-40 w-[30rem] h-[30rem] bg-emerald-400/10 rounded-full blur-3xl pointer-events-none animate-[pulse_10s_ease-in-out_infinite]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35rem] h-[35rem] bg-white/[0.07] rounded-full blur-3xl pointer-events-none animate-[ping_12s_cubic-bezier(0,0,0.2,1)_infinite]" />
 
-                <div className="relative z-10 flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-900 font-bold shadow-md">
+            {/* Contenedor Central del Login */}
+            <div className="relative z-10 w-full max-w-md bg-white p-8 sm:p-10 shadow-2xl border border-gray-100 rounded-none">
+
+                {/* Cabecera / Branding */}
+                <div className="space-y-3 text-center mb-8">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center bg-[#0b5a41] text-white font-bold text-base shadow-md">
                         OC
                     </div>
                     <div>
-                        <span className="block font-bold tracking-tight text-white text-sm">OCRI - UNCP</span>
-                        <span className="text-xs text-emerald-200">Cooperación Internacional</span>
-                    </div>
-                </div>
-
-                <div className="relative z-10 space-y-4 my-auto py-12">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 border border-emerald-700 text-emerald-100 text-xs font-medium">
-                        <Globe2 className="h-3.5 w-3.5" />
-                        <span>Sistema Institucional Seguro</span>
-                    </div>
-                    <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-snug text-white">
-                        Gestión y control de convenios al más alto nivel.
-                    </h1>
-                    <p className="text-sm text-emerald-100/80 leading-relaxed max-w-md">
-                        Plataforma centralizada orientada a optimizar los flujos de cooperación académica, alianzas estratégicas y seguimiento documentario.
-                    </p>
-                </div>
-
-                <div className="relative z-10 flex items-center justify-between text-xs text-emerald-200/70 border-t border-emerald-800 pt-6">
-                    <span>Universidad Nacional del Centro del Perú</span>
-                    <div className="flex items-center gap-1.5 text-white">
-                        <ShieldCheck className="h-4 w-4" />
-                        <span>Acceso Seguro</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Panel Derecho / Formulario Minimalista Claro */}
-            <div className="flex col-span-12 lg:col-span-7 items-center justify-center p-6 sm:p-12 lg:p-16">
-                <div className="w-full max-w-md space-y-8 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-xl">
-
-                    <div className="space-y-2 text-left">
-                        <div className="lg:hidden flex items-center gap-3 mb-6">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold">
-                                OC
-                            </div>
-                            <span className="font-bold text-slate-900">OCRI - UNCP</span>
-                        </div>
-
-                        <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                            Iniciar Sesión
-                        </h2>
-                        <p className="text-xs text-slate-500">
-                            Ingrese su correo institucional y contraseña para continuar.
+                        <h1 className="text-xl font-bold tracking-tight text-gray-900">
+                            OCRI - UNCP
+                        </h1>
+                        <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium mt-0.5">
+                            Gestión Institucional
                         </p>
                     </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {error && (
-                            <div className="rounded-2xl bg-red-50 p-4 text-xs font-medium text-red-600 border border-red-200 animate-fadeIn">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                                Correo Institucional
-                            </Label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                    <Mail className="h-4 w-4" />
-                                </div>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="usuario@uncp.edu.pe"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-emerald-600"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                                Contraseña
-                            </Label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                    <Lock className="h-4 w-4" />
-                                </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-emerald-600"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <Button
-                            type="submit"
-                            className="w-full h-11 rounded-xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition-all duration-200 flex items-center justify-center gap-2 group mt-2"
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <span>Autenticando...</span>
-                            ) : (
-                                <>
-                                    <span>Acceder al Sistema</span>
-                                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                                </>
-                            )}
-                        </Button>
-                    </form>
-
-                    <p className="text-center text-xs text-slate-400 pt-2">
-                        Oficina de Cooperación y Relaciones Internacionales • UNCP
-                    </p>
-
                 </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && (
+                        <div className="p-3 text-xs font-medium text-red-600 bg-red-50 border border-red-200">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="space-y-1.5 text-left">
+                        <Label htmlFor="email" className="text-xs font-medium text-gray-700">
+                            Correo Institucional
+                        </Label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <Mail className="h-4 w-4" />
+                            </div>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="usuario@uncp.edu.pe"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="pl-9 h-10 rounded-none bg-gray-50 border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-1 focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                        <Label htmlFor="password" className="text-xs font-medium text-gray-700">
+                            Contraseña
+                        </Label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <Lock className="h-4 w-4" />
+                            </div>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="pl-9 h-10 rounded-none bg-gray-50 border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-1 focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <Button
+                        type="submit"
+                        className="w-full h-10 rounded-none font-medium bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors duration-150 flex items-center justify-center gap-2 group mt-2 text-xs"
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <span>Autenticando...</span>
+                        ) : (
+                            <>
+                                <span>Acceder al Sistema</span>
+                                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-1" />
+                            </>
+                        )}
+                    </Button>
+                </form>
+
+                <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+                    <span>Universidad Nacional del Centro del Perú</span>
+                    <div className="flex items-center gap-1 text-emerald-700">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        <span>Seguro</span>
+                    </div>
+                </div>
+
             </div>
         </main>
     );
