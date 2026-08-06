@@ -109,7 +109,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         }
     };
 
-    // Crear Nueva Institución en Caliente
+    // Crear Nueva Institución en Caliente con deduplicación de estado local
     const handleSaveInstitution = async (e: React.FormEvent) => {
         e.preventDefault();
         const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
@@ -130,7 +130,15 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                 }),
             });
 
-            setInstitutions((prev) => [newInst, ...prev]);
+            // Evitar claves duplicadas en React si la institución ya existía
+            setInstitutions((prev) => {
+                const exists = prev.some((item) => Number(item.id) === Number(newInst.id));
+                if (exists) {
+                    return prev.map((item) => (Number(item.id) === Number(newInst.id) ? newInst : item));
+                }
+                return [newInst, ...prev];
+            });
+
             setInstitutionId(newInst.id.toString());
 
             if (isCustomCountry && !countries.includes(finalCountry)) {
@@ -156,7 +164,6 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
             await fetcher(`/documents/${docId}`, {
                 method: 'DELETE',
             });
-            // Actualizar estado local eliminando el documento de la lista
             if (agreement) {
                 setAgreement({
                     ...agreement,
@@ -186,7 +193,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
             if (documentFile) formData.append('document', documentFile);
 
             await fetcher(`/agreements/${id}`, {
-                method: 'POST', // Laravel soporta POST con _method=PUT para archivos Multipart/FormData
+                method: 'POST', // Soporta Multipart/FormData para actualizar adjuntos
                 body: formData,
             });
 
@@ -324,7 +331,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                     >
                                         <option value="">Seleccione una institución...</option>
                                         {institutions.map((i) => (
-                                            <option key={i.id} value={i.id}>
+                                            <option key={`inst-edit-${i.id}`} value={i.id}>
                                                 {i.name} {i.country ? `(${i.country})` : ''}
                                             </option>
                                         ))}
@@ -352,7 +359,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 >
                                     <option value="">Seleccione tipo de convenio...</option>
                                     {types.map((t) => (
-                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                        <option key={`type-edit-${t.id}`} value={t.id}>{t.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -594,33 +601,27 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 >
                                     <option value="Universidad Nacional">Universidad Nacional</option>
                                     <option value="Universidad Privada">Universidad Privada</option>
-                                    <option value="Universidad Internacional">Universidad Internacional</option>
-                                    <option value="Salud">Salud</option>
-                                    <option value="Educación">Educación</option>
-                                    <option value="Sector Público">Sector Público</option>
-                                    <option value="Empresa Nacional">Empresa Nacional</option>
-                                    <option value="Empresa Internacional">Empresa Internacional</option>
-                                    <option value="Comunidades">Comunidades</option>
-                                    <option value="Otros">Otros</option>
+                                    <option value="Entidad Gubernamental">Entidad Gubernamental</option>
+                                    <option value="Empresa Privada">Empresa Privada</option>
+                                    <option value="Organización Internacional">Organización Internacional</option>
                                 </select>
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-2">
-                                <Button
+                            <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+                                <button
                                     type="button"
-                                    variant="outline"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="rounded-none border-gray-200 text-gray-700"
+                                    className="px-4 py-2 text-xs font-medium border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
                                 >
                                     Cancelar
-                                </Button>
-                                <Button
+                                </button>
+                                <button
                                     type="submit"
                                     disabled={savingInst}
-                                    className="rounded-none bg-[#0b5a41] text-white hover:bg-[#08422f]"
+                                    className="px-4 py-2 text-xs font-bold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50"
                                 >
-                                    {savingInst ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar Institución'}
-                                </Button>
+                                    {savingInst ? 'Guardando...' : 'Guardar y Seleccionar'}
+                                </button>
                             </div>
                         </form>
                     </div>

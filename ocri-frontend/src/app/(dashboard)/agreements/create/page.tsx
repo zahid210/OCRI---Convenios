@@ -110,8 +110,15 @@ export default function CreateAgreementPage() {
                 }),
             });
 
-            // Actualizar lista local y auto-seleccionar
-            setInstitutions((prev) => [newInst, ...prev]);
+            // Actualizar lista local evitando claves duplicadas en React si la institución ya existía
+            setInstitutions((prev) => {
+                const exists = prev.some((item) => Number(item.id) === Number(newInst.id));
+                if (exists) {
+                    return prev.map((item) => (Number(item.id) === Number(newInst.id) ? newInst : item));
+                }
+                return [newInst, ...prev];
+            });
+
             setInstitutionId(newInst.id.toString());
 
             // Agregar país a lista si es nuevo
@@ -283,7 +290,7 @@ export default function CreateAgreementPage() {
                                         className="flex-1 h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                     >
                                         {institutions.map((inst) => (
-                                            <option key={inst.id} value={inst.id}>
+                                            <option key={`inst-create-${inst.id}`} value={inst.id}>
                                                 {inst.name} {inst.country ? `(${inst.country})` : ''}
                                             </option>
                                         ))}
@@ -311,7 +318,7 @@ export default function CreateAgreementPage() {
                                     className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                 >
                                     {types.map((type) => (
-                                        <option key={type.id} value={type.id}>
+                                        <option key={`type-${type.id}`} value={type.id}>
                                             {type.name}
                                         </option>
                                     ))}
