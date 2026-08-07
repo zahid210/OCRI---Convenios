@@ -162,8 +162,8 @@ export default function AgreementsIndexPage() {
             </div>
 
             {/* Tabla con el diseño institucional */}
-            <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="border border-gray-200 bg-white shadow-sm">
+                <div className="overflow-x-visible md:overflow-x-auto min-h-[350px]">
                     <table className="w-full text-left border-collapse">
                         <thead>
                         <tr className="bg-[#f8f9fa] border-b border-gray-200">
@@ -206,7 +206,7 @@ export default function AgreementsIndexPage() {
                                 </td>
                             </tr>
                         ) : (
-                            data?.data.map((agreement) => {
+                            data?.data.map((agreement, index) => {
                                 const roadmap = agreement.roadmap_items;
                                 const pendingOpinions = roadmap
                                     ? roadmap
@@ -245,6 +245,8 @@ export default function AgreementsIndexPage() {
                                 }
 
                                 const inst = agreement.institutions;
+                                // Para las primeras filas desplegamos hacia abajo, para las últimas hacia arriba
+                                const isFirstRow = index < 2;
 
                                 return (
                                     <tr
@@ -253,43 +255,52 @@ export default function AgreementsIndexPage() {
                                     >
                                         {/* Expediente / Resolución */}
                                         <td className="py-5">
-                                            <div
-                                                className="flex items-center gap-4 ml-10 relative"
-                                                onMouseEnter={() => setHoveredRowId(agreement.id)}
-                                                onMouseLeave={() => setHoveredRowId(null)}
-                                            >
-                                                {/* Tooltip de Opiniones Pendientes */}
-                                                {hasPending && hoveredRowId === agreement.id && (
-                                                    <div className="absolute top-0 left-full ml-3 z-50 w-72">
-                                                        <div className="bg-white shadow-lg border border-gray-200 p-4 text-xs">
-                                                            <div className="flex items-center gap-2 mb-2 border-b border-gray-100 pb-1.5">
-                                                                <Clock className="h-4 w-4 text-amber-500" />
-                                                                <span className="font-semibold text-gray-600 uppercase">
+                                            <div className="flex items-center gap-4 ml-10">
+                                                {/* Contenedor relativo solo para el ícono y su tooltip */}
+                                                <div
+                                                    className="relative"
+                                                    onMouseEnter={() => setHoveredRowId(agreement.id)}
+                                                    onMouseLeave={() => setHoveredRowId(null)}
+                                                >
+                                                    {/* Ícono institucional de documento */}
+                                                    <div className={`p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0 cursor-pointer ${
+                                                        hasPending ? 'border-amber-400 bg-amber-50 text-amber-600' : ''
+                                                    }`}>
+                                                        <FileText className="h-4 w-4" />
+                                                    </div>
+
+                                                    {/* Tooltip con posicionamiento inteligente */}
+                                                    {hasPending && hoveredRowId === agreement.id && (
+                                                        <div className={`absolute left-full ml-3 z-50 w-72 pointer-events-none drop-shadow-xl ${
+                                                            isFirstRow ? 'top-0' : 'bottom-0'
+                                                        }`}>
+                                                            <div className="bg-white border border-gray-200 p-4 text-xs">
+                                                                <div className="flex items-center gap-2 mb-2 border-b border-gray-100 pb-1.5">
+                                                                    <Clock className="h-4 w-4 text-amber-500" />
+                                                                    <span className="font-semibold text-gray-700 uppercase tracking-wider">
                                                                         Opiniones Pendientes
                                                                     </span>
-                                                            </div>
-                                                            <div className="space-y-1.5">
-                                                                {pendingOpinions.map((area: string, idx: number) => (
-                                                                    <div key={idx} className="flex items-center gap-2 text-gray-700">
-                                                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                                                                        <span>Falta opinión de <strong>{area}</strong></span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                            <div className="mt-2 pt-2 border-t border-gray-100">
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    {pendingOpinions.map((area: string, idx: number) => (
+                                                                        <div key={idx} className="flex items-center gap-2 text-gray-700">
+                                                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                                                                            <span>Falta opinión de <strong>{area}</strong></span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                <div className="mt-2 pt-2 border-t border-gray-100">
                                                                     <span className="text-[11px] text-gray-400 font-medium">
                                                                         {pendingOpinions.length} área(s) pendiente(s)
                                                                     </span>
+                                                                </div>
                                                             </div>
+                                                            {/* Flechita lateral apuntando al ícono */}
+                                                            <div className={`w-2.5 h-2.5 bg-white border-b border-l border-gray-200 transform rotate-45 absolute -left-1.5 ${
+                                                                isFirstRow ? 'top-3' : 'bottom-3'
+                                                            }`} />
                                                         </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Ícono institucional de documento */}
-                                                <div className={`p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0 ${
-                                                    hasPending ? 'border-amber-400 bg-amber-50' : ''
-                                                }`}>
-                                                    <FileText className="h-4 w-4" />
+                                                    )}
                                                 </div>
 
                                                 <div>
