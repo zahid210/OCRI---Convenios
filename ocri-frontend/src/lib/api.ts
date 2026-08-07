@@ -24,6 +24,21 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
         headers,
     });
 
+    // Interceptar tokens caducados o no autorizados (401)
+    if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+            // Eliminar cookies de sesión expiradas
+            Cookies.remove('access_token', { path: '/' });
+            Cookies.remove('user', { path: '/' });
+
+            // Redirigir al login si no estamos ya en él
+            if (!window.location.pathname.startsWith('/login')) {
+                window.location.href = '/login';
+            }
+        }
+        throw new Error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+    }
+
     // Manejar respuestas vacías (ej. 204 No Content)
     if (response.status === 204) {
         return {} as T;

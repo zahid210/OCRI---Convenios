@@ -26,6 +26,7 @@ const agreementIncludes: Prisma.agreementsInclude = {
     include: {
       roadmap_documents: true,
     },
+    orderBy: { id: 'asc' },
   },
   oficios: true,
   agreement_reports: true,
@@ -61,19 +62,38 @@ export class AgreementsService {
     }
 
     if (filters.status) {
-      if (filters.status === 'Por Vencer') {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
+      const statusFilter = filters.status;
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
 
+      if (statusFilter === 'En Proceso') {
+        where.status = 'En Proceso';
+      } else if (statusFilter === 'Vigente') {
+        where.status = 'Vigente';
+        where.AND = [
+          {
+            OR: [{ end_date: null }, { end_date: { gte: now } }],
+          },
+        ];
+      } else if (statusFilter === 'Por Vencer') {
         const warningDate = new Date(now);
         warningDate.setDate(warningDate.getDate() + 90);
 
+        where.status = 'Vigente';
         where.end_date = {
           gte: now,
           lte: warningDate,
         };
+      } else if (statusFilter === 'Vencido') {
+        where.OR = [
+          { status: 'Vencido' },
+          {
+            status: 'Vigente',
+            end_date: { lt: now },
+          },
+        ];
       } else {
-        where.status = filters.status;
+        where.status = statusFilter;
       }
     }
 
@@ -130,25 +150,37 @@ export class AgreementsService {
     const documentsToCreate: Prisma.documentsCreateWithoutAgreementsInput[] =
       [];
 
-    if (files?.document && files.document.length > 0) {
-      const file = files.document[0];
-      const filePath = file.path ?? `resoluciones/${file.originalname}`;
-      documentsToCreate.push({
-        name: 'Documento Principal del Convenio',
-        file_path: filePath.replace(/\\/g, '/'),
-        extension: file.originalname.split('.').pop() ?? 'pdf',
-      });
+    const hasDocument = files?.document && files.document.length > 0;
+
+    if (hasDocument) {
+      const file = files?.document?.[0];
+      if (file) {
+        const filePath = file.path ?? `resoluciones/${file.originalname}`;
+        documentsToCreate.push({
+          name: `DOC - ${dto.resolution_number ?? dto.title}`,
+          file_path: filePath.replace(/\\/g, '/'),
+          extension: file.originalname.split('.').pop() ?? 'pdf',
+        });
+      }
     }
 
     if (files?.dictamen && files.dictamen.length > 0) {
-      const file = files.dictamen[0];
-      const filePath = file.path ?? `resoluciones/${file.originalname}`;
-      documentsToCreate.push({
-        name: 'Dictamen Legal',
-        file_path: filePath.replace(/\\/g, '/'),
-        extension: file.originalname.split('.').pop() ?? 'pdf',
-      });
+      const file = files?.dictamen?.[0];
+      if (file) {
+        const filePath = file.path ?? `resoluciones/${file.originalname}`;
+        documentsToCreate.push({
+          name: 'Dictamen Legal',
+          file_path: filePath.replace(/\\/g, '/'),
+          extension: file.originalname.split('.').pop() ?? 'pdf',
+        });
+      }
     }
+
+    const determinedStatus = dto.status
+      ? dto.status.trim()
+      : hasDocument
+        ? 'Vigente'
+        : 'En Proceso';
 
     const agreementData: Prisma.agreementsCreateInput = {
       title: dto.title.trim().toUpperCase(),
@@ -159,7 +191,7 @@ export class AgreementsService {
       start_date: dto.start_date ? new Date(dto.start_date) : null,
       end_date: dto.end_date ? new Date(dto.end_date) : null,
       situation: dto.situation ? dto.situation.trim() : null,
-      status: dto.status ? dto.status.trim() : 'En Proceso',
+      status: determinedStatus,
       institutions: {
         connect: { id: BigInt(dto.institution_id) },
       },
@@ -169,6 +201,24 @@ export class AgreementsService {
       ...(documentsToCreate.length > 0 && {
         documents: {
           create: documentsToCreate,
+        },
+      }),
+      ...(hasDocument && {
+        roadmap_items: {
+          create: [
+            { area_name: 'Rectorado', order: 0, is_completed: true },
+            {
+              area_name: 'Vicerrectorado de Investigación',
+              order: 1,
+              is_completed: true,
+            },
+            {
+              area_name: 'Vicerrectorado Académico',
+              order: 2,
+              is_completed: true,
+            },
+            { area_name: 'Asesoría Legal', order: 3, is_completed: true },
+          ],
         },
       }),
     };
@@ -189,6 +239,17 @@ export class AgreementsService {
       document?: MulterFile[];
     },
   ) {
+    const agreementId = BigInt(id);
+
+    const currentAgreement = await this.prisma.agreements.findUnique({
+      where: { id: agreementId },
+      include: { roadmap_items: true },
+    });
+
+    if (!currentAgreement) {
+      throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
+    }
+
     const agreementData: Prisma.agreementsUpdateInput = {};
 
     if (dto.title) {
@@ -210,9 +271,6 @@ export class AgreementsService {
     if (dto.end_date !== undefined) {
       agreementData.end_date = dto.end_date ? new Date(dto.end_date) : null;
     }
-    if (dto.status !== undefined) {
-      agreementData.status = dto.status.trim();
-    }
     if (dto.situation !== undefined) {
       agreementData.situation = dto.situation ? dto.situation.trim() : null;
     }
@@ -232,24 +290,38 @@ export class AgreementsService {
     const documentsToCreate: Prisma.documentsCreateWithoutAgreementsInput[] =
       [];
 
-    if (files?.document && files.document.length > 0) {
-      const file = files.document[0];
-      const filePath = file.path ?? `resoluciones/${file.originalname}`;
-      documentsToCreate.push({
-        name: 'Documento Actualizado / Adicional',
-        file_path: filePath.replace(/\\/g, '/'),
-        extension: file.originalname.split('.').pop() ?? 'pdf',
-      });
+    const hasNewDocument = files?.document && files.document.length > 0;
+
+    if (hasNewDocument) {
+      const file = files?.document?.[0];
+      if (file) {
+        const filePath = file.path ?? `resoluciones/${file.originalname}`;
+        documentsToCreate.push({
+          name: 'Convenio Firmado / Actualizado',
+          file_path: filePath.replace(/\\/g, '/'),
+          extension: file.originalname.split('.').pop() ?? 'pdf',
+        });
+      }
+
+      if (currentAgreement.status === 'En Proceso' && !dto.status) {
+        agreementData.status = 'Vigente';
+      }
+    }
+
+    if (dto.status !== undefined) {
+      agreementData.status = dto.status.trim();
     }
 
     if (files?.dictamen && files.dictamen.length > 0) {
-      const file = files.dictamen[0];
-      const filePath = file.path ?? `resoluciones/${file.originalname}`;
-      documentsToCreate.push({
-        name: 'Dictamen Actualizado',
-        file_path: filePath.replace(/\\/g, '/'),
-        extension: file.originalname.split('.').pop() ?? 'pdf',
-      });
+      const file = files?.dictamen?.[0];
+      if (file) {
+        const filePath = file.path ?? `resoluciones/${file.originalname}`;
+        documentsToCreate.push({
+          name: 'Dictamen Actualizado',
+          file_path: filePath.replace(/\\/g, '/'),
+          extension: file.originalname.split('.').pop() ?? 'pdf',
+        });
+      }
     }
 
     if (documentsToCreate.length > 0) {
@@ -258,9 +330,33 @@ export class AgreementsService {
       };
     }
 
+    const needsRoadmap =
+      hasNewDocument &&
+      (!currentAgreement.roadmap_items ||
+        currentAgreement.roadmap_items.length === 0);
+
+    if (needsRoadmap) {
+      agreementData.roadmap_items = {
+        create: [
+          { area_name: 'Rectorado', order: 0, is_completed: true },
+          {
+            area_name: 'Vicerrectorado de Investigación',
+            order: 1,
+            is_completed: true,
+          },
+          {
+            area_name: 'Vicerrectorado Académico',
+            order: 2,
+            is_completed: true,
+          },
+          { area_name: 'Asesoría Legal', order: 3, is_completed: true },
+        ],
+      };
+    }
+
     try {
       const updatedAgreement = await this.prisma.agreements.update({
-        where: { id: BigInt(id) },
+        where: { id: agreementId },
         data: agreementData,
         include: agreementIncludes,
       });
