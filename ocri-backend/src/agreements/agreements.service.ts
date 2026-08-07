@@ -4,6 +4,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
@@ -59,7 +61,12 @@ export class AgreementsService {
 
   private resolveFilePath(file: MulterFile): string {
     const fileName = file.filename ?? file.originalname;
-    return `resoluciones/${fileName}`.replace(/\\/g, '/');
+    return fileName;
+  }
+
+  private getAbsolutePath(filePath: string): string {
+    const fileName = filePath.split('/').pop()?.split('\\').pop() || filePath;
+    return path.join(process.cwd(), 'uploads', fileName);
   }
 
   async findAll(filters: FilterAgreementsDto) {
@@ -433,6 +440,17 @@ export class AgreementsService {
 
   async deleteRoadmapDocument(docId: number) {
     try {
+      const doc = await this.prisma.roadmap_documents.findUnique({
+        where: { id: BigInt(docId) },
+      });
+
+      if (doc && doc.file_path) {
+        const absolutePath = this.getAbsolutePath(doc.file_path);
+        if (fs.existsSync(absolutePath)) {
+          fs.unlinkSync(absolutePath);
+        }
+      }
+
       await this.prisma.roadmap_documents.delete({
         where: { id: BigInt(docId) },
       });
@@ -474,12 +492,72 @@ export class AgreementsService {
   }
 
   async remove(id: number) {
+    const agreementId = BigInt(id);
+
     try {
-      await this.prisma.agreements.delete({
-        where: { id: BigInt(id) },
+      const agreement = await this.prisma.agreements.findUnique({
+        where: { id: agreementId },
       });
 
-      return { message: `Convenio #${id} eliminado correctamente` };
+      if (!agreement) {
+        throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
+      }
+
+      const documents = await this.prisma.documents.findMany({
+        where: { agreement_id: agreementId },
+      });
+
+      for (const doc of documents) {
+        if (doc.file_path) {
+          const absolutePath = this.getAbsolutePath(doc.file_path);
+          if (fs.existsSync(absolutePath)) {
+            try {
+              fs.unlinkSync(absolutePath);
+            } catch (e) {
+              console.error(
+                `Error al borrar archivo general: ${absolutePath}`,
+                e,
+              );
+            }
+          }
+        }
+      }
+
+      const roadmapItems = await this.prisma.roadmap_items.findMany({
+        where: { agreement_id: agreementId },
+      });
+
+      const roadmapItemIds = roadmapItems.map((item) => item.id);
+
+      if (roadmapItemIds.length > 0) {
+        const roadmapDocs = await this.prisma.roadmap_documents.findMany({
+          where: { roadmap_item_id: { in: roadmapItemIds } },
+        });
+
+        for (const rDoc of roadmapDocs) {
+          if (rDoc.file_path) {
+            const absolutePath = this.getAbsolutePath(rDoc.file_path);
+            if (fs.existsSync(absolutePath)) {
+              try {
+                fs.unlinkSync(absolutePath);
+              } catch (e) {
+                console.error(
+                  `Error al borrar archivo de hoja de ruta: ${absolutePath}`,
+                  e,
+                );
+              }
+            }
+          }
+        }
+      }
+
+      await this.prisma.agreements.delete({
+        where: { id: agreementId },
+      });
+
+      return {
+        message: `Convenio #${id} y sus archivos asociados eliminados correctamente`,
+      };
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -505,5 +583,38 @@ export class AgreementsService {
       orderBy: { name: 'asc' },
     });
     return this.serializeBigInt(data);
+  }
+
+  async removeAgreementDocument(docId: number) {
+    try {
+      const doc = await this.prisma.documents.findUnique({
+        where: { id: BigInt(docId) },
+      });
+
+      if (!doc) {
+        throw new NotFoundException(`Documento con ID #${docId} no encontrado`);
+      }
+
+      if (doc.file_path) {
+        const absolutePath = this.getAbsolutePath(doc.file_path);
+        if (fs.existsSync(absolutePath)) {
+          fs.unlinkSync(absolutePath);
+        }
+      }
+
+      await this.prisma.documents.delete({
+        where: { id: BigInt(docId) },
+      });
+
+      return { message: `Documento #${docId} eliminado correctamente` };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Documento con ID #${docId} no encontrado`);
+      }
+      throw error;
+    }
   }
 }

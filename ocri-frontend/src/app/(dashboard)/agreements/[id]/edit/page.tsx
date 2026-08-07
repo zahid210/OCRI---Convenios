@@ -198,11 +198,17 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         }
     };
 
-    // Eliminar un archivo individual del acervo actual
+    // Eliminar un archivo individual del acervo actual con aviso inmediato
     const handleDeleteDocument = async (docId: number) => {
-        if (!confirm('¿Estás seguro de eliminar este archivo permanentemente?')) return;
+        const isConfirmed = confirm(
+            '⚠️ ATENCIÓN: Esta acción eliminará el archivo del servidor de forma inmediata. ' +
+            'No se puede deshacer incluso si cancelas la edición del convenio después. ¿Estás seguro?'
+        );
+
+        if (!isConfirmed) return;
+
         try {
-            await fetcher(`/documents/${docId}`, {
+            await fetcher(`/agreements/documents/${docId}`, {
                 method: 'DELETE',
             });
             if (agreement) {
@@ -211,6 +217,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                     documents: agreement.documents?.filter((d: AgreementDocument) => d.id !== docId) || []
                 });
             }
+            alert('Archivo eliminado correctamente.');
         } catch (err) {
             console.error('Error al eliminar archivo:', err);
             alert('No se pudo eliminar el archivo.');
@@ -467,7 +474,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                                         <button
                                                             type="button"
                                                             onClick={() => handleDeleteDocument(doc.id)}
-                                                            className="text-red-500 hover:text-red-700 transition-colors"
+                                                            className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
                                                             title="Eliminar archivo"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -590,7 +597,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                         <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
                             <X className="h-5 w-5" />
                         </button>
@@ -627,9 +634,9 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                     <button
                                         type="button"
                                         onClick={() => setIsCustomCountry(!isCustomCountry)}
-                                        className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                                        className="text-xs text-blue-600 hover:underline cursor-pointer"
                                     >
-                                        {isCustomCountry ? 'Seleccionar de la lista' : 'Otro país'}
+                                        {isCustomCountry ? 'Seleccionar de lista' : '+ Escribir país'}
                                     </button>
                                 </div>
 
@@ -649,7 +656,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                         className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                     >
                                         {countries.map((c) => (
-                                            <option key={`country-${c}`} value={c}>
+                                            <option key={`country-opt-${c}`} value={c}>
                                                 {c}
                                             </option>
                                         ))}
@@ -661,37 +668,36 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Tipo de Institución <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    required
+                                <select
                                     value={newInstType}
                                     onChange={(e) => setNewInstType(e.target.value)}
-                                    placeholder="EJ. Universidad Nacional, ONG, Empresa"
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
-                                />
+                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                >
+                                    <option value="Universidad Nacional">Universidad Nacional</option>
+                                    <option value="Universidad Privada">Universidad Privada</option>
+                                    <option value="Institución Pública">Institución Pública</option>
+                                    <option value="Institución Privada">Institución Privada</option>
+                                    <option value="Empresa">Empresa</option>
+                                    <option value="Organización Internacional">Organización Internacional</option>
+                                    <option value="Centro de Investigación">Centro de Investigación</option>
+                                </select>
                             </div>
 
-                            <div className="flex items-center justify-end gap-3 pt-2">
+                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={savingInst}
-                                    className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-60 cursor-pointer"
+                                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-60 cursor-pointer"
                                 >
-                                    {savingInst ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            <span>Guardando...</span>
-                                        </>
-                                    ) : (
-                                        <span>Guardar Institución</span>
-                                    )}
+                                    {savingInst && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                                    <span>Guardar Institución</span>
                                 </button>
                             </div>
                         </form>

@@ -169,4 +169,9 @@ export class AgreementsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.agreementsService.remove(id);
   }
+
+  @Delete('documents/:docId')
+  removeAgreementDocument(@Param('docId', ParseIntPipe) docId: number) {
+    return this.agreementsService.removeAgreementDocument(docId);
+  }
 }
