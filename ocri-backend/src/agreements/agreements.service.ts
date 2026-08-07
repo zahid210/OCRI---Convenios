@@ -182,6 +182,14 @@ export class AgreementsService {
         ? 'Vigente'
         : 'En Proceso';
 
+    const determinedSituation = dto.situation
+      ? dto.situation.trim()
+      : hasDocument
+        ? 'REGISTRADO Y CONVALIDADO'
+        : 'EN TRAMITE';
+
+    const now = new Date();
+
     const agreementData: Prisma.agreementsCreateInput = {
       title: dto.title.trim().toUpperCase(),
       name: dto.name ? dto.name.trim().toUpperCase() : null,
@@ -190,8 +198,10 @@ export class AgreementsService {
         : null,
       start_date: dto.start_date ? new Date(dto.start_date) : null,
       end_date: dto.end_date ? new Date(dto.end_date) : null,
-      situation: dto.situation ? dto.situation.trim() : null,
+      situation: determinedSituation,
       status: determinedStatus,
+      created_at: now,
+      updated_at: now,
       institutions: {
         connect: { id: BigInt(dto.institution_id) },
       },
@@ -250,7 +260,9 @@ export class AgreementsService {
       throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
     }
 
-    const agreementData: Prisma.agreementsUpdateInput = {};
+    const agreementData: Prisma.agreementsUpdateInput = {
+      updated_at: new Date(),
+    };
 
     if (dto.title) {
       agreementData.title = dto.title.trim().toUpperCase();
