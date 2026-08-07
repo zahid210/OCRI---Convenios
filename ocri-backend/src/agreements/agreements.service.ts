@@ -1,9 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
+import { UpdateSituationDto } from './dto/update-situation.dto';
+import { UpdateEnvioDto } from './dto/update-envio.dto';
+import { ActivateAgreementDto } from './dto/activate-agreement.dto';
 
 interface MulterFile {
   fieldname: string;
@@ -26,11 +33,18 @@ const agreementIncludes: Prisma.agreementsInclude = {
     include: {
       roadmap_documents: true,
     },
-    orderBy: { id: 'asc' },
+    orderBy: { order: 'asc' },
   },
   oficios: true,
   agreement_reports: true,
 };
+
+const DEFAULT_AREAS = [
+  'Rectorado',
+  'Vicerrectorado de Investigación',
+  'Vicerrectorado Académico',
+  'Asesoría Legal',
+];
 
 @Injectable()
 export class AgreementsService {
@@ -216,24 +230,13 @@ export class AgreementsService {
           create: documentsToCreate,
         },
       }),
-      ...(hasDocument && {
-        roadmap_items: {
-          create: [
-            { area_name: 'Rectorado', order: 0, is_completed: true },
-            {
-              area_name: 'Vicerrectorado de Investigación',
-              order: 1,
-              is_completed: true,
-            },
-            {
-              area_name: 'Vicerrectorado Académico',
-              order: 2,
-              is_completed: true,
-            },
-            { area_name: 'Asesoría Legal', order: 3, is_completed: true },
-          ],
-        },
-      }),
+      roadmap_items: {
+        create: DEFAULT_AREAS.map((area, index) => ({
+          area_name: area,
+          order: index,
+          is_completed: hasDocument ? true : false,
+        })),
+      },
     };
 
     const createdAgreement = await this.prisma.agreements.create({
@@ -343,30 +346,6 @@ export class AgreementsService {
       };
     }
 
-    const needsRoadmap =
-      hasNewDocument &&
-      (!currentAgreement.roadmap_items ||
-        currentAgreement.roadmap_items.length === 0);
-
-    if (needsRoadmap) {
-      agreementData.roadmap_items = {
-        create: [
-          { area_name: 'Rectorado', order: 0, is_completed: true },
-          {
-            area_name: 'Vicerrectorado de Investigación',
-            order: 1,
-            is_completed: true,
-          },
-          {
-            area_name: 'Vicerrectorado Académico',
-            order: 2,
-            is_completed: true,
-          },
-          { area_name: 'Asesoría Legal', order: 3, is_completed: true },
-        ],
-      };
-    }
-
     try {
       const updatedAgreement = await this.prisma.agreements.update({
         where: { id: agreementId },
@@ -384,6 +363,114 @@ export class AgreementsService {
       }
       throw error;
     }
+  }
+
+  async updateSituation(id: number, dto: UpdateSituationDto) {
+    const updated = await this.prisma.agreements.update({
+      where: { id: BigInt(id) },
+      data: {
+        situation: dto.situation ? dto.situation.trim() : null,
+        updated_at: new Date(),
+      },
+      include: agreementIncludes,
+    });
+    return this.serializeBigInt(updated);
+  }
+
+  async initRoadmap(agreementId: number) {
+    const existing = await this.prisma.roadmap_items.findMany({
+      where: { agreement_id: BigInt(agreementId) },
+    });
+
+    if (existing.length === 0) {
+      await this.prisma.roadmap_items.createMany({
+        data: DEFAULT_AREAS.map((area, index) => ({
+          agreement_id: BigInt(agreementId),
+          area_name: area,
+          order: index,
+          is_completed: false,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })),
+      });
+    }
+
+    return this.findOne(agreementId);
+  }
+
+  async uploadRoadmapDocument(
+    itemId: number,
+    file: MulterFile,
+    type: 'entrada' | 'salida',
+  ) {
+    if (!file) {
+      throw new BadRequestException('Debe adjuntar un archivo PDF.');
+    }
+
+    const roadmapItem = await this.prisma.roadmap_items.findUnique({
+      where: { id: BigInt(itemId) },
+    });
+
+    if (!roadmapItem) {
+      throw new NotFoundException(
+        `Área de hoja de ruta #${itemId} no encontrada`,
+      );
+    }
+
+    const doc = await this.prisma.roadmap_documents.create({
+      data: {
+        roadmap_item_id: BigInt(itemId),
+        file_path: this.resolveFilePath(file),
+        original_name: file.originalname,
+        type: type || 'entrada',
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
+    return this.serializeBigInt(doc);
+  }
+
+  async deleteRoadmapDocument(docId: number) {
+    try {
+      await this.prisma.roadmap_documents.delete({
+        where: { id: BigInt(docId) },
+      });
+      return { message: 'Documento de hoja de ruta eliminado' };
+    } catch {
+      throw new NotFoundException(`Documento #${docId} no encontrado`);
+    }
+  }
+
+  async updateRoadmapEnvio(itemId: number, dto: UpdateEnvioDto) {
+    const updated = await this.prisma.roadmap_items.update({
+      where: { id: BigInt(itemId) },
+      data: {
+        envio_tipo: dto.envio_tipo || null,
+        numero_expediente: dto.numero_expediente || null,
+        updated_at: new Date(),
+      },
+    });
+    return this.serializeBigInt(updated);
+  }
+
+  async activateAgreement(id: number, dto: ActivateAgreementDto) {
+    const agreementId = BigInt(id);
+
+    const updated = await this.prisma.agreements.update({
+      where: { id: agreementId },
+      data: {
+        resolution_number: dto.resolution_number.trim().toUpperCase(),
+        start_date: new Date(dto.start_date),
+        end_date: new Date(dto.end_date),
+        status: 'Vigente',
+        situation: dto.situation?.trim() || 'REGISTRADO Y CONVALIDADO',
+        updated_at: new Date(),
+      },
+      include: agreementIncludes,
+    });
+
+    return this.serializeBigInt(updated);
   }
 
   async remove(id: number) {

@@ -84,3 +84,71 @@ export function getFileUrl(filePath: string | null | undefined): string {
     // Genera la URL codificando el nombre de archivo para el controlador público de NestJS
     return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}`;
 }
+
+/* ============================================================================
+ * HELPERS ESPECÍFICOS PARA EL MÓDULO DE CONVENIOS Y HOJA DE RUTA
+ * ============================================================================ */
+
+/** Actualiza la nota rápida de situación/observaciones del convenio */
+export async function updateAgreementSituation(id: number, situation: string) {
+    return fetchApi(`/agreements/${id}/situation`, {
+        method: 'PATCH',
+        body: JSON.stringify({ situation }),
+    });
+}
+
+/** Inicializa o restituye los ítems por defecto de la Hoja de Ruta */
+export async function initAgreementRoadmap(id: number) {
+    return fetchApi(`/agreements/${id}/roadmap/init`, {
+        method: 'POST',
+    });
+}
+
+/** Sube un documento PDF de entrada o salida para un área específica de la Hoja de Ruta */
+export async function uploadRoadmapDocument(
+    itemId: number,
+    file: File,
+    type: 'entrada' | 'salida',
+) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return fetchApi(`/agreements/roadmap/${itemId}/documents?type=${type}`, {
+        method: 'POST',
+        body: formData,
+    });
+}
+
+/** Elimina un documento de la hoja de ruta por su ID */
+export async function deleteRoadmapDocument(docId: number) {
+    return fetchApi(`/agreements/roadmap/documents/${docId}`, {
+        method: 'DELETE',
+    });
+}
+
+/** Actualiza la información de envío (ADESA con N° expediente o Correo) */
+export async function updateRoadmapEnvio(
+    itemId: number,
+    data: { envio_tipo?: string; numero_expediente?: string },
+) {
+    return fetchApi(`/agreements/roadmap/${itemId}/envio`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+/** Activa el convenio (pasa de 'En Proceso' a 'Vigente' registrando resolución y rango de fechas) */
+export async function activateAgreement(
+    id: number,
+    data: {
+        resolution_number: string;
+        start_date: string;
+        end_date: string;
+        situation?: string;
+    },
+) {
+    return fetchApi(`/agreements/${id}/activate`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}

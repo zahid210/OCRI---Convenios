@@ -10,13 +10,20 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFiles,
+  UploadedFile,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AgreementsService } from './agreements.service';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
+import { UpdateSituationDto } from './dto/update-situation.dto';
+import { UpdateEnvioDto } from './dto/update-envio.dto';
+import { ActivateAgreementDto } from './dto/activate-agreement.dto';
 
 interface MulterFile {
   fieldname: string;
@@ -112,6 +119,50 @@ export class AgreementsController {
     },
   ) {
     return this.agreementsService.update(id, updateAgreementDto, files);
+  }
+
+  @Patch(':id/situation')
+  updateSituation(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSituationDto: UpdateSituationDto,
+  ) {
+    return this.agreementsService.updateSituation(id, updateSituationDto);
+  }
+
+  @Post(':id/roadmap/init')
+  initRoadmap(@Param('id', ParseIntPipe) id: number) {
+    return this.agreementsService.initRoadmap(id);
+  }
+
+  @Post('roadmap/:itemId/documents')
+  @UseInterceptors(FileInterceptor('file', multerOptions))
+  uploadRoadmapDoc(
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @Query('type') type: 'entrada' | 'salida',
+    @UploadedFile() file: MulterFile,
+  ) {
+    return this.agreementsService.uploadRoadmapDocument(itemId, file, type);
+  }
+
+  @Delete('roadmap/documents/:docId')
+  deleteRoadmapDoc(@Param('docId', ParseIntPipe) docId: number) {
+    return this.agreementsService.deleteRoadmapDocument(docId);
+  }
+
+  @Patch('roadmap/:itemId/envio')
+  updateRoadmapEnvio(
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @Body() updateEnvioDto: UpdateEnvioDto,
+  ) {
+    return this.agreementsService.updateRoadmapEnvio(itemId, updateEnvioDto);
+  }
+
+  @Patch(':id/activate')
+  activateAgreement(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() activateDto: ActivateAgreementDto,
+  ) {
+    return this.agreementsService.activateAgreement(id, activateDto);
   }
 
   @Delete(':id')
