@@ -14,10 +14,20 @@ import {
     Loader2,
     Paperclip,
     Plus,
-    X
+    X,
+    ExternalLink
 } from 'lucide-react';
 import { Agreement, Institution, AgreementType } from '@/types/agreements';
-import { fetcher } from '@/lib/api';
+import { fetcher, getFileUrl } from '@/lib/api';
+
+interface AgreementDocument {
+    id: number;
+    name?: string;
+    file_path?: string;
+    filePath?: string;
+    file_url?: string;
+    fileUrl?: string;
+}
 
 export default function EditAgreementPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -58,7 +68,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     const [customCountry, setCustomCountry] = useState('');
     const [savingInst, setSavingInst] = useState(false);
 
-    // Carga de Datos y Auxiliares sincronizada con Create
+    // Carga de Datos y Auxiliares sincronizada con NestJS
     useEffect(() => {
         let isMounted = true;
 
@@ -198,7 +208,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
             if (agreement) {
                 setAgreement({
                     ...agreement,
-                    documents: agreement.documents?.filter((d: { id: number }) => d.id !== docId) || []
+                    documents: agreement.documents?.filter((d: AgreementDocument) => d.id !== docId) || []
                 });
             }
         } catch (err) {
@@ -231,7 +241,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
             if (documentFile) formData.append('document', documentFile);
 
             await fetcher(`/agreements/${id}`, {
-                method: 'PATCH', // 👈 Método PATCH correcto alineado con NestJS
+                method: 'PATCH',
                 body: formData,
             });
 
@@ -423,37 +433,49 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                         </div>
 
                         <div className="p-6 space-y-5">
-                            {/* Listado de archivos actuales */}
+                            {/* Listado de archivos actuales adaptado para NestJS */}
                             {agreement?.documents && agreement.documents.length > 0 ? (
                                 <div className="space-y-2 pb-2">
                                     <p className="text-xs font-semibold text-gray-700 uppercase">Archivos guardados actualmente:</p>
                                     <div className="space-y-2">
-                                        {agreement.documents.map((doc: { id: number; name?: string; file_path?: string }) => (
-                                            <div key={doc.id} className="flex items-center justify-between gap-2 text-xs bg-gray-50 p-2.5 border border-gray-200">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <FileText className="h-4 w-4 text-blue-500 shrink-0" />
-                                                    <span className="truncate font-medium text-gray-700" title={doc.name}>{doc.name}</span>
+                                        {agreement.documents.map((doc: AgreementDocument) => {
+                                            const rawPath = doc.file_path || doc.filePath || doc.file_url || doc.fileUrl;
+                                            const fullUrl = getFileUrl(rawPath);
+
+                                            return (
+                                                <div key={doc.id} className="flex items-center justify-between gap-2 text-xs bg-gray-50 p-2.5 border border-gray-200">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                                                        <span className="truncate font-medium text-gray-700" title={doc.name || 'Documento en el acervo'}>
+                                                            {doc.name || 'Documento adjunto'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        {fullUrl ? (
+                                                            <a
+                                                                href={fullUrl}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold"
+                                                            >
+                                                                <span>Ver PDF</span>
+                                                                <ExternalLink className="h-3 w-3" />
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-gray-400 italic">Ruta no disponible</span>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteDocument(doc.id)}
+                                                            className="text-red-500 hover:text-red-700 transition-colors"
+                                                            title="Eliminar archivo"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 shrink-0">
-                                                    <a
-                                                        href={`/storage/${doc.file_path?.replace(/\\/g, '/')}`}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-blue-600 hover:underline font-bold"
-                                                    >
-                                                        Ver PDF
-                                                    </a>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDeleteDocument(doc.id)}
-                                                        className="text-red-500 hover:text-red-700 transition-colors"
-                                                        title="Eliminar archivo"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ) : (
@@ -605,31 +627,33 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                     <button
                                         type="button"
                                         onClick={() => setIsCustomCountry(!isCustomCountry)}
-                                        className="text-xs font-semibold text-blue-600 hover:underline"
+                                        className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
                                     >
-                                        {isCustomCountry ? '📋 Seleccionar existente' : '✍️ Escribir país nuevo'}
+                                        {isCustomCountry ? 'Seleccionar de la lista' : 'Otro país'}
                                     </button>
                                 </div>
 
-                                {!isCustomCountry ? (
+                                {isCustomCountry ? (
+                                    <input
+                                        type="text"
+                                        required
+                                        value={customCountry}
+                                        onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
+                                        placeholder="EJ. ALEMANIA"
+                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                                    />
+                                ) : (
                                     <select
                                         value={selectedCountry}
                                         onChange={(e) => setSelectedCountry(e.target.value)}
                                         className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                     >
                                         {countries.map((c) => (
-                                            <option key={c} value={c}>{c}</option>
+                                            <option key={`country-${c}`} value={c}>
+                                                {c}
+                                            </option>
                                         ))}
                                     </select>
-                                ) : (
-                                    <input
-                                        type="text"
-                                        required
-                                        value={customCountry}
-                                        onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
-                                        placeholder="EJ. ARGENTINA"
-                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
-                                    />
                                 )}
                             </div>
 
@@ -637,34 +661,37 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Tipo de Institución <span className="text-red-500">*</span>
                                 </label>
-                                <select
+                                <input
+                                    type="text"
                                     required
                                     value={newInstType}
                                     onChange={(e) => setNewInstType(e.target.value)}
-                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    <option value="Universidad Nacional">Universidad Nacional</option>
-                                    <option value="Universidad Privada">Universidad Privada</option>
-                                    <option value="Entidad Gubernamental">Entidad Gubernamental</option>
-                                    <option value="Empresa Privada">Empresa Privada</option>
-                                    <option value="Organización Internacional">Organización Internacional</option>
-                                </select>
+                                    placeholder="EJ. Universidad Nacional, ONG, Empresa"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                                />
                             </div>
 
-                            <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+                            <div className="flex items-center justify-end gap-3 pt-2">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+                                    className="px-4 py-2 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={savingInst}
-                                    className="px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 cursor-pointer"
+                                    className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-60 cursor-pointer"
                                 >
-                                    {savingInst ? 'Guardando...' : 'Guardar y Seleccionar'}
+                                    {savingInst ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Guardando...</span>
+                                        </>
+                                    ) : (
+                                        <span>Guardar Institución</span>
+                                    )}
                                 </button>
                             </div>
                         </form>

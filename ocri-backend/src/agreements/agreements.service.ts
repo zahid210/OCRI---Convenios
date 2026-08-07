@@ -43,6 +43,11 @@ export class AgreementsService {
     return JSON.parse(jsonString) as T;
   }
 
+  private resolveFilePath(file: MulterFile): string {
+    const fileName = file.filename ?? file.originalname;
+    return `resoluciones/${fileName}`.replace(/\\/g, '/');
+  }
+
   async findAll(filters: FilterAgreementsDto) {
     const page = Number(filters.page) || 1;
     const perPage = Number(filters.per_page) || 10;
@@ -155,10 +160,9 @@ export class AgreementsService {
     if (hasDocument) {
       const file = files?.document?.[0];
       if (file) {
-        const filePath = file.path ?? `resoluciones/${file.originalname}`;
         documentsToCreate.push({
           name: `DOC - ${dto.resolution_number ?? dto.title}`,
-          file_path: filePath.replace(/\\/g, '/'),
+          file_path: this.resolveFilePath(file),
           extension: file.originalname.split('.').pop() ?? 'pdf',
         });
       }
@@ -167,10 +171,9 @@ export class AgreementsService {
     if (files?.dictamen && files.dictamen.length > 0) {
       const file = files?.dictamen?.[0];
       if (file) {
-        const filePath = file.path ?? `resoluciones/${file.originalname}`;
         documentsToCreate.push({
           name: 'Dictamen Legal',
-          file_path: filePath.replace(/\\/g, '/'),
+          file_path: this.resolveFilePath(file),
           extension: file.originalname.split('.').pop() ?? 'pdf',
         });
       }
@@ -307,10 +310,9 @@ export class AgreementsService {
     if (hasNewDocument) {
       const file = files?.document?.[0];
       if (file) {
-        const filePath = file.path ?? `resoluciones/${file.originalname}`;
         documentsToCreate.push({
           name: 'Convenio Firmado / Actualizado',
-          file_path: filePath.replace(/\\/g, '/'),
+          file_path: this.resolveFilePath(file),
           extension: file.originalname.split('.').pop() ?? 'pdf',
         });
       }
@@ -327,10 +329,9 @@ export class AgreementsService {
     if (files?.dictamen && files.dictamen.length > 0) {
       const file = files?.dictamen?.[0];
       if (file) {
-        const filePath = file.path ?? `resoluciones/${file.originalname}`;
         documentsToCreate.push({
           name: 'Dictamen Actualizado',
-          file_path: filePath.replace(/\\/g, '/'),
+          file_path: this.resolveFilePath(file),
           extension: file.originalname.split('.').pop() ?? 'pdf',
         });
       }

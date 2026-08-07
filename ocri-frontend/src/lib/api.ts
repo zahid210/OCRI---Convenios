@@ -24,14 +24,14 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
         headers,
     });
 
-    // Interceptar tokens caducados o no autorizados (401)
+    // Intercepta tokens caducados o no autorizados (401)
     if (response.status === 401) {
         if (typeof window !== 'undefined') {
-            // Eliminar cookies de sesión expiradas
+            // Elimina cookies de sesión expiradas
             Cookies.remove('access_token', { path: '/' });
             Cookies.remove('user', { path: '/' });
 
-            // Redirigir al login si no estamos ya en él
+            // Redirige al login si no estamos ya en él
             if (!window.location.pathname.startsWith('/login')) {
                 window.location.href = '/login';
             }
@@ -39,7 +39,7 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
         throw new Error('Sesión expirada. Por favor, inicie sesión nuevamente.');
     }
 
-    // Manejar respuestas vacías (ej. 204 No Content)
+    // Maneja respuestas vacías (ej. 204 No Content)
     if (response.status === 204) {
         return {} as T;
     }
@@ -60,3 +60,27 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
 // Exportación compatible con SWR y peticiones HTTP con opciones (GET, POST, PATCH, DELETE)
 export const fetcher = <T = unknown>(endpoint: string, options?: RequestInit): Promise<T> =>
     fetchApi<T>(endpoint, options);
+
+/**
+ * Genera la URL completa para previsualizar o descargar archivos estáticos (PDFs, resoluciones, etc.)
+ * Apunta al controlador público /resoluciones del backend NestJS.
+ */
+export function getFileUrl(filePath: string | null | undefined): string {
+    if (!filePath) return '';
+
+    // Si el registro traía la URL antigua de Laravel, la limpiamos
+    const cleanPath = filePath.replace(/^http:\/\/localhost:8000\/?/, '');
+
+    // Si ya es una URL HTTP/HTTPS externa completa, la devolvemos tal cual
+    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+        return cleanPath;
+    }
+
+    // Extrae únicamente el nombre base del archivo ignorando subcarpetas antiguas
+    const fileName = cleanPath.split('/').pop()?.split('\\').pop() || cleanPath;
+
+    const storageBaseUrl = process.env.NEXT_PUBLIC_STORAGE_URL || API_URL;
+
+    // Genera la URL codificando el nombre de archivo para el controlador público de NestJS
+    return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}`;
+}

@@ -12,6 +12,7 @@ import {
   UploadedFiles,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import { AgreementsService } from './agreements.service';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
@@ -28,6 +29,23 @@ interface MulterFile {
   path?: string;
   buffer?: Buffer;
 }
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+const multerStorage = diskStorage({
+  destination: './uploads',
+  filename: (
+    _req: unknown,
+    file: MulterFile,
+    callback: (error: Error | null, filename: string) => void,
+  ) => {
+    callback(null, file.originalname);
+  },
+});
+
+const multerOptions = {
+  storage: multerStorage,
+};
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
 
 @Controller('agreements')
 export class AgreementsController {
@@ -55,10 +73,13 @@ export class AgreementsController {
 
   @Post()
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'dictamen', maxCount: 1 },
-      { name: 'document', maxCount: 1 },
-    ]),
+    FileFieldsInterceptor(
+      [
+        { name: 'dictamen', maxCount: 1 },
+        { name: 'document', maxCount: 1 },
+      ],
+      multerOptions,
+    ),
   )
   create(
     @Body() createAgreementDto: CreateAgreementDto,
@@ -73,10 +94,13 @@ export class AgreementsController {
 
   @Patch(':id')
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'dictamen', maxCount: 1 },
-      { name: 'document', maxCount: 1 },
-    ]),
+    FileFieldsInterceptor(
+      [
+        { name: 'dictamen', maxCount: 1 },
+        { name: 'document', maxCount: 1 },
+      ],
+      multerOptions,
+    ),
   )
   update(
     @Param('id', ParseIntPipe) id: number,
