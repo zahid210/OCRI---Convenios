@@ -2,22 +2,26 @@
 
 import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { Institution } from '@/types/agreements';
+import { InstitutionItem } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
 
 interface InstitutionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreated: (institution: Institution) => void;
+    onSaved: (institution: InstitutionItem) => void;
     countries: string[];
+    institution?: InstitutionItem | null;
 }
 
 export default function InstitutionModal({
                                              isOpen,
                                              onClose,
-                                             onCreated,
+                                             onSaved,
                                              countries,
+                                             institution,
                                          }: InstitutionModalProps) {
+    const editing = Boolean(institution);
+
     const [name, setName] = useState('');
     const [type, setType] = useState('Universidad Nacional');
     const [customCountry, setCustomCountry] = useState('');
@@ -26,6 +30,7 @@ export default function InstitutionModal({
 
     // Ajuste de estado derivado de props durante el render (Evita useEffect y errores de linter)
     const [prevCountries, setPrevCountries] = useState(countries);
+    const [prevInstitution, setPrevInstitution] = useState<InstitutionItem | null | undefined>(institution);
     const [selectedCountry, setSelectedCountry] = useState(countries?.[0] || 'PERÚ');
 
     if (countries !== prevCountries) {
@@ -33,6 +38,17 @@ export default function InstitutionModal({
         if (countries && countries.length > 0 && !countries.includes(selectedCountry)) {
             setSelectedCountry(countries[0]);
         }
+    }
+
+    if (institution !== prevInstitution) {
+        setPrevInstitution(institution);
+        setName(institution?.name ?? '');
+        setType(institution?.type || 'Universidad Nacional');
+        setIsCustomCountry(!!institution && !(countries || []).includes(institution.country));
+        setCustomCountry(institution && !(countries || []).includes(institution.country) ? institution.country : '');
+        setSelectedCountry(
+            institution && countries?.includes(institution.country) ? institution.country : (countries?.[0] || 'PERÚ'),
+        );
     }
 
     if (!isOpen) return null;
@@ -62,21 +78,26 @@ export default function InstitutionModal({
 
         setLoading(true);
         try {
-            const newInst = await fetcher<Institution>('/institutions', {
-                method: 'POST',
-                body: JSON.stringify({
-                    name: name.trim().toUpperCase(),
-                    country: finalCountry,
-                    type,
-                }),
-            });
+            const payload = {
+                name: name.trim().toUpperCase(),
+                country: finalCountry,
+                type,
+            };
 
-            onCreated(newInst);
+            const saved = await fetcher<InstitutionItem>(
+                institution ? `/institutions/${institution.id}` : '/institutions',
+                {
+                    method: institution ? 'PATCH' : 'POST',
+                    body: JSON.stringify(payload),
+                },
+            );
+
+            onSaved(saved);
             resetForm();
             onClose();
         } catch (err) {
-            console.error('Error al registrar institución:', err);
-            alert(err instanceof Error ? err.message : 'Error al registrar la institución.');
+            console.error('Error al guardar institución:', err);
+            alert(err instanceof Error ? err.message : 'Error al guardar la institución.');
         } finally {
             setLoading(false);
         }
@@ -95,10 +116,12 @@ export default function InstitutionModal({
 
                 <div>
                     <h3 className="text-base font-semibold text-gray-800">
-                        Registrar Nueva Institución
+                        {editing ? 'Editar Institución' : 'Registrar Nueva Institución'}
                     </h3>
                     <p className="text-xs text-gray-500">
-                        Ingresa los datos básicos para añadirla al directorio.
+                        {editing
+                            ? 'Actualiza los datos básicos del directorio.'
+                            : 'Ingresa los datos básicos para añadirla al directorio.'}
                     </p>
                 </div>
 
@@ -190,8 +213,10 @@ export default function InstitutionModal({
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                     <span>Guardando...</span>
                                 </>
+                            ) : editing ? (
+                                'Guardar Cambios'
                             ) : (
-                                'Guardar y Seleccionar'
+                                'Guardar'
                             )}
                         </button>
                     </div>

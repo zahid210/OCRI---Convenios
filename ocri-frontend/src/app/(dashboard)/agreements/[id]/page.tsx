@@ -68,7 +68,6 @@ export default function AgreementDetailPage({
     const loadAgreement = useCallback(async () => {
         if (!agreementId) return;
         try {
-            setIsLoading(true);
             setError(null);
             const data = await fetchApi<Agreement>(`/agreements/${agreementId}`);
             setAgreement(data);
@@ -82,8 +81,35 @@ export default function AgreementDetailPage({
     }, [agreementId]);
 
     useEffect(() => {
-        loadAgreement();
-    }, [loadAgreement]);
+        let isMounted = true;
+
+        const fetchData = async () => {
+            if (!agreementId) return;
+            try {
+                setError(null);
+                const data = await fetchApi<Agreement>(`/agreements/${agreementId}`);
+                if (isMounted) {
+                    setAgreement(data);
+                    setSituation(data.situation || '');
+                }
+            } catch (err: unknown) {
+                if (isMounted) {
+                    const message = err instanceof Error ? err.message : 'Error al cargar el convenio';
+                    setError(message);
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        fetchData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [agreementId]);
 
     if (isLoading) {
         return (
@@ -569,147 +595,149 @@ export default function AgreementDetailPage({
                             })}
                         </div>
                     ) : (
-                        <div className="border border-dashed border-gray-300 py-8 text-center text-sm text-gray-400">
-                            <p>No se ha inicializado la hoja de ruta para este convenio.</p>
+                        <div className="p-8 text-center text-sm text-gray-500">
+                            No hay áreas registradas en la Hoja de Ruta para este convenio.
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* MODAL REGISTRAR ENVÍO / ADESA */}
+            {/* Modal "Registrar Envío" */}
             {envioModalItem && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-white border border-gray-200 w-full max-w-md p-6 shadow-xl space-y-4">
-                        <div>
-                            <h3 className="text-base font-semibold text-gray-800">
-                                Registrar Envío: {envioModalItem.area_name}
-                            </h3>
-                            <p className="text-xs text-gray-500">
-                                Indica el método de envío utilizado para esta área del trámite.
-                            </p>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    Método de Envío
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-md bg-white p-6 shadow-lg border border-gray-200 space-y-4">
+                        <h3 className="text-base font-semibold text-gray-800">
+                            Registrar Envío - {envioModalItem.area_name}
+                        </h3>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">
+                                    Tipo de Envío
                                 </label>
                                 <select
                                     value={envioTipo}
                                     onChange={(e) => setEnvioTipo(e.target.value)}
-                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    className="w-full p-2.5 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                                 >
-                                    <option value="ADESA">ADESA (Sistema Trámite Documentario)</option>
-                                    <option value="Correo">Correo Electrónico</option>
-                                    <option value="Físico">Físico / Cuaderno de Cargo</option>
+                                    <option value="ADESA">ADESA (Sistema de Trámite)</option>
+                                    <option value="OFICIO">OFICIO DIRECTO</option>
+                                    <option value="CORREO">CORREO ELECTRÓNICO</option>
+                                    <option value="MANUAL">ENTREGA FÍSICA / MANUAL</option>
                                 </select>
                             </div>
+
                             {envioTipo === 'ADESA' && (
-                                <div className="space-y-1.5">
-                                    <label className="block text-xs font-semibold uppercase text-gray-600">
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">
                                         Número de Expediente ADESA
                                     </label>
                                     <input
                                         type="text"
                                         value={numExpediente}
                                         onChange={(e) => setNumExpediente(e.target.value)}
-                                        placeholder="Ej. EXP-2026-00412"
-                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+                                        placeholder="Ej. EXP-2026-00123"
+                                        className="w-full p-2.5 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                                     />
                                 </div>
                             )}
                         </div>
-                        <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+
+                        <div className="flex justify-end gap-2 pt-2">
                             <button
                                 type="button"
                                 onClick={() => setEnvioModalItem(null)}
-                                className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer"
+                                className="px-4 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm transition-colors cursor-pointer"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSaveEnvio}
-                                className="px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white cursor-pointer"
+                                className="px-4 py-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white text-sm font-semibold transition-colors cursor-pointer"
                             >
-                                Guardar
+                                Guardar Datos
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL ACTIVAR CONVENIO */}
+            {/* Modal "Activar Convenio" */}
             {showActivateModal && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-white border border-gray-200 w-full max-w-md p-6 shadow-xl space-y-4">
-                        <div>
-                            <h3 className="flex items-center gap-2 text-base font-semibold text-gray-800">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                <span>Activar Convenio (Aprobación)</span>
-                            </h3>
-                            <p className="text-xs text-gray-500 mt-1">
-                                Al activar el convenio, pasará a estado <strong>Vigente</strong> y se registrarán sus vigencias oficiales.
-                            </p>
-                        </div>
-                        <form onSubmit={handleActivate} className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    N° Resolución de Aprobación <span className="text-red-500">*</span>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <form
+                        onSubmit={handleActivate}
+                        className="w-full max-w-md bg-white p-6 shadow-lg border border-gray-200 space-y-4"
+                    >
+                        <h3 className="text-base font-semibold text-gray-800">
+                            Activar Convenio (Cambiar a Vigente)
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                            Complete el número de resolución y la vigencia otorgada para pasar este trámite a estado Vigente.
+                        </p>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">
+                                    Número de Resolución *
                                 </label>
                                 <input
                                     type="text"
                                     required
                                     value={resolutionNum}
                                     onChange={(e) => setResolutionNum(e.target.value)}
-                                    placeholder="Ej. Res. N° 0412-2026-R-UNCP"
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+                                    placeholder="Ej. RES-0452-CU-2026"
+                                    className="w-full p-2.5 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                                 />
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="block text-xs font-semibold uppercase text-gray-600">
-                                        Fecha de Inicio <span className="text-red-500">*</span>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">
+                                        Fecha Inicio *
                                     </label>
                                     <input
                                         type="date"
                                         required
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
-                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                        className="w-full p-2.5 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="block text-xs font-semibold uppercase text-gray-600">
-                                        Fecha de Fin <span className="text-red-500">*</span>
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">
+                                        Fecha Fin *
                                     </label>
                                     <input
                                         type="date"
                                         required
                                         value={endDate}
                                         onChange={(e) => setEndDate(e.target.value)}
-                                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                        className="w-full p-2.5 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                                     />
                                 </div>
                             </div>
-                            <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowActivateModal(false)}
-                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isActivating}
-                                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60 cursor-pointer"
-                                >
-                                    {isActivating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                                    <span>Confirmar Activación</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowActivateModal(false)}
+                                className="px-4 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm transition-colors cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isActivating}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-60 cursor-pointer"
+                            >
+                                {isActivating && <Loader2 className="h-4 w-4 animate-spin" />}
+                                <span>Confirmar Activación</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
         </div>

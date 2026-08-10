@@ -34,6 +34,16 @@ interface AgreementsResponse {
     [key: string]: unknown;
 }
 
+interface PaginatedMeta {
+    total: number;
+    [key: string]: unknown;
+}
+
+interface StatusResponse {
+    meta?: PaginatedMeta;
+    [key: string]: unknown;
+}
+
 export default function DashboardPage() {
     const [stats, setStats] = useState({
         vigentes: 0,
@@ -46,40 +56,21 @@ export default function DashboardPage() {
     useEffect(() => {
         async function loadDashboardData() {
             try {
-                const response = await fetchApi<Agreement[] | AgreementsResponse>('/agreements').catch(() => []);
+                const [vigentesRes, porVencerRes, vencidosRes, recentRes] = await Promise.all([
+                    fetchApi<StatusResponse>('/agreements?status=Vigente&per_page=1').catch(() => null),
+                    fetchApi<StatusResponse>('/agreements?status=Por+Vencer&per_page=1').catch(() => null),
+                    fetchApi<StatusResponse>('/agreements?status=Vencido&per_page=1').catch(() => null),
+                    fetchApi<AgreementsResponse>('/agreements?per_page=5').catch(() => null),
+                ]);
 
-                const agreements: Agreement[] = Array.isArray(response)
-                    ? response
-                    : (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data))
-                        ? response.data
-                        : [];
-
-                const now = new Date();
-                const ninetyDaysFromNow = new Date();
-                ninetyDaysFromNow.setDate(now.getDate() + 90);
-
-                let vigentes = 0;
-                let por_vencer = 0;
-                let vencidos = 0;
-
-                agreements.forEach((ag) => {
-                    if (!ag.end_date) {
-                        vigentes++;
-                        return;
-                    }
-                    const endDate = new Date(ag.end_date);
-                    if (endDate < now || ag.status === 'Vencido') {
-                        vencidos++;
-                    } else if (endDate <= ninetyDaysFromNow) {
-                        por_vencer++;
-                        vigentes++;
-                    } else {
-                        vigentes++;
-                    }
+                setStats({
+                    vigentes: vigentesRes?.meta?.total ?? 0,
+                    por_vencer: porVencerRes?.meta?.total ?? 0,
+                    vencidos: vencidosRes?.meta?.total ?? 0,
                 });
 
-                setStats({ vigentes, por_vencer, vencidos });
-                setRecentAgreements(agreements.slice(0, 5));
+                const recentData = recentRes?.data;
+                setRecentAgreements(Array.isArray(recentData) ? recentData : []);
             } catch (error) {
                 console.error('Error al cargar datos del dashboard:', error);
             } finally {

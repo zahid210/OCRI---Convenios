@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -12,6 +13,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
+import { UpdateInstitutionDto } from './dto/update-institution.dto';
 import { InstitutionsService } from './institutions.service';
 
 @UseGuards(JwtAuthGuard)
@@ -37,6 +39,14 @@ export class InstitutionsController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.institutionsService.findOne(id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: UpdateInstitutionDto,
+  ) {
+    return this.institutionsService.update(id, updateDto);
   }
 
   @Delete(':id')

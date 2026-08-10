@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
+import { UpdateInstitutionDto } from './dto/update-institution.dto';
 
 @Injectable()
 export class InstitutionsService {
@@ -155,7 +156,7 @@ export class InstitutionsService {
       meta: {
         total,
         page: Number(page),
-        lastPage: Math.ceil(total / take),
+        last_page: Math.ceil(total / take),
       },
     };
   }
@@ -194,6 +195,45 @@ export class InstitutionsService {
     }
 
     return institution;
+  }
+
+  async update(id: number, dto: UpdateInstitutionDto) {
+    const institution = await this.prisma.institutions.findUnique({
+      where: { id },
+    });
+
+    if (!institution) {
+      throw new NotFoundException(`Institución con ID ${id} no encontrada.`);
+    }
+
+    const name = dto.name ? dto.name.trim().toUpperCase() : institution.name;
+    const country = dto.country ? dto.country.trim() : institution.country;
+    const inputType = dto.type ?? institution.type;
+
+    // Evita duplicados si el nombre cambió a uno ya existente
+    if (dto.name) {
+      const existingInstitution = await this.prisma.institutions.findFirst({
+        where: { name, NOT: { id } },
+      });
+
+      if (existingInstitution) {
+        throw new BadRequestException(
+          `Ya existe una institución registrada con el nombre "${name}".`,
+        );
+      }
+    }
+
+    const finalType = this.categorizeType(name, inputType);
+
+    return this.prisma.institutions.update({
+      where: { id },
+      data: {
+        name,
+        country,
+        type: finalType,
+        updated_at: new Date(),
+      },
+    });
   }
 
   async remove(id: number) {

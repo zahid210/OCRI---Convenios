@@ -5,6 +5,21 @@ export interface Institution {
     type?: string;
 }
 
+export interface InstitutionItem extends Institution {
+    _count?: {
+        agreements?: number;
+    };
+}
+
+export interface InstitutionListResponse {
+    data: InstitutionItem[];
+    meta: {
+        total: number;
+        page: number;
+        last_page: number;
+    };
+}
+
 export interface AgreementType {
     id: number;
     name: string;

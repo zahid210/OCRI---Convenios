@@ -210,9 +210,9 @@ export default function AgreementsIndexPage() {
                                 const roadmap = agreement.roadmap_items;
                                 const pendingOpinions = roadmap
                                     ? roadmap
-                                        .filter((item: { documents?: Array<{ type?: string }>; area_name?: string }) => {
-                                            const entrada = item.documents?.some((d: { type?: string }) => d.type === 'entrada');
-                                            const salida = item.documents?.some((d: { type?: string }) => d.type === 'salida');
+                                        .filter((item: { roadmap_documents?: Array<{ type?: string }>; area_name?: string }) => {
+                                            const entrada = item.roadmap_documents?.some((d: { type?: string }) => d.type === 'entrada');
+                                            const salida = item.roadmap_documents?.some((d: { type?: string }) => d.type === 'salida');
                                             return !(entrada && salida);
                                         })
                                         .map((i: { area_name?: string }) => i.area_name || '')

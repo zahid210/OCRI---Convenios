@@ -5,8 +5,13 @@ export function middleware(request: NextRequest) {
     const token = request.cookies.get('access_token')?.value;
     const { pathname } = request.nextUrl;
 
+    const protectedPrefixes = ['/dashboard', '/agreements', '/institutions'];
+
     // Si intenta acceder a rutas protegidas sin token
-    if (pathname.startsWith('/dashboard') && !token) {
+    const isProtected = protectedPrefixes.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    );
+    if (isProtected && !token) {
         const loginUrl = new URL('/login', request.url);
         return NextResponse.redirect(loginUrl);
     }
@@ -21,5 +26,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/', '/dashboard/:path*', '/login'],
+    matcher: ['/', '/dashboard/:path*', '/agreements/:path*', '/institutions/:path*', '/login'],
 };
