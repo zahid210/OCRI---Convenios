@@ -7,19 +7,21 @@ import {
     BarChart3, Search, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/components/user-provider';
 import { isAdmin, canManage } from '@/lib/auth';
 
 export function Sidebar() {
     const pathname = usePathname();
+    const user = useUser();
 
     const navItems = [
         { title: 'Dashboard', href: '/dashboard', icon: Home },
         { title: 'Convenios', href: '/agreements', icon: ClipboardCheck },
-        ...(canManage() ? [{ title: 'Nuevo Registro', href: '/agreements/create', icon: FilePlus }] : []),
+        ...(canManage(user) ? [{ title: 'Nuevo Registro', href: '/agreements/create', icon: FilePlus }] : []),
         { title: 'Instituciones', href: '/institutions', icon: Building2 },
         { title: 'Reportes', href: '/reports', icon: BarChart3 },
         { title: 'Seguimiento', href: '/seguimiento', icon: Search },
-        ...(isAdmin() ? [{ title: 'Usuarios', href: '/users', icon: Users }] : []),
+        ...(isAdmin(user) ? [{ title: 'Usuarios', href: '/users', icon: Users }] : []),
     ];
 
     return (

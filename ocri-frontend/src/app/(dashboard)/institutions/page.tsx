@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { InstitutionItem, InstitutionListResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
+import { useUser } from '@/components/user-provider';
 import { canManage, isAdmin } from '@/lib/auth';
 import InstitutionModal from '@/components/agreements/InstitutionModal';
 import {
@@ -31,6 +32,7 @@ export default function InstitutionsIndexPage() {
     const [editingInstitution, setEditingInstitution] = useState<InstitutionItem | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const user = useUser();
 
     useEffect(() => {
         let isMounted = true;
@@ -170,7 +172,7 @@ export default function InstitutionsIndexPage() {
                             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
                         />
                     </div>
-                    {canManage() && (
+                    {canManage(user) && (
                         <button
                             type="button"
                             onClick={openCreate}
@@ -265,7 +267,7 @@ export default function InstitutionsIndexPage() {
 
                                     <td className="py-5 pr-10">
                                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {canManage() && (
+                                            {canManage(user) && (
                                                 <button
                                                     type="button"
                                                     onClick={() => openEdit(institution)}
@@ -275,7 +277,7 @@ export default function InstitutionsIndexPage() {
                                                     <Pencil className="h-4 w-4" />
                                                 </button>
                                             )}
-                                            {isAdmin() && (
+                                            {isAdmin(user) && (
                                                 <button
                                                     type="button"
                                                     onClick={() => handleDelete(institution)}

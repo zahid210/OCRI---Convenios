@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Agreement, PaginatedResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
+import { useUser } from '@/components/user-provider';
 import { canManage } from '@/lib/auth';
 import {
     Plus,
@@ -28,6 +29,7 @@ export default function AgreementsIndexPage() {
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [hoveredRowId, setHoveredRowId] = useState<number | null>(null);
+    const user = useUser();
 
     useEffect(() => {
         let isMounted = true;
@@ -119,7 +121,7 @@ export default function AgreementsIndexPage() {
                             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
                         />
                     </div>
-                    {canManage() && (
+                    {canManage(user) && (
                         <Link
                             href="/agreements/create"
                             className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0"
@@ -357,7 +359,7 @@ export default function AgreementsIndexPage() {
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Link>
-                                                {canManage() && (
+                                                {canManage(user) && (
                                                     <Link
                                                         href={`/agreements/${agreement.id}/edit`}
                                                         className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors"

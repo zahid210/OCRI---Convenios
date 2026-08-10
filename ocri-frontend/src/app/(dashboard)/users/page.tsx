@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { UserItem, PaginatedResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
-import { getCurrentUser, ROLE_LABELS } from '@/lib/auth';
+import { useUser } from '@/components/user-provider';
+import { ROLE_LABELS } from '@/lib/auth';
 import {
     Plus,
     Search,
@@ -49,7 +50,7 @@ export default function UsersPage() {
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
-    const currentUser = getCurrentUser();
+    const currentUser = useUser();
 
     useEffect(() => {
         let isMounted = true;

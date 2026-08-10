@@ -16,11 +16,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { cn } from '@/lib/utils';
-import { getCurrentUser, ROLE_LABELS, canManage, isAdmin } from '@/lib/auth';
+import { useUser } from '@/components/user-provider';
+import { ROLE_LABELS, canManage, isAdmin } from '@/lib/auth';
 
 export function Header() {
     const router = useRouter();
-    const currentUser = getCurrentUser();
+    const currentUser = useUser();
 
     const handleLogout = () => {
         Cookies.remove('access_token');
@@ -56,13 +57,13 @@ export function Header() {
                         </div>
                         <Link href="/dashboard" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Dashboard</Link>
                         <Link href="/agreements" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Convenios</Link>
-                        {canManage() && (
+                        {canManage(currentUser) && (
                             <Link href="/agreements/create" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Nuevo Registro</Link>
                         )}
                         <Link href="/institutions" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Instituciones</Link>
                         <Link href="/reports" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Reportes</Link>
                         <Link href="/seguimiento" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Seguimiento</Link>
-                        {isAdmin() && (
+                        {isAdmin(currentUser) && (
                             <Link href="/users" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Usuarios</Link>
                         )}
                     </div>

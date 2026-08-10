@@ -541,7 +541,8 @@ export default function ReportsPage() {
                                     <tr className="border-b border-gray-200">
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Expediente</th>
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Institución</th>
-                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Venció</th>                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Días</th>
+                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Venció</th>
+                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Días</th>
                                     </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
