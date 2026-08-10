@@ -1,6 +1,7 @@
 'use client';
 
 import { Menu, User, Settings, LogOut, Bell, Search } from 'lucide-react';
+import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -15,9 +16,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { cn } from '@/lib/utils';
+import { getCurrentUser, ROLE_LABELS, canManage, isAdmin } from '@/lib/auth';
 
 export function Header() {
     const router = useRouter();
+    const currentUser = getCurrentUser();
 
     const handleLogout = () => {
         Cookies.remove('access_token');
@@ -51,12 +54,17 @@ export function Header() {
                         <div className="px-6 mb-3 text-[10px] font-bold uppercase tracking-wider text-[#82b8a2]">
                             Módulos Principales
                         </div>
-                        <a href="/dashboard" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Dashboard</a>
-                        <a href="/agreements" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Convenios</a>
-                        <a href="/agreements/create" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Nuevo Registro</a>
-                        <a href="/institutions" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Instituciones</a>
-                        <a href="/reports" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Reportes</a>
-                        <a href="/seguimiento" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Seguimiento</a>
+                        <Link href="/dashboard" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Dashboard</Link>
+                        <Link href="/agreements" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Convenios</Link>
+                        {canManage() && (
+                            <Link href="/agreements/create" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Nuevo Registro</Link>
+                        )}
+                        <Link href="/institutions" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Instituciones</Link>
+                        <Link href="/reports" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Reportes</Link>
+                        <Link href="/seguimiento" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Seguimiento</Link>
+                        {isAdmin() && (
+                            <Link href="/users" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Usuarios</Link>
+                        )}
                     </div>
                 </SheetContent>
             </Sheet>
@@ -93,17 +101,21 @@ export function Header() {
                             </AvatarFallback>
                         </Avatar>
                         <div className="hidden lg:flex flex-col text-left pr-3">
-                            <span className="text-xs font-bold text-gray-800 group-hover:text-[#0b5a41] transition-colors">OCRI</span>
-                            <span className="text-[10px] text-gray-500 font-medium">Administrador</span>
+                            <span className="text-xs font-bold text-gray-800 group-hover:text-[#0b5a41] transition-colors">
+                                {currentUser?.name || 'OCRI'}
+                            </span>
+                            <span className="text-[10px] text-gray-500 font-medium">
+                                {ROLE_LABELS[currentUser?.role || ''] || 'Usuario'}
+                            </span>
                         </div>
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent align="end" className="w-64 p-0 bg-white border border-gray-200 shadow-sm rounded-none">
                         <DropdownMenuLabel className="font-normal px-4 py-3 bg-gray-50 border-b border-gray-200">
                             <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-semibold text-gray-900">Oficina OCRI</p>
-                                <p className="text-xs text-gray-500 truncate" title="cooperacionyrelacionesinternacionales@uncp.edu.pe">
-                                    cooperacionyrelacionesinternacionales@uncp.edu.pe
+                                <p className="text-sm font-semibold text-gray-900">{currentUser?.name || 'Oficina OCRI'}</p>
+                                <p className="text-xs text-gray-500 truncate" title={currentUser?.email}>
+                                    {currentUser?.email || 'usuario@uncp.edu.pe'}
                                 </p>
                             </div>
                         </DropdownMenuLabel>

@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
     const token = request.cookies.get('access_token')?.value;
     const { pathname } = request.nextUrl;
 
-    const protectedPrefixes = ['/dashboard', '/agreements', '/institutions'];
+    const protectedPrefixes = ['/dashboard', '/agreements', '/institutions', '/reports', '/seguimiento', '/users'];
 
     // Si intenta acceder a rutas protegidas sin token
     const isProtected = protectedPrefixes.some(
@@ -26,5 +26,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/', '/dashboard/:path*', '/agreements/:path*', '/institutions/:path*', '/login'],
+    matcher: ['/', '/dashboard/:path*', '/agreements/:path*', '/institutions/:path*', '/reports/:path*', '/seguimiento/:path*', '/users/:path*', '/login'],
 };

@@ -9,6 +9,8 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { InstitutionsModule } from './institutions/institutions.module';
 import { AgreementsModule } from './agreements/agreements.module';
+import { ReportsModule } from './reports/reports.module';
+import { SeguimientoModule } from './seguimiento/seguimiento.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -26,6 +28,8 @@ import { RolesGuard } from './auth/guards/roles.guard';
     AuthModule,
     AgreementsModule,
     InstitutionsModule,
+    ReportsModule,
+    SeguimientoModule,
   ],
   controllers: [AppController],
   providers: [

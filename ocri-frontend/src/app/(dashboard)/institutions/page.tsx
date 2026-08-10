@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { InstitutionItem, InstitutionListResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
+import { canManage, isAdmin } from '@/lib/auth';
 import InstitutionModal from '@/components/agreements/InstitutionModal';
 import {
     Plus,
@@ -169,14 +170,16 @@ export default function InstitutionsIndexPage() {
                             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
                         />
                     </div>
-                    <button
-                        type="button"
-                        onClick={openCreate}
-                        className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer"
-                    >
-                        <Plus className="h-4 w-4" />
-                        <span>Nueva Institución</span>
-                    </button>
+                    {canManage() && (
+                        <button
+                            type="button"
+                            onClick={openCreate}
+                            className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span>Nueva Institución</span>
+                        </button>
+                    )}
                 </form>
             </div>
 
@@ -262,27 +265,31 @@ export default function InstitutionsIndexPage() {
 
                                     <td className="py-5 pr-10">
                                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                type="button"
-                                                onClick={() => openEdit(institution)}
-                                                className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors cursor-pointer"
-                                                title="Editar Institución"
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDelete(institution)}
-                                                disabled={deleteLoading && deletingId === institution.id}
-                                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
-                                                title="Eliminar Institución"
-                                            >
-                                                {deleteLoading && deletingId === institution.id ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Trash2 className="h-4 w-4" />
-                                                )}
-                                            </button>
+                                            {canManage() && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEdit(institution)}
+                                                    className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors cursor-pointer"
+                                                    title="Editar Institución"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                            {isAdmin() && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(institution)}
+                                                    disabled={deleteLoading && deletingId === institution.id}
+                                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
+                                                    title="Eliminar Institución"
+                                                >
+                                                    {deleteLoading && deletingId === institution.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

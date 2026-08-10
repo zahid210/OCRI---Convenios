@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Agreement, PaginatedResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
+import { canManage } from '@/lib/auth';
 import {
     Plus,
     Search,
@@ -118,13 +119,15 @@ export default function AgreementsIndexPage() {
                             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
                         />
                     </div>
-                    <Link
-                        href="/agreements/create"
-                        className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0"
-                    >
-                        <Plus className="h-4 w-4" />
-                        <span>Nuevo Registro</span>
-                    </Link>
+                    {canManage() && (
+                        <Link
+                            href="/agreements/create"
+                            className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span>Nuevo Registro</span>
+                        </Link>
+                    )}
                 </form>
             </div>
 
@@ -354,13 +357,15 @@ export default function AgreementsIndexPage() {
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Link>
-                                                <Link
-                                                    href={`/agreements/${agreement.id}/edit`}
-                                                    className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors"
-                                                    title="Editar Convenio"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Link>
+                                                {canManage() && (
+                                                    <Link
+                                                        href={`/agreements/${agreement.id}/edit`}
+                                                        className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors"
+                                                        title="Editar Convenio"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Link>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

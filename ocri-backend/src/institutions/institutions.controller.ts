@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
 import { UpdateInstitutionDto } from './dto/update-institution.dto';
@@ -21,6 +22,7 @@ import { InstitutionsService } from './institutions.service';
 export class InstitutionsController {
   constructor(private readonly institutionsService: InstitutionsService) {}
 
+  @Roles('admin', 'editor')
   @Post()
   create(@Body() createDto: CreateInstitutionDto) {
     return this.institutionsService.create(createDto);
@@ -41,6 +43,7 @@ export class InstitutionsController {
     return this.institutionsService.findOne(id);
   }
 
+  @Roles('admin', 'editor')
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -49,6 +52,7 @@ export class InstitutionsController {
     return this.institutionsService.update(id, updateDto);
   }
 
+  @Roles('admin')
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.institutionsService.remove(id);

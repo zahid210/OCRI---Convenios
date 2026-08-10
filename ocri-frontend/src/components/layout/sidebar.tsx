@@ -4,21 +4,23 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     Home, ClipboardCheck, FilePlus, Building2,
-    BarChart3, Search
+    BarChart3, Search, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-    { title: 'Dashboard', href: '/dashboard', icon: Home },
-    { title: 'Convenios', href: '/agreements', icon: ClipboardCheck },
-    { title: 'Nuevo Registro', href: '/agreements/create', icon: FilePlus },
-    { title: 'Instituciones', href: '/institutions', icon: Building2 },
-    { title: 'Reportes', href: '/reports', icon: BarChart3 },
-    { title: 'Seguimiento', href: '/seguimiento', icon: Search },
-];
+import { isAdmin, canManage } from '@/lib/auth';
 
 export function Sidebar() {
     const pathname = usePathname();
+
+    const navItems = [
+        { title: 'Dashboard', href: '/dashboard', icon: Home },
+        { title: 'Convenios', href: '/agreements', icon: ClipboardCheck },
+        ...(canManage() ? [{ title: 'Nuevo Registro', href: '/agreements/create', icon: FilePlus }] : []),
+        { title: 'Instituciones', href: '/institutions', icon: Building2 },
+        { title: 'Reportes', href: '/reports', icon: BarChart3 },
+        { title: 'Seguimiento', href: '/seguimiento', icon: Search },
+        ...(isAdmin() ? [{ title: 'Usuarios', href: '/users', icon: Users }] : []),
+    ];
 
     return (
         <aside className="hidden w-64 flex-col bg-[#0b5a41] md:flex z-10 shadow-lg">

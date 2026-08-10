@@ -24,6 +24,7 @@ import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 import { UpdateSituationDto } from './dto/update-situation.dto';
 import { UpdateEnvioDto } from './dto/update-envio.dto';
 import { ActivateAgreementDto } from './dto/activate-agreement.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 interface MulterFile {
   fieldname: string;
@@ -37,7 +38,6 @@ interface MulterFile {
   buffer?: Buffer;
 }
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
 const multerStorage = diskStorage({
   destination: './uploads',
   filename: (
@@ -52,7 +52,6 @@ const multerStorage = diskStorage({
 const multerOptions = {
   storage: multerStorage,
 };
-/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
 
 @Controller('agreements')
 export class AgreementsController {
@@ -78,6 +77,7 @@ export class AgreementsController {
     return this.agreementsService.findOne(id);
   }
 
+  @Roles('admin', 'editor')
   @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -99,6 +99,7 @@ export class AgreementsController {
     return this.agreementsService.create(createAgreementDto, files);
   }
 
+  @Roles('admin', 'editor')
   @Patch(':id')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -121,6 +122,7 @@ export class AgreementsController {
     return this.agreementsService.update(id, updateAgreementDto, files);
   }
 
+  @Roles('admin', 'editor')
   @Patch(':id/situation')
   updateSituation(
     @Param('id', ParseIntPipe) id: number,
@@ -129,11 +131,13 @@ export class AgreementsController {
     return this.agreementsService.updateSituation(id, updateSituationDto);
   }
 
+  @Roles('admin', 'editor')
   @Post(':id/roadmap/init')
   initRoadmap(@Param('id', ParseIntPipe) id: number) {
     return this.agreementsService.initRoadmap(id);
   }
 
+  @Roles('admin', 'editor')
   @Post('roadmap/:itemId/documents')
   @UseInterceptors(FileInterceptor('file', multerOptions))
   uploadRoadmapDoc(
@@ -144,11 +148,13 @@ export class AgreementsController {
     return this.agreementsService.uploadRoadmapDocument(itemId, file, type);
   }
 
+  @Roles('admin', 'editor')
   @Delete('roadmap/documents/:docId')
   deleteRoadmapDoc(@Param('docId', ParseIntPipe) docId: number) {
     return this.agreementsService.deleteRoadmapDocument(docId);
   }
 
+  @Roles('admin', 'editor')
   @Patch('roadmap/:itemId/envio')
   updateRoadmapEnvio(
     @Param('itemId', ParseIntPipe) itemId: number,
@@ -157,6 +163,7 @@ export class AgreementsController {
     return this.agreementsService.updateRoadmapEnvio(itemId, updateEnvioDto);
   }
 
+  @Roles('admin', 'editor')
   @Patch(':id/activate')
   activateAgreement(
     @Param('id', ParseIntPipe) id: number,
@@ -165,11 +172,13 @@ export class AgreementsController {
     return this.agreementsService.activateAgreement(id, activateDto);
   }
 
+  @Roles('admin')
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.agreementsService.remove(id);
   }
 
+  @Roles('admin')
   @Delete('documents/:docId')
   removeAgreementDocument(@Param('docId', ParseIntPipe) docId: number) {
     return this.agreementsService.removeAgreementDocument(docId);

@@ -85,6 +85,44 @@ export function getFileUrl(filePath: string | null | undefined): string {
     return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}`;
 }
 
+/**
+ * Descarga un archivo (ej. reporte Excel) desde un endpoint protegido del backend
+ * usando el token de sesión y disparando la descarga en el navegador.
+ */
+export async function downloadFile(endpoint: string, filename: string): Promise<void> {
+    const token = Cookies.get('access_token');
+
+    const headers: Record<string, string> = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}${endpoint}`, { headers });
+
+    if (!response.ok) {
+        let message = 'Error al exportar el archivo.';
+        try {
+            const data = await response.json();
+            if (data && typeof data.message === 'string') {
+                message = data.message;
+            }
+        } catch {
+            // Sin cuerpo JSON, se conserva el mensaje genérico
+        }
+        throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
 /* ============================================================================
  * HELPERS ESPECÍFICOS PARA EL MÓDULO DE CONVENIOS Y HOJA DE RUTA
  * ============================================================================ */

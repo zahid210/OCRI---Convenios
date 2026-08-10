@@ -111,3 +111,95 @@ export interface PaginatedResponse<T> {
         last_page: number;
     };
 }
+
+export interface ReportsSummary {
+    total: number;
+    por_estado: Record<string, number>;
+    proximos_a_vencer: number;
+    vencidos: number;
+    en_proceso: number;
+    vigentes: number;
+}
+
+export interface ReportStatusRow {
+    estado: string;
+    cantidad: number;
+}
+
+export interface ReportCountryRow {
+    pais: string;
+    cantidad: number;
+}
+
+export interface ReportTypeRow {
+    tipo: string;
+    cantidad: number;
+}
+
+export interface ReportInstitutionRow {
+    institucion: string;
+    pais: string;
+    cantidad: number;
+}
+
+export interface ReportExpiringRow {
+    id: number;
+    expediente: string;
+    titulo: string;
+    institucion: string;
+    pais: string;
+    tipo: string;
+    estado: string;
+    fecha_inicio: string | null;
+    fecha_fin: string | null;
+    dias_restantes: number | null;
+}
+
+export interface SeguimientoArea {
+    area_name: string;
+    is_completed: boolean;
+    tiene_entrada: boolean;
+    tiene_salida: boolean;
+    envio_tipo?: string | null;
+    numero_expediente?: string | null;
+}
+
+export interface SeguimientoRow {
+    id: number;
+    expediente: string;
+    titulo: string;
+    institucion: string;
+    pais: string;
+    status: string;
+    end_date: string | null;
+    total_areas: number;
+    areas_completadas: number;
+    areas_pendientes: number;
+    docs_faltantes: number;
+    envios_registrados: number;
+    sin_hoja_ruta: boolean;
+    pendiente_completar: boolean;
+    progreso: number;
+    areas: SeguimientoArea[];
+}
+
+export interface SeguimientoSummary {
+    total: number;
+    por_estado: Record<string, number>;
+    en_proceso: number;
+    vigentes: number;
+    por_vencer: number;
+    vencidos: number;
+    con_pendientes: number;
+    sin_hoja_ruta: number;
+    envios_registrados: number;
+}
+
+export interface UserItem {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    created_at?: string | null;
+    updated_at?: string | null;
+}
