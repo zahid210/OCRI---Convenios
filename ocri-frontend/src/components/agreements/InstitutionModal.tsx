@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { InstitutionItem } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 
 interface InstitutionModalProps {
     isOpen: boolean;
@@ -21,6 +22,7 @@ export default function InstitutionModal({
                                              institution,
                                          }: InstitutionModalProps) {
     const editing = Boolean(institution);
+    const toast = useToast();
 
     const [name, setName] = useState('');
     const [type, setType] = useState('Universidad Nacional');
@@ -72,7 +74,7 @@ export default function InstitutionModal({
         const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
 
         if (!name.trim() || !finalCountry || !type) {
-            alert('Por favor, completa todos los campos de la institución.');
+            toast.warning('Por favor, completa todos los campos de la institución.');
             return;
         }
 
@@ -97,7 +99,7 @@ export default function InstitutionModal({
             onClose();
         } catch (err) {
             console.error('Error al guardar institución:', err);
-            alert(err instanceof Error ? err.message : 'Error al guardar la institución.');
+            toast.error(err instanceof Error ? err.message : 'Error al guardar la institución.');
         } finally {
             setLoading(false);
         }

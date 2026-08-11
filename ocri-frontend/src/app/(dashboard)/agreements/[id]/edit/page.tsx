@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { Agreement, Institution, AgreementType } from '@/types/agreements';
 import { fetcher, getFileUrl } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 interface AgreementDocument {
     id: number;
@@ -32,6 +34,8 @@ interface AgreementDocument {
 export default function EditAgreementPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
+    const toast = useToast();
+    const confirm = useConfirm();
     const documentInputRef = useRef<HTMLInputElement>(null);
 
     // Estados de Datos Auxiliares
@@ -157,7 +161,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
 
         if (!newInstName.trim() || !finalCountry || !newInstType) {
-            alert('Por favor, completa todos los campos de la institución.');
+            toast.warning('Por favor, completa todos los campos de la institución.');
             return;
         }
 
@@ -190,9 +194,10 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
             setCustomCountry('');
             setIsCustomCountry(false);
             setIsModalOpen(false);
+            toast.success('Institución registrada correctamente.');
         } catch (err) {
             console.error('Error al crear institución:', err);
-            alert('No se pudo registrar la institución.');
+            toast.error('No se pudo registrar la institución.');
         } finally {
             setSavingInst(false);
         }
@@ -200,10 +205,14 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
 
     // Eliminar un archivo individual del acervo actual con aviso inmediato
     const handleDeleteDocument = async (docId: number) => {
-        const isConfirmed = confirm(
-            '⚠️ ATENCIÓN: Esta acción eliminará el archivo del servidor de forma inmediata. ' +
-            'No se puede deshacer incluso si cancelas la edición del convenio después. ¿Estás seguro?'
-        );
+        const isConfirmed = await confirm({
+            title: '¿Eliminar archivo?',
+            description:
+                'Esta acción eliminará el archivo del servidor de forma inmediata. No se puede deshacer incluso si cancelas la edición del convenio después.',
+            confirmLabel: 'Eliminar',
+            cancelLabel: 'Cancelar',
+            destructive: true,
+        });
 
         if (!isConfirmed) return;
 
@@ -217,10 +226,10 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                     documents: agreement.documents?.filter((d: AgreementDocument) => d.id !== docId) || []
                 });
             }
-            alert('Archivo eliminado correctamente.');
+            toast.success('Archivo eliminado correctamente.');
         } catch (err) {
             console.error('Error al eliminar archivo:', err);
-            alert('No se pudo eliminar el archivo.');
+            toast.error('No se pudo eliminar el archivo.');
         }
     };
 
@@ -229,7 +238,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         e.preventDefault();
 
         if (!institutionId || !agreementTypeId) {
-            alert('Por favor, selecciona una institución y un tipo de convenio.');
+            toast.warning('Por favor, selecciona una institución y un tipo de convenio.');
             return;
         }
 
@@ -252,10 +261,11 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                 body: formData,
             });
 
+            toast.success('Convenio actualizado correctamente.');
             router.push('/agreements');
         } catch (err) {
             console.error('Error al actualizar el convenio:', err);
-            alert('Ocurrió un error al actualizar el convenio.');
+            toast.error('Ocurrió un error al actualizar el convenio.');
         } finally {
             setSaving(false);
         }
@@ -263,20 +273,28 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
 
     // Eliminar Convenio Completo
     const handleDelete = async () => {
-        if (confirm('¿Estás completamente seguro de eliminar este convenio permanentemente? Esta acción es irreversible y borrará todo su historial.')) {
-            setDeleting(true);
-            try {
-                await fetcher(`/agreements/${id}`, {
-                    method: 'DELETE',
-                });
+        const confirmed = await confirm({
+            title: '¿Eliminar convenio?',
+            description:
+                'Eliminarás el convenio de forma permanente junto con todo su historial. Esta acción es irreversible.',
+            confirmLabel: 'Eliminar',
+            cancelLabel: 'Cancelar',
+            destructive: true,
+        });
+        if (!confirmed) return;
+        setDeleting(true);
+        try {
+            await fetcher(`/agreements/${id}`, {
+                method: 'DELETE',
+            });
 
-                router.push('/agreements');
-            } catch (err) {
-                console.error('Error al eliminar convenio:', err);
-                alert('Ocurrió un error al eliminar el convenio.');
-            } finally {
-                setDeleting(false);
-            }
+            toast.success('Convenio eliminado correctamente.');
+            router.push('/agreements');
+        } catch (err) {
+            console.error('Error al eliminar convenio:', err);
+            toast.error('Ocurrió un error al eliminar el convenio.');
+        } finally {
+            setDeleting(false);
         }
     };
 

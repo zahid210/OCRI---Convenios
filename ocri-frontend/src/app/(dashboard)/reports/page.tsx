@@ -12,6 +12,7 @@ import {
     AgreementType,
 } from '@/types/agreements';
 import { fetcher, downloadFile } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 import {
     BarChart3,
     Download,
@@ -40,6 +41,7 @@ const EMPTY_FILTERS: ReportFilters = {
 };
 
 export default function ReportsPage() {
+    const toast = useToast();
     const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
     const [activeFilters, setActiveFilters] = useState<ReportFilters>(EMPTY_FILTERS);
 
@@ -167,7 +169,7 @@ export default function ReportsPage() {
             await downloadFile(`/reports/export${query ? `?${query}` : ''}`, 'reporte_convenios.xlsx');
         } catch (err) {
             console.error('Error al exportar reporte:', err);
-            alert(err instanceof Error ? err.message : 'Error al exportar el reporte.');
+            toast.error(err instanceof Error ? err.message : 'Error al exportar el reporte.');
         } finally {
             setExporting(false);
         }

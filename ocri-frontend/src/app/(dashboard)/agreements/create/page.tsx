@@ -16,9 +16,11 @@ import {
 } from 'lucide-react';
 import { Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 
 export default function CreateAgreementPage() {
     const router = useRouter();
+    const toast = useToast();
     const documentInputRef = useRef<HTMLInputElement>(null);
 
     // Estados de Datos Auxiliares
@@ -127,7 +129,7 @@ export default function CreateAgreementPage() {
         const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
 
         if (!newInstName.trim() || !finalCountry || !newInstType) {
-            alert('Por favor, completa todos los campos de la institución.');
+            toast.warning('Por favor, completa todos los campos de la institución.');
             return;
         }
 
@@ -160,9 +162,10 @@ export default function CreateAgreementPage() {
             setCustomCountry('');
             setIsCustomCountry(false);
             setIsModalOpen(false);
+            toast.success('Institución registrada correctamente.');
         } catch (err) {
             console.error('Error al crear institución:', err);
-            alert('No se pudo registrar la institución.');
+            toast.error('No se pudo registrar la institución.');
         } finally {
             setSavingInst(false);
         }
@@ -174,7 +177,7 @@ export default function CreateAgreementPage() {
 
         // Validación previa en frontend
         if (!institutionId || !agreementTypeId) {
-            alert('Por favor, selecciona una institución y un tipo de convenio.');
+            toast.warning('Por favor, selecciona una institución y un tipo de convenio.');
             return;
         }
 
@@ -200,10 +203,11 @@ export default function CreateAgreementPage() {
                 body: formData,
             });
 
+            toast.success('Convenio registrado correctamente.');
             router.push('/agreements');
         } catch (err) {
             console.error('Error al crear convenio:', err);
-            alert('Ocurrió un error al registrar el convenio.');
+            toast.error('Ocurrió un error al registrar el convenio.');
         } finally {
             setSaving(false);
         }

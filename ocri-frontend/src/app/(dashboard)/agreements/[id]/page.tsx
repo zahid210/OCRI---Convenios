@@ -18,6 +18,8 @@ import {
     RoadmapItem,
     RoadmapDocument,
 } from '@/types/agreements';
+import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
     ArrowLeft,
     CheckCircle2,
@@ -42,6 +44,8 @@ export default function AgreementDetailPage({
     const resolvedParams = use(params);
     const agreementId = Number(resolvedParams.id);
     const router = useRouter();
+    const toast = useToast();
+    const confirm = useConfirm();
 
     // Estados Principales
     const [agreement, setAgreement] = useState<Agreement | null>(null);
@@ -144,9 +148,10 @@ export default function AgreementDetailPage({
             setIsSavingSituation(true);
             await updateAgreementSituation(agreementId, situation);
             await loadAgreement();
+            toast.success('Situación guardada correctamente.');
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al guardar la situación.';
-            alert(message);
+            toast.error(message);
         } finally {
             setIsSavingSituation(false);
         }
@@ -157,9 +162,10 @@ export default function AgreementDetailPage({
         try {
             await initAgreementRoadmap(agreementId);
             await loadAgreement();
+            toast.success('Hoja de Ruta inicializada correctamente.');
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al inicializar la Hoja de Ruta.';
-            alert(message);
+            toast.error(message);
         }
     };
 
@@ -172,7 +178,7 @@ export default function AgreementDetailPage({
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.type !== 'application/pdf') {
-            alert('Solo se permiten archivos en formato PDF.');
+            toast.warning('Solo se permiten archivos en formato PDF.');
             return;
         }
 
@@ -180,9 +186,10 @@ export default function AgreementDetailPage({
             setUploadingArea(itemId);
             await uploadRoadmapDocument(itemId, file, docType);
             await loadAgreement();
+            toast.success('Documento subido correctamente.');
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al subir el documento.';
-            alert(message);
+            toast.error(message);
         } finally {
             setUploadingArea(null);
             e.target.value = '';
@@ -191,13 +198,21 @@ export default function AgreementDetailPage({
 
     // Eliminar Documento de la Hoja de Ruta
     const handleDeleteDocument = async (docId: number) => {
-        if (!confirm('¿Está seguro de eliminar este documento de la hoja de ruta?')) return;
+        const confirmed = await confirm({
+            title: '¿Eliminar documento?',
+            description: 'Se eliminará el documento de la hoja de ruta. Esta acción no se puede deshacer.',
+            confirmLabel: 'Eliminar',
+            cancelLabel: 'Cancelar',
+            destructive: true,
+        });
+        if (!confirmed) return;
         try {
             await deleteRoadmapDocument(docId);
             await loadAgreement();
+            toast.success('Documento eliminado correctamente.');
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al eliminar el documento.';
-            alert(message);
+            toast.error(message);
         }
     };
 
@@ -211,9 +226,10 @@ export default function AgreementDetailPage({
             });
             setEnvioModalItem(null);
             await loadAgreement();
+            toast.success('Información de envío guardada correctamente.');
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al guardar la información de envío.';
-            alert(message);
+            toast.error(message);
         }
     };
 
@@ -221,7 +237,7 @@ export default function AgreementDetailPage({
     const handleActivate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!resolutionNum || !startDate || !endDate) {
-            alert('Por favor complete todos los campos obligatorios para la activación.');
+            toast.warning('Por favor complete todos los campos obligatorios para la activación.');
             return;
         }
 
@@ -235,9 +251,10 @@ export default function AgreementDetailPage({
             });
             setShowActivateModal(false);
             await loadAgreement();
+            toast.success('Convenio activado correctamente.');
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al activar el convenio.';
-            alert(message);
+            toast.error(message);
         } finally {
             setIsActivating(false);
         }

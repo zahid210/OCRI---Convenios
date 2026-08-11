@@ -6,6 +6,8 @@ import { fetcher } from '@/lib/api';
 import { useUser } from '@/components/user-provider';
 import { canManage, isAdmin } from '@/lib/auth';
 import InstitutionModal from '@/components/agreements/InstitutionModal';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 import {
     Plus,
     Search,
@@ -33,6 +35,8 @@ export default function InstitutionsIndexPage() {
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const user = useUser();
+    const confirm = useConfirm();
+    const toast = useToast();
 
     useEffect(() => {
         let isMounted = true;
@@ -116,7 +120,19 @@ export default function InstitutionsIndexPage() {
     };
 
     const handleDelete = async (institution: InstitutionItem) => {
-        if (!window.confirm(`¿Eliminar la institución "${institution.name}"?`)) return;
+        const confirmed = await confirm({
+            title: '¿Eliminar institución?',
+                description: (
+                    <>
+                        Se eliminará <strong className="font-semibold text-gray-800">&quot;{institution.name}&quot;</strong> del
+                        directorio. Esta acción no se puede deshacer.
+                    </>
+                ),
+            confirmLabel: 'Eliminar',
+            cancelLabel: 'Cancelar',
+            destructive: true,
+        });
+        if (!confirmed) return;
         setDeletingId(institution.id);
         setDeleteLoading(true);
         try {
@@ -129,9 +145,10 @@ export default function InstitutionsIndexPage() {
                     meta: { ...prev.meta, total: Math.max(prev.meta.total - 1, 0) },
                 };
             });
+            toast.success('Institución eliminada correctamente.');
         } catch (err) {
             console.error('Error al eliminar institución:', err);
-            alert(err instanceof Error ? err.message : 'Error al eliminar la institución.');
+            toast.error(err instanceof Error ? err.message : 'Error al eliminar la institución.');
         } finally {
             setDeletingId(null);
             setDeleteLoading(false);

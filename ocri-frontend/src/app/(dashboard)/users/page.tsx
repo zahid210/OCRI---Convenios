@@ -5,6 +5,8 @@ import { UserItem, PaginatedResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
 import { useUser } from '@/components/user-provider';
 import { ROLE_LABELS } from '@/lib/auth';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 import {
     Plus,
     Search,
@@ -51,6 +53,8 @@ export default function UsersPage() {
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
     const currentUser = useUser();
+    const confirm = useConfirm();
+    const toast = useToast();
 
     useEffect(() => {
         let isMounted = true;
@@ -131,9 +135,10 @@ export default function UsersPage() {
             });
 
             setModalOpen(false);
+            toast.success(editingUser ? 'Usuario actualizado correctamente.' : 'Usuario creado correctamente.');
         } catch (err) {
             console.error('Error al guardar usuario:', err);
-            alert(err instanceof Error ? err.message : 'Error al guardar el usuario.');
+            toast.error(err instanceof Error ? err.message : 'Error al guardar el usuario.');
         } finally {
             setSaving(false);
         }
@@ -141,10 +146,22 @@ export default function UsersPage() {
 
     const handleDelete = async (user: UserItem) => {
         if (user.id === currentUser?.id) {
-            alert('No puedes eliminar tu propia cuenta.');
+            toast.error('No puedes eliminar tu propia cuenta.');
             return;
         }
-        if (!window.confirm(`¿Eliminar el usuario "${user.name}"?`)) return;
+        const confirmed = await confirm({
+            title: '¿Eliminar usuario?',
+            description: (
+                <>
+                    Se eliminará el acceso de <strong className="font-semibold text-gray-800">&quot;{user.name}&quot;</strong>{' '}
+                    al sistema. Esta acción no se puede deshacer.
+                </>
+            ),
+            confirmLabel: 'Eliminar',
+            cancelLabel: 'Cancelar',
+            destructive: true,
+        });
+        if (!confirmed) return;
         setDeletingId(user.id);
         try {
             await fetcher(`/users/${user.id}`, { method: 'DELETE' });
@@ -156,9 +173,10 @@ export default function UsersPage() {
                     meta: { ...prev.meta, total: Math.max(prev.meta.total - 1, 0) },
                 };
             });
+            toast.success('Usuario eliminado correctamente.');
         } catch (err) {
             console.error('Error al eliminar usuario:', err);
-            alert(err instanceof Error ? err.message : 'Error al eliminar el usuario.');
+            toast.error(err instanceof Error ? err.message : 'Error al eliminar el usuario.');
         } finally {
             setDeletingId(null);
         }
