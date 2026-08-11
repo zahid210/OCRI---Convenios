@@ -150,7 +150,7 @@ export default function InstitutionModal({
                                 onClick={() => setIsCustomCountry(!isCustomCountry)}
                                 className="text-xs font-semibold text-blue-600 hover:underline"
                             >
-                                {isCustomCountry ? '📋 Seleccionar existente' : '✍️ Escribir país nuevo'}
+                                {isCustomCountry ? 'Seleccionar existente' : 'Escribir país nuevo'}
                             </button>
                         </div>
 
