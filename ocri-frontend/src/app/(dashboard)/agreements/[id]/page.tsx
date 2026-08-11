@@ -242,10 +242,12 @@ export default function AgreementDetailPage({
             setIsActivating(false);
         }
     };
+    const hasFinalDocument = !!agreement.final_document_exists;
 
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
             {/* Header Institucional */}
+
             <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <Link
@@ -436,6 +438,17 @@ export default function AgreementDetailPage({
                 </div>
 
                 <div className="p-6">
+                    {hasFinalDocument && (
+                        <div className="mb-4 flex items-start gap-2 border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
+                            <p>
+                                El documento <strong>Convenio Firmado / Actualizado</strong> está registrado.
+                                Todas las opiniones del trámite se consideran <strong>validadas</strong>,
+                                aunque algún PDF de opinión (entrada/salida) no esté adjunto.
+                            </p>
+                        </div>
+                    )}
+
                     {agreement.roadmap_items && agreement.roadmap_items.length > 0 ? (
                         <div className="space-y-4">
                             {agreement.roadmap_items.map((item: RoadmapItem, index: number) => {
@@ -443,6 +456,10 @@ export default function AgreementDetailPage({
                                     item.roadmap_documents?.filter((d: RoadmapDocument) => d.type === 'entrada') || [];
                                 const salidas =
                                     item.roadmap_documents?.filter((d: RoadmapDocument) => d.type === 'salida') || [];
+                                const opinionValidada =
+                                    hasFinalDocument ||
+                                    item.is_completed ||
+                                    (entradas.length > 0 && salidas.length > 0);
 
                                 return (
                                     <div
@@ -465,6 +482,20 @@ export default function AgreementDetailPage({
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 text-xs">
+                                                <span
+                                                    className={`inline-flex items-center gap-1 border px-2 py-1 font-semibold uppercase tracking-wider ${
+                                                        opinionValidada
+                                                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                            : 'border-amber-200 bg-amber-50 text-amber-700'
+                                                    }`}
+                                                    title={
+                                                        opinionValidada
+                                                            ? 'Opinión del área validada'
+                                                            : 'Falta opinión del área (requiere doc. entrada y salida, o el documento final)'
+                                                    }
+                                                >
+                                                    {opinionValidada ? 'Opinión validada' : 'Opinión pendiente'}
+                                                </span>
                                                 <button
                                                     type="button"
                                                     onClick={() => {

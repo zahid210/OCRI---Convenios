@@ -100,6 +100,8 @@ export interface Agreement {
     roadmap_items?: RoadmapItem[];
     oficios?: Oficio[];
     agreement_reports?: AgreementReport[];
+    /** Derivado: existe un documento 'Convenio Firmado / Actualizado' (todas las opiniones validadas) */
+    final_document_exists?: boolean;
 }
 
 export interface PaginatedResponse<T> {
@@ -160,6 +162,8 @@ export interface SeguimientoArea {
     is_completed: boolean;
     tiene_entrada: boolean;
     tiene_salida: boolean;
+    /** Derivado: opinión del área validada (is_completed, entrada+salida o documento final) */
+    opinion_validada?: boolean;
     envio_tipo?: string | null;
     numero_expediente?: string | null;
 }
@@ -180,6 +184,8 @@ export interface SeguimientoRow {
     sin_hoja_ruta: boolean;
     pendiente_completar: boolean;
     progreso: number;
+    final_document_exists?: boolean;
+    opiniones_validadas?: boolean;
     areas: SeguimientoArea[];
 }
 

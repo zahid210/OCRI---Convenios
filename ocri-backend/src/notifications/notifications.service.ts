@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FINAL_DOCUMENT_NAME } from '../agreements/final-document.constants';
 
 export type NotificationType = 'expiring' | 'expired' | 'pending_area';
 
@@ -87,6 +88,7 @@ export class NotificationsService {
             },
             orderBy: { order: 'asc' },
           },
+          documents: { select: { name: true } },
         },
       }),
     ]);
@@ -124,6 +126,12 @@ export class NotificationsService {
 
     for (const a of withRoadmap) {
       const areas = a.roadmap_items ?? [];
+      const finalDocumentExists = (a.documents ?? []).some(
+        (d) => d.name === FINAL_DOCUMENT_NAME,
+      );
+
+      if (finalDocumentExists) continue;
+
       const pendientes = areas.filter(
         (area) =>
           !area.is_completed &&

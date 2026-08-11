@@ -13,6 +13,7 @@ import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 import { UpdateSituationDto } from './dto/update-situation.dto';
 import { UpdateEnvioDto } from './dto/update-envio.dto';
 import { ActivateAgreementDto } from './dto/activate-agreement.dto';
+import { FINAL_DOCUMENT_NAME } from './final-document.constants';
 
 interface MulterFile {
   fieldname: string;
@@ -67,6 +68,23 @@ export class AgreementsService {
   private getAbsolutePath(filePath: string): string {
     const fileName = filePath.split('/').pop()?.split('\\').pop() || filePath;
     return path.join(process.cwd(), 'uploads', fileName);
+  }
+
+  private hasFinalDocument(agreement: {
+    documents?: Array<{ name: string }>;
+  }): boolean {
+    return (agreement.documents ?? []).some(
+      (d) => d.name === FINAL_DOCUMENT_NAME,
+    );
+  }
+
+  private withFinalDocumentFlag<
+    T extends { documents?: Array<{ name: string }> },
+  >(agreement: T): T & { final_document_exists: boolean } {
+    return {
+      ...agreement,
+      final_document_exists: this.hasFinalDocument(agreement),
+    };
   }
 
   async findAll(filters: FilterAgreementsDto) {
@@ -143,7 +161,7 @@ export class AgreementsService {
     ]);
 
     return this.serializeBigInt({
-      data,
+      data: data.map((a) => this.withFinalDocumentFlag(a)),
       meta: {
         total,
         page,
@@ -163,7 +181,7 @@ export class AgreementsService {
       throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
     }
 
-    return this.serializeBigInt(agreement);
+    return this.serializeBigInt(this.withFinalDocumentFlag(agreement));
   }
 
   async create(
@@ -182,7 +200,7 @@ export class AgreementsService {
       const file = files?.document?.[0];
       if (file) {
         documentsToCreate.push({
-          name: `DOC - ${dto.resolution_number ?? dto.title}`,
+          name: FINAL_DOCUMENT_NAME,
           file_path: this.resolveFilePath(file),
           extension: file.originalname.split('.').pop() ?? 'pdf',
         });
@@ -251,7 +269,7 @@ export class AgreementsService {
       include: agreementIncludes,
     });
 
-    return this.serializeBigInt(createdAgreement);
+    return this.serializeBigInt(this.withFinalDocumentFlag(createdAgreement));
   }
 
   async update(
@@ -360,7 +378,7 @@ export class AgreementsService {
         include: agreementIncludes,
       });
 
-      return this.serializeBigInt(updatedAgreement);
+      return this.serializeBigInt(this.withFinalDocumentFlag(updatedAgreement));
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -381,7 +399,7 @@ export class AgreementsService {
       },
       include: agreementIncludes,
     });
-    return this.serializeBigInt(updated);
+    return this.serializeBigInt(this.withFinalDocumentFlag(updated));
   }
 
   async initRoadmap(agreementId: number) {
@@ -488,7 +506,7 @@ export class AgreementsService {
       include: agreementIncludes,
     });
 
-    return this.serializeBigInt(updated);
+    return this.serializeBigInt(this.withFinalDocumentFlag(updated));
   }
 
   async remove(id: number) {

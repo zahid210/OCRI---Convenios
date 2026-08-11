@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilterSeguimientoDto } from './dto/filter-seguimiento.dto';
+import { FINAL_DOCUMENT_NAME } from '../agreements/final-document.constants';
 
 type TrackingRoadmapItem = {
   id: bigint;
@@ -20,6 +21,7 @@ type TrackingAgreement = {
   end_date?: Date | null;
   institutions?: { name: string; country: string } | null;
   roadmap_items?: TrackingRoadmapItem[];
+  documents?: Array<{ name: string }>;
 };
 
 interface AreaRow {
@@ -27,6 +29,7 @@ interface AreaRow {
   is_completed: boolean;
   tiene_entrada: boolean;
   tiene_salida: boolean;
+  opinion_validada: boolean;
   envio_tipo?: string | null;
   numero_expediente?: string | null;
 }
@@ -47,6 +50,8 @@ export interface TrackingRow {
   sin_hoja_ruta: boolean;
   pendiente_completar: boolean;
   progreso: number;
+  final_document_exists: boolean;
+  opiniones_validadas: boolean;
   areas: AreaRow[];
 }
 
@@ -76,13 +81,21 @@ export class SeguimientoService {
     return a.status || 'Sin estado';
   }
 
-  private buildArea(item: TrackingRoadmapItem): AreaRow {
+  private buildArea(
+    item: TrackingRoadmapItem,
+    finalDocumentExists: boolean,
+  ): AreaRow {
     const docs = item.roadmap_documents ?? [];
     return {
       area_name: item.area_name,
       is_completed: item.is_completed,
       tiene_entrada: docs.some((d) => d.type === 'entrada'),
       tiene_salida: docs.some((d) => d.type === 'salida'),
+      opinion_validada:
+        item.is_completed ||
+        (docs.some((d) => d.type === 'entrada') &&
+          docs.some((d) => d.type === 'salida')) ||
+        finalDocumentExists,
       envio_tipo: item.envio_tipo,
       numero_expediente: item.numero_expediente,
     };
@@ -90,9 +103,13 @@ export class SeguimientoService {
 
   private buildRow(a: TrackingAgreement): TrackingRow {
     const items = a.roadmap_items ?? [];
-    const areas = items.map((item) => this.buildArea(item));
-    const completada = (area: AreaRow) =>
-      area.is_completed || (area.tiene_entrada && area.tiene_salida);
+    const finalDocumentExists = (a.documents ?? []).some(
+      (d) => d.name === FINAL_DOCUMENT_NAME,
+    );
+    const areas = items.map((item) =>
+      this.buildArea(item, finalDocumentExists),
+    );
+    const completada = (area: AreaRow) => area.opinion_validada;
 
     const areas_completadas = areas.filter(completada).length;
     const areas_pendientes = areas.length - areas_completadas;
@@ -121,6 +138,10 @@ export class SeguimientoService {
       progreso: areas.length
         ? Math.round((areas_completadas / areas.length) * 100)
         : 0,
+      final_document_exists: finalDocumentExists,
+      opiniones_validadas:
+        finalDocumentExists ||
+        (areas.length > 0 && areas_completadas === areas.length),
       areas,
     };
   }
@@ -133,6 +154,7 @@ export class SeguimientoService {
           include: { roadmap_documents: { select: { type: true } } },
           orderBy: { order: 'asc' },
         },
+        documents: { select: { name: true } },
       },
       orderBy: { id: 'desc' },
     })) as TrackingAgreement[];

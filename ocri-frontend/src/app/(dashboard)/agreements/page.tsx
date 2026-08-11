@@ -213,12 +213,13 @@ export default function AgreementsIndexPage() {
                         ) : (
                             data?.data.map((agreement, index) => {
                                 const roadmap = agreement.roadmap_items;
-                                const pendingOpinions = roadmap
+                                const hasFinalDocument = !!agreement.final_document_exists;
+                                const pendingOpinions = roadmap && !hasFinalDocument
                                     ? roadmap
-                                        .filter((item: { roadmap_documents?: Array<{ type?: string }>; area_name?: string }) => {
+                                        .filter((item: { roadmap_documents?: Array<{ type?: string }>; area_name?: string; is_completed?: boolean }) => {
                                             const entrada = item.roadmap_documents?.some((d: { type?: string }) => d.type === 'entrada');
                                             const salida = item.roadmap_documents?.some((d: { type?: string }) => d.type === 'salida');
-                                            return !(entrada && salida);
+                                            return !(item.is_completed || (entrada && salida));
                                         })
                                         .map((i: { area_name?: string }) => i.area_name || '')
                                         .filter(Boolean)

@@ -208,7 +208,10 @@ export default function SeguimientoPage() {
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
                                 Áreas
                             </th>
-                            <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                            <th
+                                className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center"
+                                title="PDFs de entrada/salida de la hoja de ruta no adjuntos (existencia documental; puede diferir del estado de opinión)"
+                            >
                                 Docs Faltantes
                             </th>
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
@@ -341,7 +344,10 @@ export default function SeguimientoPage() {
                                                     ) : (
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                             {row.areas.map((area) => {
-                                                                const completa = area.is_completed || (area.tiene_entrada && area.tiene_salida);
+                                                                const completa =
+                                                                    typeof area.opinion_validada === 'boolean'
+                                                                        ? area.opinion_validada
+                                                                        : area.is_completed || (area.tiene_entrada && area.tiene_salida);
                                                                 return (
                                                                     <div key={area.area_name} className="border border-gray-200 bg-white p-3">
                                                                         <div className="flex items-center justify-between gap-2">
@@ -353,7 +359,7 @@ export default function SeguimientoPage() {
                                                                                     ? 'bg-green-50 text-green-700 border-green-200'
                                                                                     : 'bg-amber-50 text-amber-700 border-amber-200'
                                                                             }`}>
-                                                                                {completa ? 'Completa' : 'Pendiente'}
+                                                                                {completa ? 'Opinión validada' : 'Opinión pendiente'}
                                                                             </span>
                                                                         </div>
                                                                         <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
