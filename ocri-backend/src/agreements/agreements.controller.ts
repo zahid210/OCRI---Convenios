@@ -72,6 +72,11 @@ export class AgreementsController {
     return this.agreementsService.findAll(filters);
   }
 
+  @Get('search')
+  searchAgreements(@Query('q') q?: string) {
+    return this.agreementsService.search(q);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.agreementsService.findOne(id);

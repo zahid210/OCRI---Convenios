@@ -617,4 +617,41 @@ export class AgreementsService {
       throw error;
     }
   }
+
+  /** Búsqueda liviana para el buscador del header (title, name, resolución) */
+  async search(q?: string) {
+    const term = (q ?? '').trim();
+    if (!term) {
+      return [];
+    }
+
+    const rows = await this.prisma.agreements.findMany({
+      where: {
+        OR: [
+          { title: { contains: term } },
+          { name: { contains: term } },
+          { resolution_number: { contains: term } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        name: true,
+        resolution_number: true,
+        status: true,
+        institutions: { select: { name: true } },
+      },
+      take: 8,
+      orderBy: { id: 'desc' },
+    });
+
+    return rows.map((r) => ({
+      id: Number(r.id),
+      title: r.title,
+      name: r.name,
+      resolution_number: r.resolution_number,
+      status: r.status,
+      institution_name: r.institutions?.name ?? null,
+    }));
+  }
 }

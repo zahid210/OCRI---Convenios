@@ -164,7 +164,11 @@ export default function AgreementDetailPage({
     };
 
     // Subir Documento PDF por Área
-    const handleFileUpload = async (itemId: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (
+        itemId: number,
+        docType: 'entrada' | 'salida',
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.type !== 'application/pdf') {
@@ -174,7 +178,7 @@ export default function AgreementDetailPage({
 
         try {
             setUploadingArea(itemId);
-            await uploadRoadmapDocument(itemId, file, selectedDocType);
+            await uploadRoadmapDocument(itemId, file, docType);
             await loadAgreement();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al subir el documento.';
@@ -493,7 +497,7 @@ export default function AgreementDetailPage({
                                                             className="hidden"
                                                             onChange={(e) => {
                                                                 setSelectedDocType('entrada');
-                                                                handleFileUpload(item.id, e);
+                                                                handleFileUpload(item.id, 'entrada', e);
                                                             }}
                                                         />
                                                     </label>
@@ -549,7 +553,7 @@ export default function AgreementDetailPage({
                                                             className="hidden"
                                                             onChange={(e) => {
                                                                 setSelectedDocType('salida');
-                                                                handleFileUpload(item.id, e);
+                                                                handleFileUpload(item.id, 'salida', e);
                                                             }}
                                                         />
                                                     </label>

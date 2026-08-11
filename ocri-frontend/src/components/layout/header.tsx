@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, User, Settings, LogOut, Bell, Search } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import {
@@ -17,6 +17,8 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/components/user-provider';
+import { HeaderSearch } from '@/components/layout/header-search';
+import { HeaderNotifications } from '@/components/layout/header-notifications';
 import { ROLE_LABELS, canManage, isAdmin } from '@/lib/auth';
 
 export function Header() {
@@ -72,23 +74,14 @@ export function Header() {
 
             {/* Buscador Estilo Escritorio */}
             <div className="w-full hidden sm:flex items-center relative">
-                <Search className="absolute left-3.5 h-4 w-4 text-gray-400 pointer-events-none" />
-                <input
-                    type="text"
-                    placeholder="Buscar expedientes, convenios..."
-                    className="w-full h-10 pl-10 pr-4 rounded-none bg-gray-50 border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#df9f1f] focus:ring-1 focus:ring-[#df9f1f] focus:bg-white transition-all"
-                />
+                <HeaderSearch />
             </div>
 
             <div className="w-full flex-1" />
 
             <div className="flex items-center gap-3">
-                {/* Botón de Notificaciones */}
-                <button className="relative p-2.5 rounded-none text-gray-600 hover:text-[#0b5a41] transition-colors border border-transparent">
-                    <Bell className="h-4 w-4" />
-                    {/* Indicador de notificación en círculo */}
-                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#df9f1f] ring-2 ring-white" />
-                </button>
+                {/* Notificaciones */}
+                <HeaderNotifications />
 
                 <div className="h-6 w-[1px] bg-gray-200 mx-1" />
 
@@ -120,18 +113,6 @@ export function Header() {
                                 </p>
                             </div>
                         </DropdownMenuLabel>
-
-                        <div className="py-1">
-                            <DropdownMenuItem className="px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#0b5a41] rounded-none cursor-pointer border-l-2 border-transparent hover:border-[#df9f1f] transition-all">
-                                <User className="mr-2.5 h-4 w-4 text-gray-400 group-hover:text-[#0b5a41]" />
-                                <span>Mi Perfil</span>
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem className="px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#0b5a41] rounded-none cursor-pointer border-l-2 border-transparent hover:border-[#df9f1f] transition-all">
-                                <Settings className="mr-2.5 h-4 w-4 text-gray-400 group-hover:text-[#0b5a41]" />
-                                <span>Configuración</span>
-                            </DropdownMenuItem>
-                        </div>
 
                         <DropdownMenuSeparator className="bg-gray-200 m-0" />
 

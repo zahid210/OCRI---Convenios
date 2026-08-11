@@ -11,6 +11,7 @@ import { InstitutionsModule } from './institutions/institutions.module';
 import { AgreementsModule } from './agreements/agreements.module';
 import { ReportsModule } from './reports/reports.module';
 import { SeguimientoModule } from './seguimiento/seguimiento.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -30,6 +31,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     InstitutionsModule,
     ReportsModule,
     SeguimientoModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

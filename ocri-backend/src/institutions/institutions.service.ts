@@ -161,6 +161,23 @@ export class InstitutionsService {
     };
   }
 
+  /** Búsqueda liviana para el buscador del header (name, country) */
+  async search(q?: string) {
+    const term = (q ?? '').trim();
+    if (!term) {
+      return [];
+    }
+
+    return this.prisma.institutions.findMany({
+      where: {
+        OR: [{ name: { contains: term } }, { country: { contains: term } }],
+      },
+      select: { id: true, name: true, country: true, type: true },
+      take: 8,
+      orderBy: { id: 'desc' },
+    });
+  }
+
   async getCountries(): Promise<string[]> {
     const records = await this.prisma.institutions.findMany({
       select: { country: true },

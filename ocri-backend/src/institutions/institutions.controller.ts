@@ -33,6 +33,11 @@ export class InstitutionsController {
     return this.institutionsService.findAll(filterDto);
   }
 
+  @Get('search')
+  search(@Query('q') q?: string) {
+    return this.institutionsService.search(q);
+  }
+
   @Get('countries')
   getCountries() {
     return this.institutionsService.getCountries();
