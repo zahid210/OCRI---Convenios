@@ -20,6 +20,8 @@ import {
 } from '@/types/agreements';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useUser } from '@/components/user-provider';
+import { canManage } from '@/lib/auth';
 import {
     ArrowLeft,
     CheckCircle2,
@@ -46,6 +48,7 @@ export default function AgreementDetailPage({
     const router = useRouter();
     const toast = useToast();
     const confirm = useConfirm();
+    const user = useUser();
 
     // Estados Principales
     const [agreement, setAgreement] = useState<Agreement | null>(null);
@@ -294,7 +297,7 @@ export default function AgreementDetailPage({
                         {agreement.status}
                     </span>
 
-                    {agreement.status === 'En Proceso' && (
+                    {canManage(user) && agreement.status === 'En Proceso' && (
                         <button
                             type="button"
                             onClick={() => setShowActivateModal(true)}
@@ -305,13 +308,15 @@ export default function AgreementDetailPage({
                         </button>
                     )}
 
-                    <Link
-                        href={`/agreements/${agreementId}/edit`}
-                        className="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm transition-colors"
-                    >
-                        <Pencil className="h-4 w-4" />
-                        <span>Editar</span>
-                    </Link>
+                    {canManage(user) && (
+                        <Link
+                            href={`/agreements/${agreementId}/edit`}
+                            className="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm transition-colors"
+                        >
+                            <Pencil className="h-4 w-4" />
+                            <span>Editar</span>
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -401,29 +406,37 @@ export default function AgreementDetailPage({
                             <p className="text-xs text-gray-500">
                                 Escriba notas breves sobre el avance o estado del trámite para consulta rápida.
                             </p>
-                            <textarea
-                                value={situation}
-                                onChange={(e) => setSituation(e.target.value)}
-                                placeholder="Ej. En revisión en Asesoría Jurídica. Pendiente firma de Decano..."
-                                rows={4}
-                                className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400 resize-none"
-                            />
-                        </div>
-                        <button
-                            type="button"
-                            onClick={handleSaveSituation}
-                            disabled={isSavingSituation}
-                            className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 cursor-pointer"
-                        >
-                            {isSavingSituation ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Guardando...</span>
-                                </>
+                            {canManage(user) ? (
+                                <textarea
+                                    value={situation}
+                                    onChange={(e) => setSituation(e.target.value)}
+                                    placeholder="Ej. En revisión en Asesoría Jurídica. Pendiente firma de Decano..."
+                                    rows={4}
+                                    className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400 resize-none"
+                                />
                             ) : (
-                                <span>Guardar Nota</span>
+                                <p className="whitespace-pre-wrap border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+                                    {situation || 'Sin notas registradas.'}
+                                </p>
                             )}
-                        </button>
+                        </div>
+                        {canManage(user) && (
+                            <button
+                                type="button"
+                                onClick={handleSaveSituation}
+                                disabled={isSavingSituation}
+                                className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 cursor-pointer"
+                            >
+                                {isSavingSituation ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span>Guardando...</span>
+                                    </>
+                                ) : (
+                                    <span>Guardar Nota</span>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -442,7 +455,7 @@ export default function AgreementDetailPage({
                             </p>
                         </div>
                     </div>
-                    {(!agreement.roadmap_items || agreement.roadmap_items.length === 0) && (
+                    {canManage(user) && (!agreement.roadmap_items || agreement.roadmap_items.length === 0) && (
                         <button
                             type="button"
                             onClick={handleInitRoadmap}
@@ -513,18 +526,20 @@ export default function AgreementDetailPage({
                                                 >
                                                     {opinionValidada ? 'Opinión validada' : 'Opinión pendiente'}
                                                 </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setEnvioModalItem(item);
-                                                        setEnvioTipo(item.envio_tipo || 'ADESA');
-                                                        setNumExpediente(item.numero_expediente || '');
-                                                    }}
-                                                    className="inline-flex items-center gap-1.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-2.5 py-1.5 font-medium cursor-pointer"
-                                                >
-                                                    <Send className="h-3 w-3" />
-                                                    <span>Registrar Envío</span>
-                                                </button>
+                                                {canManage(user) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEnvioModalItem(item);
+                                                            setEnvioTipo(item.envio_tipo || 'ADESA');
+                                                            setNumExpediente(item.numero_expediente || '');
+                                                        }}
+                                                        className="inline-flex items-center gap-1.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-2.5 py-1.5 font-medium cursor-pointer"
+                                                    >
+                                                        <Send className="h-3 w-3" />
+                                                        <span>Registrar Envío</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
 
@@ -536,19 +551,21 @@ export default function AgreementDetailPage({
                                                     <span className="border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
                                                         Doc. Entrada
                                                     </span>
-                                                    <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
-                                                        <Upload className="h-3 w-3" />
-                                                        <span>Subir</span>
-                                                        <input
-                                                            type="file"
-                                                            accept=".pdf"
-                                                            className="hidden"
-                                                            onChange={(e) => {
-                                                                setSelectedDocType('entrada');
-                                                                handleFileUpload(item.id, 'entrada', e);
-                                                            }}
-                                                        />
-                                                    </label>
+                                                    {canManage(user) && (
+                                                        <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
+                                                            <Upload className="h-3 w-3" />
+                                                            <span>Subir</span>
+                                                            <input
+                                                                type="file"
+                                                                accept=".pdf"
+                                                                className="hidden"
+                                                                onChange={(e) => {
+                                                                    setSelectedDocType('entrada');
+                                                                    handleFileUpload(item.id, 'entrada', e);
+                                                                }}
+                                                            />
+                                                        </label>
+                                                    )}
                                                 </div>
                                                 {uploadingArea === item.id && selectedDocType === 'entrada' ? (
                                                     <div className="flex items-center gap-2 py-2 text-xs text-[#df9f1f]">
@@ -572,14 +589,16 @@ export default function AgreementDetailPage({
                                                                 >
                                                                     {doc.original_name}
                                                                 </a>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleDeleteDocument(doc.id)}
-                                                                    className="p-0.5 text-red-500 hover:text-red-700 cursor-pointer"
-                                                                    title="Eliminar"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </button>
+                                                                    {canManage(user) && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteDocument(doc.id)}
+                                                                            className="p-0.5 text-red-500 hover:text-red-700 cursor-pointer"
+                                                                            title="Eliminar"
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </button>
+                                                                    )}
                                                             </li>
                                                         ))}
                                                     </ul>
@@ -592,19 +611,21 @@ export default function AgreementDetailPage({
                                                     <span className="border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-blue-700">
                                                         Doc. Salida
                                                     </span>
-                                                    <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
-                                                        <Upload className="h-3 w-3" />
-                                                        <span>Subir</span>
-                                                        <input
-                                                            type="file"
-                                                            accept=".pdf"
-                                                            className="hidden"
-                                                            onChange={(e) => {
-                                                                setSelectedDocType('salida');
-                                                                handleFileUpload(item.id, 'salida', e);
-                                                            }}
-                                                        />
-                                                    </label>
+                                                    {canManage(user) && (
+                                                        <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
+                                                            <Upload className="h-3 w-3" />
+                                                            <span>Subir</span>
+                                                            <input
+                                                                type="file"
+                                                                accept=".pdf"
+                                                                className="hidden"
+                                                                onChange={(e) => {
+                                                                    setSelectedDocType('salida');
+                                                                    handleFileUpload(item.id, 'salida', e);
+                                                                }}
+                                                            />
+                                                        </label>
+                                                    )}
                                                 </div>
                                                 {uploadingArea === item.id && selectedDocType === 'salida' ? (
                                                     <div className="flex items-center gap-2 py-2 text-xs text-[#df9f1f]">
@@ -628,14 +649,16 @@ export default function AgreementDetailPage({
                                                                 >
                                                                     {doc.original_name}
                                                                 </a>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleDeleteDocument(doc.id)}
-                                                                    className="p-0.5 text-red-500 hover:text-red-700 cursor-pointer"
-                                                                    title="Eliminar"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </button>
+                                                                    {canManage(user) && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteDocument(doc.id)}
+                                                                            className="p-0.5 text-red-500 hover:text-red-700 cursor-pointer"
+                                                                            title="Eliminar"
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </button>
+                                                                    )}
                                                             </li>
                                                         ))}
                                                     </ul>
@@ -655,7 +678,7 @@ export default function AgreementDetailPage({
             </div>
 
             {/* Modal "Registrar Envío" */}
-            {envioModalItem && (
+            {canManage(user) && envioModalItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-md bg-white p-6 shadow-lg border border-gray-200 space-y-4">
                         <h3 className="text-base font-semibold text-gray-800">
@@ -716,7 +739,7 @@ export default function AgreementDetailPage({
             )}
 
             {/* Modal "Activar Convenio" */}
-            {showActivateModal && (
+            {canManage(user) && showActivateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <form
                         onSubmit={handleActivate}

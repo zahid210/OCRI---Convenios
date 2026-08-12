@@ -21,6 +21,8 @@ import { Agreement, Institution, AgreementType } from '@/types/agreements';
 import { fetcher, getFileUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useUser } from '@/components/user-provider';
+import { canManage, isAdmin } from '@/lib/auth';
 
 interface AgreementDocument {
     id: number;
@@ -36,6 +38,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     const router = useRouter();
     const toast = useToast();
     const confirm = useConfirm();
+    const user = useUser();
     const documentInputRef = useRef<HTMLInputElement>(null);
 
     // Estados de Datos Auxiliares
@@ -307,6 +310,24 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         );
     }
 
+    if (!canManage(user)) {
+        return (
+            <div className="border border-gray-200 bg-white p-8 text-center shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-700">Acceso restringido</h2>
+                <p className="mt-2 text-sm text-gray-500">
+                    No tiene permisos para editar convenios. Solo los usuarios con rol Administrador o Editor pueden modificar esta información.
+                </p>
+                <Link
+                    href={`/agreements/${id}`}
+                    className="mt-4 inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Volver al detalle</span>
+                </Link>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
             {/* Header Institucional */}
@@ -489,14 +510,16 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                                         ) : (
                                                             <span className="text-gray-400 italic">Ruta no disponible</span>
                                                         )}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteDocument(doc.id)}
-                                                            className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-                                                            title="Eliminar archivo"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
+                                                        {isAdmin(user) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteDocument(doc.id)}
+                                                                className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                                                                title="Eliminar archivo"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
@@ -570,15 +593,17 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
 
                 {/* Barra de Acciones Final */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <button
-                        type="button"
-                        onClick={handleDelete}
-                        disabled={deleting}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                    >
-                        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        <span>Eliminar Convenio</span>
-                    </button>
+                    {isAdmin(user) && (
+                        <button
+                            type="button"
+                            onClick={handleDelete}
+                            disabled={deleting}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        >
+                            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            <span>Eliminar Convenio</span>
+                        </button>
+                    )}
 
                     <div className="flex items-center gap-3">
                         <Link
