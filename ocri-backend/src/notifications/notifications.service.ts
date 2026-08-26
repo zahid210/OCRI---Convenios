@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { FINAL_DOCUMENT_NAME } from '../agreements/final-document.constants';
+import {
+  EXPIRATION_WARNING_DAYS,
+  serializeBigInt,
+} from '../common/process.constants';
 
 export type NotificationType = 'expiring' | 'expired' | 'pending_area';
 
@@ -34,25 +37,27 @@ export class NotificationsService {
 
   private expedienteOf(a: {
     id: bigint;
-    title: string;
+    tramite_code: string;
     resolution_number?: string | null;
   }): string {
-    return a.resolution_number || a.title || `Convenio #${a.id}`;
+    return a.tramite_code || a.resolution_number || `Trámite #${a.id}`;
   }
 
   async findAll() {
     const now = this.startOfToday();
     const warningDate = new Date(now);
-    warningDate.setDate(warningDate.getDate() + 90);
+    warningDate.setDate(warningDate.getDate() + EXPIRATION_WARNING_DAYS);
 
-    const [expiring, expired, withRoadmap] = await Promise.all([
+    // Convenios registrados y vigentes: semáforo de vigencia
+    const [expiring, expired, withOpinions] = await Promise.all([
       this.prisma.agreements.findMany({
         where: {
-          status: 'Vigente',
+          validity_status: { in: ['VIGENTE', 'SUSPENDIDO'] },
           end_date: { gte: now, lte: warningDate },
         },
         select: {
           id: true,
+          tramite_code: true,
           title: true,
           resolution_number: true,
           end_date: true,
@@ -62,33 +67,42 @@ export class NotificationsService {
       this.prisma.agreements.findMany({
         where: {
           OR: [
-            { status: 'Vencido' },
-            { status: 'Vigente', end_date: { lt: now } },
+            { validity_status: 'VENCIDO' },
+            {
+              validity_status: { in: ['VIGENTE', 'SUSPENDIDO'] },
+              end_date: { lt: now },
+            },
           ],
         },
         select: {
           id: true,
+          tramite_code: true,
           title: true,
           resolution_number: true,
           end_date: true,
         },
         orderBy: { end_date: 'asc' },
       }),
+      // Propuestas en trámite con opiniones pendientes (E1)
       this.prisma.agreements.findMany({
-        where: { roadmap_items: { some: {} } },
+        where: {
+          process_status: {
+            in: ['RECEPCIONADA', 'OPINIONES_EN_CURSO', 'OPINIONES_COMPLETAS'],
+          },
+          opinion_requests: { some: {} },
+        },
         select: {
           id: true,
+          tramite_code: true,
           title: true,
           resolution_number: true,
-          roadmap_items: {
+          opinion_requests: {
             select: {
-              area_name: true,
-              is_completed: true,
-              roadmap_documents: { select: { type: true } },
+              status: true,
+              due_at: true,
+              dependencias: { select: { name: true } },
             },
-            orderBy: { order: 'asc' },
           },
-          documents: { select: { name: true } },
         },
       }),
     ]);
@@ -124,34 +138,50 @@ export class NotificationsService {
       });
     }
 
-    for (const a of withRoadmap) {
-      const areas = a.roadmap_items ?? [];
-      const finalDocumentExists = (a.documents ?? []).some(
-        (d) => d.name === FINAL_DOCUMENT_NAME,
+    for (const a of withOpinions) {
+      const requests = a.opinion_requests ?? [];
+      const today = now;
+
+      const vencidas = requests.filter(
+        (r) =>
+          r.status !== 'VALIDADA' &&
+          r.status !== 'CANCELADA' &&
+          r.due_at &&
+          new Date(r.due_at) < today,
       );
-
-      if (finalDocumentExists) continue;
-
-      const pendientes = areas.filter(
-        (area) =>
-          !area.is_completed &&
-          !(
-            area.roadmap_documents.some((d) => d.type === 'entrada') &&
-            area.roadmap_documents.some((d) => d.type === 'salida')
-          ),
+      const pendientes = requests.filter(
+        (r) => r.status !== 'VALIDADA' && r.status !== 'CANCELADA',
       );
 
       if (pendientes.length === 0) continue;
 
-      items.push({
-        id: `pending_area-${a.id}`,
-        type: 'pending_area',
-        agreement_id: Number(a.id),
-        title: a.title,
-        expediente: this.expedienteOf(a),
-        message: `${pendientes.length} área(s) de hoja de ruta pendiente(s)`,
-        fecha: null,
-      });
+      if (vencidas.length > 0) {
+        const names = vencidas
+          .map((r) => r.dependencias?.name ?? 'Dependencia')
+          .join(', ');
+        items.push({
+          id: `pending_area-${a.id}`,
+          type: 'pending_area',
+          agreement_id: Number(a.id),
+          title: a.title,
+          expediente: this.expedienteOf(a),
+          message: `${vencidas.length} opinión(es) con plazo vencido: ${names}`,
+          fecha: null,
+        });
+      } else {
+        const names = pendientes
+          .map((r) => r.dependencias?.name ?? 'Dependencia')
+          .join(', ');
+        items.push({
+          id: `pending_area-${a.id}`,
+          type: 'pending_area',
+          agreement_id: Number(a.id),
+          title: a.title,
+          expediente: this.expedienteOf(a),
+          message: `${pendientes.length} opinión(es) pendiente(s): ${names}`,
+          fecha: null,
+        });
+      }
     }
 
     const rank: Record<NotificationType, number> = {
@@ -173,9 +203,9 @@ export class NotificationsService {
     });
 
     const MAX_ITEMS = 25;
-    return {
+    return serializeBigInt({
       total: items.length,
       items: items.slice(0, MAX_ITEMS),
-    };
+    });
   }
 }

@@ -5,7 +5,7 @@ export function proxy(request: NextRequest) {
     const token = request.cookies.get('access_token')?.value;
     const { pathname } = request.nextUrl;
 
-    const protectedPrefixes = ['/dashboard', '/agreements', '/institutions', '/reports', '/seguimiento', '/users'];
+    const protectedPrefixes = ['/dashboard', '/agreements', '/institutions', '/reports', '/seguimiento', '/users', '/convenios-vigentes', '/dependencias'];
 
     // Si intenta acceder a rutas protegidas sin token
     const isProtected = protectedPrefixes.some(
@@ -26,5 +26,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/', '/dashboard/:path*', '/agreements/:path*', '/institutions/:path*', '/reports/:path*', '/seguimiento/:path*', '/users/:path*', '/login'],
+    matcher: ['/', '/dashboard/:path*', '/agreements/:path*', '/institutions/:path*', '/reports/:path*', '/seguimiento/:path*', '/users/:path*', '/convenios-vigentes/:path*', '/dependencias/:path*', '/login'],
 };

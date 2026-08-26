@@ -183,10 +183,12 @@ export default function ReportsPage() {
     const maxByType = useMemo(() => Math.max(1, ...byType.map((t) => t.cantidad)), [byType]);
 
     const statusColors: Record<string, string> = {
-        'En Proceso': 'bg-gray-500 text-white border-gray-500',
+        'En Trámite': 'bg-gray-500 text-white border-gray-500',
         'Vigente': 'bg-green-700 text-white border-green-700',
         'Por Vencer': 'bg-yellow-500 text-white border-yellow-500',
         'Vencido': 'bg-red-700 text-white border-red-700',
+        'No Suscrito': 'bg-red-200 text-red-800 border-red-200',
+        'Sin Fecha': 'bg-gray-300 text-gray-700 border-gray-300',
     };
 
     const formatDate = (dateStr: string | null) => {
@@ -198,7 +200,7 @@ export default function ReportsPage() {
 
     const summaryCards = [
         { label: 'Total de Convenios', value: summary?.total ?? 0, color: 'text-gray-800', icon: Layers },
-        { label: 'En Proceso', value: summary?.en_proceso ?? 0, color: 'text-gray-600', icon: CalendarClock },
+        { label: 'En Trámite', value: summary?.en_tramite ?? 0, color: 'text-gray-600', icon: CalendarClock },
         { label: 'Vigentes', value: summary?.vigentes ?? 0, color: 'text-green-700', icon: FileType2 },
         { label: 'Próximos a Vencer', value: summary?.proximos_a_vencer ?? 0, color: 'text-yellow-600', icon: AlertTriangle },
         { label: 'Vencidos', value: summary?.vencidos ?? 0, color: 'text-red-700', icon: Building2 },
@@ -258,10 +260,11 @@ export default function ReportsPage() {
                             className={filterSelectClass}
                         >
                             <option value="">Todos los estados</option>
-                            <option value="En Proceso">En Proceso</option>
+                            <option value="En Trámite">En Trámite</option>
                             <option value="Vigente">Vigente</option>
                             <option value="Por Vencer">Por Vencer</option>
                             <option value="Vencido">Vencido</option>
+                            <option value="No Suscrito">No Suscrito</option>
                         </select>
                     </div>
 

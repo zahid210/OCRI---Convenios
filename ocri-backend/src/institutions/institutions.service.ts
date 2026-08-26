@@ -114,7 +114,7 @@ export class InstitutionsService {
     return this.prisma.institutions.create({
       data: {
         name: nameUpper,
-        country: dto.country.trim(),
+        country: dto.country.trim().toUpperCase(),
         type: finalType,
       },
     });
@@ -224,7 +224,9 @@ export class InstitutionsService {
     }
 
     const name = dto.name ? dto.name.trim().toUpperCase() : institution.name;
-    const country = dto.country ? dto.country.trim() : institution.country;
+    const country = dto.country
+      ? dto.country.trim().toUpperCase()
+      : institution.country;
     const inputType = dto.type ?? institution.type;
 
     // Evita duplicados si el nombre cambió a uno ya existente

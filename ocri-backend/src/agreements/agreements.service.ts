@@ -7,85 +7,199 @@ import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { UPLOADS_DIR, UploadedFileLike } from '../common/uploads.config';
+import {
+  deriveTemporalStatus,
+  serializeBigInt,
+  ProcessStatus,
+  IN_FLIGHT_STATUSES,
+} from '../common/process.constants';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
-import { UpdateSituationDto } from './dto/update-situation.dto';
-import { UpdateEnvioDto } from './dto/update-envio.dto';
-import { ActivateAgreementDto } from './dto/activate-agreement.dto';
-import { FINAL_DOCUMENT_NAME } from './final-document.constants';
-
-interface MulterFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  destination?: string;
-  filename?: string;
-  path?: string;
-  buffer?: Buffer;
-}
 
 const agreementIncludes: Prisma.agreementsInclude = {
   institutions: true,
   agreement_types: true,
-  documents: true,
-  work_plans: true,
-  roadmap_items: {
-    include: {
-      roadmap_documents: true,
-    },
-    orderBy: { order: 'asc' },
-  },
-  oficios: true,
-  agreement_reports: true,
 };
-
-const DEFAULT_AREAS = [
-  'Rectorado',
-  'Vicerrectorado de Investigación',
-  'Vicerrectorado Académico',
-  'Asesoría Legal',
-];
 
 @Injectable()
 export class AgreementsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private serializeBigInt<T>(obj: unknown): T {
-    const jsonString = JSON.stringify(obj, (_, value) =>
-      typeof value === 'bigint' ? Number(value) : (value as unknown),
-    );
-    return JSON.parse(jsonString) as T;
-  }
-
-  private resolveFilePath(file: MulterFile): string {
-    const fileName = file.filename ?? file.originalname;
-    return fileName;
-  }
-
   private getAbsolutePath(filePath: string): string {
     const fileName = filePath.split('/').pop()?.split('\\').pop() || filePath;
-    return path.join(process.cwd(), 'uploads', fileName);
+    return path.join(UPLOADS_DIR, fileName);
   }
 
-  private hasFinalDocument(agreement: {
-    documents?: Array<{ name: string }>;
-  }): boolean {
-    return (agreement.documents ?? []).some(
-      (d) => d.name === FINAL_DOCUMENT_NAME,
-    );
+  private async deletePhysicalFiles(agreementId: bigint): Promise<void> {
+    const documents = await this.prisma.documents.findMany({
+      where: { agreement_id: agreementId },
+    });
+
+    for (const doc of documents) {
+      if (!doc.file_path) continue;
+      const absolutePath = this.getAbsolutePath(doc.file_path);
+      if (fs.existsSync(absolutePath)) {
+        try {
+          fs.unlinkSync(absolutePath);
+        } catch (e) {
+          console.error(`Error al borrar archivo: ${absolutePath}`, e);
+        }
+      }
+    }
   }
 
-  private withFinalDocumentFlag<
-    T extends { documents?: Array<{ name: string }> },
-  >(agreement: T): T & { final_document_exists: boolean } {
+  // ─── E1: OCRI registra la solicitud derivada por Rectorado ────────────────
+  async create(
+    dto: CreateAgreementDto,
+    files?: {
+      oficio_solicitud?: UploadedFileLike[];
+      propuesta?: UploadedFileLike[];
+    },
+  ) {
+    const now = new Date();
+
+    if (!files?.oficio_solicitud?.[0]) {
+      throw new BadRequestException(
+        'Debe adjuntar el Oficio de Solicitud (archivo oficio_solicitud).',
+      );
+    }
+    if (!files?.propuesta?.[0]) {
+      throw new BadRequestException(
+        'Debe adjuntar la Propuesta de Convenio (archivo propuesta).',
+      );
+    }
+
+    const tramiteCode =
+      dto.tramite_code?.trim() ||
+      `EXP-${now.getFullYear()}-${String(Date.now()).slice(-5)}`;
+
+    const createdAgreement = await this.prisma.$transaction(async (tx) => {
+      const agr = await tx.agreements.create({
+        data: {
+          tramite_code: tramiteCode,
+          title: dto.title.trim().toUpperCase(),
+          name: dto.name?.trim() || null,
+          applicant_name: dto.applicant_name?.trim() || null,
+          applicant_email: dto.applicant_email?.trim() || null,
+          applicant_unit: dto.applicant_unit?.trim() || null,
+          rectorate_oficio_number: dto.rectorate_oficio_number?.trim() || null,
+          resolution_number: dto.resolution_number
+            ? dto.resolution_number.trim().toUpperCase()
+            : null,
+          start_date: dto.start_date ? new Date(dto.start_date) : null,
+          end_date: dto.end_date ? new Date(dto.end_date) : null,
+          observations: dto.observations?.trim() || null,
+          process_status: 'RECEPCIONADA',
+          validity_status: 'PENDIENTE',
+          stage: 'ETAPA_1_PROPUESTA',
+          institutions: { connect: { id: BigInt(dto.institution_id) } },
+          agreement_types: { connect: { id: BigInt(dto.agreement_type_id) } },
+        },
+        include: agreementIncludes,
+      });
+
+      const docSpecs: Array<{
+        file?: UploadedFileLike;
+        code: string;
+        fallbackName: string;
+      }> = [
+        {
+          file: files?.oficio_solicitud?.[0],
+          code: 'OFICIO_SOLICITUD',
+          fallbackName: 'Oficio de Solicitud',
+        },
+        {
+          file: files?.propuesta?.[0],
+          code: 'PROPUESTA_CONVENIO',
+          fallbackName: 'Propuesta de Convenio',
+        },
+      ];
+
+      for (const spec of docSpecs) {
+        if (!spec.file) continue;
+        const docType = await tx.document_types.findUnique({
+          where: { code: spec.code },
+        });
+        await tx.documents.create({
+          data: this.buildDocumentData(agr.id, spec.file, {
+            name: docType?.name ?? spec.fallbackName,
+            documentTypeId: docType?.id ?? null,
+            direction: 'ENTRADA',
+            stage: 'ETAPA_1_PROPUESTA',
+          }),
+        });
+      }
+
+      await tx.process_events.create({
+        data: {
+          agreement_id: agr.id,
+          event_type: 'SOLICITUD_RECEPCIONADA',
+          description: `OCRI recibió de Rectorado la solicitud de propuesta de convenio${dto.rectorate_oficio_number ? ` (Oficio ${dto.rectorate_oficio_number})` : ''}. Inicia evaluación técnica.`,
+          to_value: 'RECEPCIONADA',
+          stage: 'ETAPA_1_PROPUESTA',
+          metadata: JSON.parse(
+            JSON.stringify({
+              tramite_code: tramiteCode,
+              applicant_name: dto.applicant_name ?? null,
+              has_oficio_solicitud: Boolean(files?.oficio_solicitud?.[0]),
+              has_propuesta: Boolean(files?.propuesta?.[0]),
+            }),
+          ) as Prisma.InputJsonValue,
+          occurred_at: now,
+        },
+      });
+
+      return agr;
+    });
+
+    return serializeBigInt<typeof createdAgreement>(createdAgreement);
+  }
+
+  private buildDocumentData(
+    agreementId: bigint,
+    file: UploadedFileLike & { filename?: string },
+    opts: {
+      name: string;
+      documentTypeId: bigint | null;
+      direction: 'ENTRADA' | 'SALIDA' | 'INTERNO';
+      stage?: string;
+      opinionRequestId?: bigint | null;
+      deliverableId?: bigint | null;
+      uploadedById?: number | null;
+    },
+  ): Prisma.documentsCreateInput {
+    const ext = path.extname(file.originalname).slice(0, 10) || undefined;
     return {
-      ...agreement,
-      final_document_exists: this.hasFinalDocument(agreement),
+      agreements: { connect: { id: agreementId } },
+      name: opts.name,
+      file_path: file.filename ?? file.originalname,
+      original_name: file.originalname,
+      extension: ext,
+      document_types: opts.documentTypeId
+        ? { connect: { id: opts.documentTypeId } }
+        : undefined,
+      direction: opts.direction,
+      stage: (opts.stage ?? undefined) as never,
+      opinion_requests:
+        opts.opinionRequestId != null
+          ? { connect: { id: opts.opinionRequestId } }
+          : undefined,
+      deliverables:
+        opts.deliverableId != null
+          ? { connect: { id: opts.deliverableId } }
+          : undefined,
+      uploaded_by:
+        opts.uploadedById != null
+          ? { connect: { id: BigInt(opts.uploadedById) } }
+          : undefined,
+      created_at: new Date(),
+      updated_at: new Date(),
     };
   }
+
+  // ─── Consultas ─────────────────────────────────────────────────────────────
 
   async findAll(filters: FilterAgreementsDto) {
     const page = Number(filters.page) || 1;
@@ -98,47 +212,22 @@ export class AgreementsService {
       const searchTerm = filters.search.trim();
       where.OR = [
         { title: { contains: searchTerm } },
-        { resolution_number: { contains: searchTerm } },
         { name: { contains: searchTerm } },
+        { tramite_code: { contains: searchTerm } },
+        { resolution_number: { contains: searchTerm } },
         { institutions: { name: { contains: searchTerm } } },
         { institutions: { country: { contains: searchTerm } } },
       ];
     }
 
-    if (filters.status) {
-      const statusFilter = filters.status;
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      if (statusFilter === 'En Proceso') {
-        where.status = 'En Proceso';
-      } else if (statusFilter === 'Vigente') {
-        where.status = 'Vigente';
-        where.AND = [
-          {
-            OR: [{ end_date: null }, { end_date: { gte: now } }],
-          },
-        ];
-      } else if (statusFilter === 'Por Vencer') {
-        const warningDate = new Date(now);
-        warningDate.setDate(warningDate.getDate() + 90);
-
-        where.status = 'Vigente';
-        where.end_date = {
-          gte: now,
-          lte: warningDate,
-        };
-      } else if (statusFilter === 'Vencido') {
-        where.OR = [
-          { status: 'Vencido' },
-          {
-            status: 'Vigente',
-            end_date: { lt: now },
-          },
-        ];
-      } else {
-        where.status = statusFilter;
-      }
+    if (filters.scope === 'tramite') {
+      where.process_status = { in: IN_FLIGHT_STATUSES };
+    } else if (filters.scope === 'registrados') {
+      where.process_status = {
+        in: ['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'],
+      };
+    } else if (filters.process_status) {
+      where.process_status = filters.process_status as ProcessStatus;
     }
 
     if (filters.institution_id) {
@@ -156,12 +245,15 @@ export class AgreementsService {
         skip,
         take: perPage,
         orderBy: { id: 'desc' },
-        include: agreementIncludes,
+        include: {
+          ...agreementIncludes,
+          _count: { select: { opinion_requests: true, documents: true } },
+        },
       }),
     ]);
 
-    return this.serializeBigInt({
-      data: data.map((a) => this.withFinalDocumentFlag(a)),
+    return serializeBigInt<unknown>({
+      data,
       meta: {
         total,
         page,
@@ -174,211 +266,70 @@ export class AgreementsService {
   async findOne(id: number) {
     const agreement = await this.prisma.agreements.findUnique({
       where: { id: BigInt(id) },
-      include: agreementIncludes,
+      include: {
+        ...agreementIncludes,
+        responsables: { orderBy: [{ side: 'asc' }, { id: 'asc' }] },
+      },
     });
 
     if (!agreement) {
       throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
     }
 
-    return this.serializeBigInt(this.withFinalDocumentFlag(agreement));
+    return serializeBigInt<unknown>(agreement);
   }
 
-  async create(
-    dto: CreateAgreementDto,
-    files?: {
-      dictamen?: MulterFile[];
-      document?: MulterFile[];
-    },
-  ) {
-    const documentsToCreate: Prisma.documentsCreateWithoutAgreementsInput[] =
-      [];
-
-    const hasDocument = files?.document && files.document.length > 0;
-
-    if (hasDocument) {
-      const file = files?.document?.[0];
-      if (file) {
-        documentsToCreate.push({
-          name: FINAL_DOCUMENT_NAME,
-          file_path: this.resolveFilePath(file),
-          extension: file.originalname.split('.').pop() ?? 'pdf',
-        });
-      }
-    }
-
-    if (files?.dictamen && files.dictamen.length > 0) {
-      const file = files?.dictamen?.[0];
-      if (file) {
-        documentsToCreate.push({
-          name: 'Dictamen Legal',
-          file_path: this.resolveFilePath(file),
-          extension: file.originalname.split('.').pop() ?? 'pdf',
-        });
-      }
-    }
-
-    const determinedStatus = dto.status
-      ? dto.status.trim()
-      : hasDocument
-        ? 'Vigente'
-        : 'En Proceso';
-
-    const determinedSituation = dto.situation
-      ? dto.situation.trim()
-      : hasDocument
-        ? 'REGISTRADO Y CONVALIDADO'
-        : 'EN TRAMITE';
-
-    const now = new Date();
-
-    const agreementData: Prisma.agreementsCreateInput = {
-      title: dto.title.trim().toUpperCase(),
-      name: dto.name ? dto.name.trim().toUpperCase() : null,
-      resolution_number: dto.resolution_number
-        ? dto.resolution_number.trim().toUpperCase()
-        : null,
-      start_date: dto.start_date ? new Date(dto.start_date) : null,
-      end_date: dto.end_date ? new Date(dto.end_date) : null,
-      situation: determinedSituation,
-      status: determinedStatus,
-      created_at: now,
-      updated_at: now,
-      institutions: {
-        connect: { id: BigInt(dto.institution_id) },
-      },
-      agreement_types: {
-        connect: { id: BigInt(dto.agreement_type_id) },
-      },
-      ...(documentsToCreate.length > 0 && {
-        documents: {
-          create: documentsToCreate,
-        },
-      }),
-      roadmap_items: {
-        create: DEFAULT_AREAS.map((area, index) => ({
-          area_name: area,
-          order: index,
-          is_completed: hasDocument ? true : false,
-        })),
-      },
-    };
-
-    const createdAgreement = await this.prisma.agreements.create({
-      data: agreementData,
-      include: agreementIncludes,
-    });
-
-    return this.serializeBigInt(this.withFinalDocumentFlag(createdAgreement));
-  }
-
-  async update(
-    id: number,
-    dto: UpdateAgreementDto,
-    files?: {
-      dictamen?: MulterFile[];
-      document?: MulterFile[];
-    },
-  ) {
+  async update(id: number, dto: UpdateAgreementDto) {
     const agreementId = BigInt(id);
 
-    const currentAgreement = await this.prisma.agreements.findUnique({
+    const current = await this.prisma.agreements.findUnique({
       where: { id: agreementId },
-      include: { roadmap_items: true },
     });
 
-    if (!currentAgreement) {
+    if (!current) {
       throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
     }
 
-    const agreementData: Prisma.agreementsUpdateInput = {
+    const data: Prisma.agreementsUpdateInput = {
       updated_at: new Date(),
     };
 
-    if (dto.title) {
-      agreementData.title = dto.title.trim().toUpperCase();
-    }
-    if (dto.name !== undefined) {
-      agreementData.name = dto.name ? dto.name.trim().toUpperCase() : null;
-    }
-    if (dto.resolution_number !== undefined) {
-      agreementData.resolution_number = dto.resolution_number
+    if (dto.title !== undefined) data.title = dto.title.trim().toUpperCase();
+    if (dto.name !== undefined) data.name = dto.name?.trim() || null;
+    if (dto.applicant_name !== undefined)
+      data.applicant_name = dto.applicant_name?.trim() || null;
+    if (dto.applicant_email !== undefined)
+      data.applicant_email = dto.applicant_email?.trim() || null;
+    if (dto.applicant_unit !== undefined)
+      data.applicant_unit = dto.applicant_unit?.trim() || null;
+    if (dto.rectorate_oficio_number !== undefined)
+      data.rectorate_oficio_number =
+        dto.rectorate_oficio_number?.trim() || null;
+    if (dto.resolution_number !== undefined)
+      data.resolution_number = dto.resolution_number
         ? dto.resolution_number.trim().toUpperCase()
         : null;
-    }
-    if (dto.start_date !== undefined) {
-      agreementData.start_date = dto.start_date
-        ? new Date(dto.start_date)
-        : null;
-    }
-    if (dto.end_date !== undefined) {
-      agreementData.end_date = dto.end_date ? new Date(dto.end_date) : null;
-    }
-    if (dto.situation !== undefined) {
-      agreementData.situation = dto.situation ? dto.situation.trim() : null;
-    }
-
-    if (dto.institution_id !== undefined) {
-      agreementData.institutions = {
-        connect: { id: BigInt(dto.institution_id) },
-      };
-    }
-
-    if (dto.agreement_type_id !== undefined) {
-      agreementData.agreement_types = {
-        connect: { id: BigInt(dto.agreement_type_id) },
-      };
-    }
-
-    const documentsToCreate: Prisma.documentsCreateWithoutAgreementsInput[] =
-      [];
-
-    const hasNewDocument = files?.document && files.document.length > 0;
-
-    if (hasNewDocument) {
-      const file = files?.document?.[0];
-      if (file) {
-        documentsToCreate.push({
-          name: 'Convenio Firmado / Actualizado',
-          file_path: this.resolveFilePath(file),
-          extension: file.originalname.split('.').pop() ?? 'pdf',
-        });
-      }
-
-      if (currentAgreement.status === 'En Proceso' && !dto.status) {
-        agreementData.status = 'Vigente';
-      }
-    }
-
-    if (dto.status !== undefined) {
-      agreementData.status = dto.status.trim();
-    }
-
-    if (files?.dictamen && files.dictamen.length > 0) {
-      const file = files?.dictamen?.[0];
-      if (file) {
-        documentsToCreate.push({
-          name: 'Dictamen Actualizado',
-          file_path: this.resolveFilePath(file),
-          extension: file.originalname.split('.').pop() ?? 'pdf',
-        });
-      }
-    }
-
-    if (documentsToCreate.length > 0) {
-      agreementData.documents = {
-        create: documentsToCreate,
-      };
-    }
+    if (dto.start_date !== undefined)
+      data.start_date = dto.start_date ? new Date(dto.start_date) : null;
+    if (dto.end_date !== undefined)
+      data.end_date = dto.end_date ? new Date(dto.end_date) : null;
+    if (dto.observations !== undefined)
+      data.observations = dto.observations?.trim() || null;
+    if (dto.institution_id !== undefined)
+      data.institutions = { connect: { id: BigInt(dto.institution_id) } };
+    if (dto.agreement_type_id !== undefined)
+      data.agreement_types = { connect: { id: BigInt(dto.agreement_type_id) } };
 
     try {
-      const updatedAgreement = await this.prisma.agreements.update({
+      const updated = await this.prisma.agreements.update({
         where: { id: agreementId },
-        data: agreementData,
-        include: agreementIncludes,
+        data,
+        include: {
+          ...agreementIncludes,
+          responsables: true,
+        },
       });
-
-      return this.serializeBigInt(this.withFinalDocumentFlag(updatedAgreement));
+      return serializeBigInt<unknown>(updated);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -388,125 +339,6 @@ export class AgreementsService {
       }
       throw error;
     }
-  }
-
-  async updateSituation(id: number, dto: UpdateSituationDto) {
-    const updated = await this.prisma.agreements.update({
-      where: { id: BigInt(id) },
-      data: {
-        situation: dto.situation ? dto.situation.trim() : null,
-        updated_at: new Date(),
-      },
-      include: agreementIncludes,
-    });
-    return this.serializeBigInt(this.withFinalDocumentFlag(updated));
-  }
-
-  async initRoadmap(agreementId: number) {
-    const existing = await this.prisma.roadmap_items.findMany({
-      where: { agreement_id: BigInt(agreementId) },
-    });
-
-    if (existing.length === 0) {
-      await this.prisma.roadmap_items.createMany({
-        data: DEFAULT_AREAS.map((area, index) => ({
-          agreement_id: BigInt(agreementId),
-          area_name: area,
-          order: index,
-          is_completed: false,
-          created_at: new Date(),
-          updated_at: new Date(),
-        })),
-      });
-    }
-
-    return this.findOne(agreementId);
-  }
-
-  async uploadRoadmapDocument(
-    itemId: number,
-    file: MulterFile,
-    type: 'entrada' | 'salida',
-  ) {
-    if (!file) {
-      throw new BadRequestException('Debe adjuntar un archivo PDF.');
-    }
-
-    const roadmapItem = await this.prisma.roadmap_items.findUnique({
-      where: { id: BigInt(itemId) },
-    });
-
-    if (!roadmapItem) {
-      throw new NotFoundException(
-        `Área de hoja de ruta #${itemId} no encontrada`,
-      );
-    }
-
-    const doc = await this.prisma.roadmap_documents.create({
-      data: {
-        roadmap_item_id: BigInt(itemId),
-        file_path: this.resolveFilePath(file),
-        original_name: file.originalname,
-        type: type || 'entrada',
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
-
-    return this.serializeBigInt(doc);
-  }
-
-  async deleteRoadmapDocument(docId: number) {
-    try {
-      const doc = await this.prisma.roadmap_documents.findUnique({
-        where: { id: BigInt(docId) },
-      });
-
-      if (doc && doc.file_path) {
-        const absolutePath = this.getAbsolutePath(doc.file_path);
-        if (fs.existsSync(absolutePath)) {
-          fs.unlinkSync(absolutePath);
-        }
-      }
-
-      await this.prisma.roadmap_documents.delete({
-        where: { id: BigInt(docId) },
-      });
-      return { message: 'Documento de hoja de ruta eliminado' };
-    } catch {
-      throw new NotFoundException(`Documento #${docId} no encontrado`);
-    }
-  }
-
-  async updateRoadmapEnvio(itemId: number, dto: UpdateEnvioDto) {
-    const updated = await this.prisma.roadmap_items.update({
-      where: { id: BigInt(itemId) },
-      data: {
-        envio_tipo: dto.envio_tipo || null,
-        numero_expediente: dto.numero_expediente || null,
-        updated_at: new Date(),
-      },
-    });
-    return this.serializeBigInt(updated);
-  }
-
-  async activateAgreement(id: number, dto: ActivateAgreementDto) {
-    const agreementId = BigInt(id);
-
-    const updated = await this.prisma.agreements.update({
-      where: { id: agreementId },
-      data: {
-        resolution_number: dto.resolution_number.trim().toUpperCase(),
-        start_date: new Date(dto.start_date),
-        end_date: new Date(dto.end_date),
-        status: 'Vigente',
-        situation: dto.situation?.trim() || 'REGISTRADO Y CONVALIDADO',
-        updated_at: new Date(),
-      },
-      include: agreementIncludes,
-    });
-
-    return this.serializeBigInt(this.withFinalDocumentFlag(updated));
   }
 
   async remove(id: number) {
@@ -521,60 +353,12 @@ export class AgreementsService {
         throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
       }
 
-      const documents = await this.prisma.documents.findMany({
-        where: { agreement_id: agreementId },
-      });
+      await this.deletePhysicalFiles(agreementId);
 
-      for (const doc of documents) {
-        if (doc.file_path) {
-          const absolutePath = this.getAbsolutePath(doc.file_path);
-          if (fs.existsSync(absolutePath)) {
-            try {
-              fs.unlinkSync(absolutePath);
-            } catch (e) {
-              console.error(
-                `Error al borrar archivo general: ${absolutePath}`,
-                e,
-              );
-            }
-          }
-        }
-      }
-
-      const roadmapItems = await this.prisma.roadmap_items.findMany({
-        where: { agreement_id: agreementId },
-      });
-
-      const roadmapItemIds = roadmapItems.map((item) => item.id);
-
-      if (roadmapItemIds.length > 0) {
-        const roadmapDocs = await this.prisma.roadmap_documents.findMany({
-          where: { roadmap_item_id: { in: roadmapItemIds } },
-        });
-
-        for (const rDoc of roadmapDocs) {
-          if (rDoc.file_path) {
-            const absolutePath = this.getAbsolutePath(rDoc.file_path);
-            if (fs.existsSync(absolutePath)) {
-              try {
-                fs.unlinkSync(absolutePath);
-              } catch (e) {
-                console.error(
-                  `Error al borrar archivo de hoja de ruta: ${absolutePath}`,
-                  e,
-                );
-              }
-            }
-          }
-        }
-      }
-
-      await this.prisma.agreements.delete({
-        where: { id: agreementId },
-      });
+      await this.prisma.agreements.delete({ where: { id: agreementId } });
 
       return {
-        message: `Convenio #${id} y sus archivos asociados eliminados correctamente`,
+        message: `Trámite #${id} y sus archivos asociados eliminados correctamente`,
       };
     } catch (error) {
       if (
@@ -585,22 +369,6 @@ export class AgreementsService {
       }
       throw error;
     }
-  }
-
-  async getInstitutionsLookup() {
-    const data = await this.prisma.institutions.findMany({
-      select: { id: true, name: true, country: true, type: true },
-      orderBy: { name: 'asc' },
-    });
-    return this.serializeBigInt(data);
-  }
-
-  async getAgreementTypesLookup() {
-    const data = await this.prisma.agreement_types.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    });
-    return this.serializeBigInt(data);
   }
 
   async removeAgreementDocument(docId: number) {
@@ -620,9 +388,7 @@ export class AgreementsService {
         }
       }
 
-      await this.prisma.documents.delete({
-        where: { id: BigInt(docId) },
-      });
+      await this.prisma.documents.delete({ where: { id: BigInt(docId) } });
 
       return { message: `Documento #${docId} eliminado correctamente` };
     } catch (error) {
@@ -636,18 +402,33 @@ export class AgreementsService {
     }
   }
 
-  /** Búsqueda liviana para el buscador del header (title, name, resolución) */
+  async getInstitutionsLookup() {
+    const data = await this.prisma.institutions.findMany({
+      select: { id: true, name: true, country: true, type: true },
+      orderBy: { name: 'asc' },
+    });
+    return serializeBigInt(data);
+  }
+
+  async getAgreementTypesLookup() {
+    const data = await this.prisma.agreement_types.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+    return serializeBigInt(data);
+  }
+
+  /** Búsqueda liviana para el buscador del header. */
   async search(q?: string) {
     const term = (q ?? '').trim();
-    if (!term) {
-      return [];
-    }
+    if (!term) return [];
 
     const rows = await this.prisma.agreements.findMany({
       where: {
         OR: [
           { title: { contains: term } },
           { name: { contains: term } },
+          { tramite_code: { contains: term } },
           { resolution_number: { contains: term } },
         ],
       },
@@ -655,21 +436,54 @@ export class AgreementsService {
         id: true,
         title: true,
         name: true,
+        tramite_code: true,
         resolution_number: true,
-        status: true,
+        process_status: true,
         institutions: { select: { name: true } },
       },
       take: 8,
       orderBy: { id: 'desc' },
     });
 
-    return rows.map((r) => ({
-      id: Number(r.id),
-      title: r.title,
-      name: r.name,
-      resolution_number: r.resolution_number,
-      status: r.status,
-      institution_name: r.institutions?.name ?? null,
-    }));
+    return serializeBigInt(rows);
+  }
+
+  // ─── Semáforo de convenios (vigencia) ──────────────────────────────────────
+
+  async getExpirationTracking() {
+    const agreements = await this.prisma.agreements.findMany({
+      where: {
+        validity_status: { in: ['VIGENTE', 'SUSPENDIDO'] },
+      },
+      include: {
+        institutions: { select: { name: true } },
+        agreement_types: { select: { name: true } },
+        responsables: true,
+      },
+      orderBy: { end_date: 'asc' },
+    });
+
+    const rows = agreements.map((a) => {
+      const temporal = deriveTemporalStatus(a.end_date);
+      return {
+        id: Number(a.id),
+        tramite_code: a.tramite_code,
+        title: a.title,
+        name: a.name,
+        resolution_number: a.resolution_number,
+        validity_status: a.validity_status,
+        process_status: a.process_status,
+        start_date: a.start_date,
+        end_date: a.end_date,
+        institution_name: a.institutions?.name ?? null,
+        agreement_type_name: a.agreement_types?.name ?? null,
+        temporal_status: temporal.temporal_status,
+        days_remaining: temporal.days_remaining,
+        responsables: a.responsables,
+        drive_link: a.drive_link,
+      };
+    });
+
+    return serializeBigInt(rows);
   }
 }

@@ -25,22 +25,31 @@ interface Agreement {
         name?: string;
         country?: string;
     };
-    status?: string;
+    process_status?: string;
     end_date?: string;
 }
+
+const EN_TRAMITE_STATUSES = [
+    'RECEPCIONADA',
+    'OPINIONES_EN_CURSO',
+    'OPINIONES_COMPLETAS',
+    'EXPEDIENTE_TECNICO_LISTO',
+    'ENVIADO_A_RECTORADO',
+    'SUSCRITO',
+    'PUBLICADO',
+];
 
 interface AgreementsResponse {
     data?: Agreement[];
     [key: string]: unknown;
 }
 
-interface PaginatedMeta {
-    total: number;
-    [key: string]: unknown;
-}
-
-interface StatusResponse {
-    meta?: PaginatedMeta;
+interface ReportsSummaryResponse {
+    total?: number;
+    vigentes?: number;
+    proximos_a_vencer?: number;
+    vencidos?: number;
+    en_tramite?: number;
     [key: string]: unknown;
 }
 
@@ -56,17 +65,15 @@ export default function DashboardPage() {
     useEffect(() => {
         async function loadDashboardData() {
             try {
-                const [vigentesRes, porVencerRes, vencidosRes, recentRes] = await Promise.all([
-                    fetchApi<StatusResponse>('/agreements?status=Vigente&per_page=1').catch(() => null),
-                    fetchApi<StatusResponse>('/agreements?status=Por+Vencer&per_page=1').catch(() => null),
-                    fetchApi<StatusResponse>('/agreements?status=Vencido&per_page=1').catch(() => null),
+                const [summaryRes, recentRes] = await Promise.all([
+                    fetchApi<ReportsSummaryResponse>('/reports/summary').catch(() => null),
                     fetchApi<AgreementsResponse>('/agreements?per_page=5').catch(() => null),
                 ]);
 
                 setStats({
-                    vigentes: vigentesRes?.meta?.total ?? 0,
-                    por_vencer: porVencerRes?.meta?.total ?? 0,
-                    vencidos: vencidosRes?.meta?.total ?? 0,
+                    vigentes: summaryRes?.vigentes ?? 0,
+                    por_vencer: summaryRes?.proximos_a_vencer ?? 0,
+                    vencidos: summaryRes?.vencidos ?? 0,
                 });
 
                 const recentData = recentRes?.data;
@@ -135,7 +142,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
                         <h2 className="text-lg font-normal text-gray-700">Listado de Convenios Recientes</h2>
                         <Link
-                            href="/agreements"
+                            href="/convenios"
                             className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
                         >
                             <span>Ver todos</span>
@@ -184,11 +191,11 @@ export default function DashboardPage() {
                                                 {agreement.institutions?.country || 'N/D'}
                                             </td>
                                             <td className="py-3 px-4">
-                                                {agreement.status === 'En Proceso' ? (
+                                                {EN_TRAMITE_STATUSES.includes(agreement.process_status ?? '') ? (
                                                     <span className="inline-block px-2 py-1 text-xs text-gray-700 bg-gray-100 border border-gray-200">
-                                                        En Proceso
+                                                        En Trámite
                                                     </span>
-                                                ) : isExpired || agreement.status === 'Vencido' ? (
+                                                ) : isExpired ? (
                                                     <span className="inline-block px-2 py-1 text-xs text-red-700 bg-red-50 border border-red-200">
                                                         Vencido
                                                     </span>
@@ -215,19 +222,19 @@ export default function DashboardPage() {
                         <h3 className="text-base font-medium text-gray-700 border-b border-gray-100 pb-2">Acciones Rápidas</h3>
                         <div className="flex flex-col gap-3">
                             <Link
-                                href="/agreements/create"
+                                href="/propuestas/create"
                                 className="flex items-center justify-center gap-2 w-full bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2.5 text-sm transition-colors"
                             >
                                 <Plus className="h-4 w-4" />
-                                <span>Nuevo Convenio</span>
+                                <span>Nueva Propuesta</span>
                             </Link>
 
                             <Link
-                                href="/agreements"
+                                href="/convenios"
                                 className="flex items-center gap-2.5 w-full bg-white hover:bg-gray-50 text-gray-600 px-4 py-2.5 text-sm transition-colors border border-gray-300"
                             >
                                 <ListOrdered className="h-4 w-4" />
-                                <span>Seguimiento de Convenios</span>
+                                <span>Directorio de Convenios</span>
                             </Link>
 
                             <Link

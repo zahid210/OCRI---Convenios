@@ -7,12 +7,13 @@ import {
     ArrowLeft,
     Save,
     FileText,
-    Building2,
     Tag,
     Loader2,
     Paperclip,
     Plus,
-    X
+    X,
+    FolderInput,
+    ShieldCheck
 } from 'lucide-react';
 import { Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
@@ -21,7 +22,8 @@ import { useToast } from '@/components/ui/toast';
 export default function CreateAgreementPage() {
     const router = useRouter();
     const toast = useToast();
-    const documentInputRef = useRef<HTMLInputElement>(null);
+    const oficioInputRef = useRef<HTMLInputElement>(null);
+    const propuestaInputRef = useRef<HTMLInputElement>(null);
 
     // Estados de Datos Auxiliares
     const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -32,19 +34,21 @@ export default function CreateAgreementPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // Estados del Formulario Principal
-    const [resolutionNumber, setResolutionNumber] = useState('');
-    const [name, setName] = useState('');
-    const [title, setTitle] = useState('');
+    // Estados del Formulario de Recepción en OCRI (Proceso 1)
+    const [rectorateOficioNumber, setRectorateOficioNumber] = useState('');
     const [institutionId, setInstitutionId] = useState('');
+    const [applicantName, setApplicantName] = useState('');
+    const [applicantEmail, setApplicantEmail] = useState('');
+    const [applicantUnit, setApplicantUnit] = useState('');
+    const [title, setTitle] = useState('');
+    const [name, setName] = useState('');
     const [agreementTypeId, setAgreementTypeId] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
 
-    // Estados de Archivos y Previsualización
-    const [dictamenFile, setDictamenFile] = useState<File | null>(null);
-    const [documentFile, setDocumentFile] = useState<File | null>(null);
-    const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+    // Archivos obligatorios: Oficio de solicitud y Propuesta de convenio
+    const [oficioFile, setOficioFile] = useState<File | null>(null);
+    const [oficioPreviewUrl, setOficioPreviewUrl] = useState<string | null>(null);
+    const [propuestaFile, setPropuestaFile] = useState<File | null>(null);
+    const [propuestaPreviewUrl, setPropuestaPreviewUrl] = useState<string | null>(null);
 
     // Estados de Modal "Nueva Institución"
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,7 +72,6 @@ export default function CreateAgreementPage() {
                 setInstitutions(instRes || []);
                 setTypes(typeRes || []);
 
-                // Fusionar países existentes en la BD con la lista por defecto
                 if (countriesRes && countriesRes.length > 0) {
                     setCountries((prev) => Array.from(new Set([...prev, ...countriesRes])));
                 }
@@ -84,46 +87,73 @@ export default function CreateAgreementPage() {
         loadAuxData();
     }, []);
 
-    // Limpieza de ObjectURL para prevenir fugas de memoria
+    // Limpieza de ObjectURLs para prevenir fugas de memoria
     useEffect(() => {
         return () => {
-            if (pdfPreviewUrl) {
-                URL.revokeObjectURL(pdfPreviewUrl);
+            if (oficioPreviewUrl) {
+                URL.revokeObjectURL(oficioPreviewUrl);
+            }
+            if (propuestaPreviewUrl) {
+                URL.revokeObjectURL(propuestaPreviewUrl);
             }
         };
-    }, [pdfPreviewUrl]);
+    }, [oficioPreviewUrl, propuestaPreviewUrl]);
 
-    // Manejador del Visor PDF y Selección de Documento
-    const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleOficioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
 
-        if (pdfPreviewUrl) {
-            URL.revokeObjectURL(pdfPreviewUrl);
+        if (oficioPreviewUrl) {
+            URL.revokeObjectURL(oficioPreviewUrl);
         }
 
-        setDocumentFile(file);
+        setOficioFile(file);
 
         if (file && file.type === 'application/pdf') {
-            const url = URL.createObjectURL(file);
-            setPdfPreviewUrl(url);
+            setOficioPreviewUrl(URL.createObjectURL(file));
         } else {
-            setPdfPreviewUrl(null);
+            setOficioPreviewUrl(null);
         }
     };
 
-    // Limpiar PDF y reiniciar input
-    const handleClearPdf = () => {
-        if (pdfPreviewUrl) {
-            URL.revokeObjectURL(pdfPreviewUrl);
+    const handleClearOficio = () => {
+        if (oficioPreviewUrl) {
+            URL.revokeObjectURL(oficioPreviewUrl);
         }
-        setPdfPreviewUrl(null);
-        setDocumentFile(null);
-        if (documentInputRef.current) {
-            documentInputRef.current.value = '';
+        setOficioPreviewUrl(null);
+        setOficioFile(null);
+        if (oficioInputRef.current) {
+            oficioInputRef.current.value = '';
         }
     };
 
-    // Crear Nueva Institución en Caliente
+    const handlePropuestaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+
+        if (propuestaPreviewUrl) {
+            URL.revokeObjectURL(propuestaPreviewUrl);
+        }
+
+        setPropuestaFile(file);
+
+        if (file && file.type === 'application/pdf') {
+            setPropuestaPreviewUrl(URL.createObjectURL(file));
+        } else {
+            setPropuestaPreviewUrl(null);
+        }
+    };
+
+    const handleClearPropuesta = () => {
+        if (propuestaPreviewUrl) {
+            URL.revokeObjectURL(propuestaPreviewUrl);
+        }
+        setPropuestaPreviewUrl(null);
+        setPropuestaFile(null);
+        if (propuestaInputRef.current) {
+            propuestaInputRef.current.value = '';
+        }
+    };
+
+    // Crear Nueva Institución
     const handleSaveInstitution = async (e: React.FormEvent) => {
         e.preventDefault();
         const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
@@ -171,13 +201,22 @@ export default function CreateAgreementPage() {
         }
     };
 
-    // Enviar Formulario Principal de Convenio
+    // Enviar Formulario de Recepción en OCRI
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validación previa en frontend
-        if (!institutionId || !agreementTypeId) {
-            toast.warning('Por favor, selecciona una institución y un tipo de convenio.');
+        if (!institutionId || !agreementTypeId || !title.trim()) {
+            toast.warning('Por favor, completa los campos obligatorios del expediente.');
+            return;
+        }
+
+        if (!oficioFile) {
+            toast.warning('Debe adjuntar el oficio de solicitud digitalizado (PDF).');
+            return;
+        }
+
+        if (!propuestaFile) {
+            toast.warning('Debe adjuntar la propuesta de convenio (PDF).');
             return;
         }
 
@@ -185,29 +224,29 @@ export default function CreateAgreementPage() {
 
         try {
             const formData = new FormData();
-            formData.append('resolution_number', resolutionNumber.trim().toUpperCase());
-            formData.append('name', name.trim().toUpperCase());
             formData.append('title', title.trim().toUpperCase());
-
-            // Convertimos explícitamente a número antes de anexarlo al FormData
             formData.append('institution_id', Number(institutionId).toString());
             formData.append('agreement_type_id', Number(agreementTypeId).toString());
 
-            if (startDate) formData.append('start_date', startDate);
-            if (endDate) formData.append('end_date', endDate);
-            if (dictamenFile) formData.append('dictamen', dictamenFile);
-            if (documentFile) formData.append('document', documentFile);
+            if (name.trim()) formData.append('name', name.trim().toUpperCase());
+            if (rectorateOficioNumber.trim()) formData.append('rectorate_oficio_number', rectorateOficioNumber.trim().toUpperCase());
+            if (applicantName.trim()) formData.append('applicant_name', applicantName.trim());
+            if (applicantEmail.trim()) formData.append('applicant_email', applicantEmail.trim());
+            if (applicantUnit.trim()) formData.append('applicant_unit', applicantUnit.trim());
 
-            await fetcher('/agreements', {
+            formData.append('oficio_solicitud', oficioFile);
+            formData.append('propuesta', propuestaFile);
+
+            const created = await fetcher<{ id: number }>('/agreements', {
                 method: 'POST',
                 body: formData,
             });
 
-            toast.success('Convenio registrado correctamente.');
-            router.push('/agreements');
+            toast.success('Expediente recepcionado correctamente. Iniciando evaluación técnica.');
+            router.push(`/agreements/${created.id}/process`);
         } catch (err) {
-            console.error('Error al crear convenio:', err);
-            toast.error('Ocurrió un error al registrar el convenio.');
+            console.error('Error al recepcionar expediente:', err);
+            toast.error(err instanceof Error ? err.message : 'Ocurrió un error al ingresar el expediente.');
         } finally {
             setSaving(false);
         }
@@ -217,7 +256,7 @@ export default function CreateAgreementPage() {
         return (
             <div className="flex h-64 w-full items-center justify-center gap-3 text-sm text-gray-500">
                 <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
-                <span>Cargando formulario de registro...</span>
+                <span>Cargando formulario de recepción...</span>
             </div>
         );
     }
@@ -228,11 +267,17 @@ export default function CreateAgreementPage() {
             {/* Header Institucional */}
             <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-xl font-normal text-gray-800">
-                        Nuevo Convenio Institucional
+                    <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
+                            Proceso 1 • Mesa de Entrada OCRI
+                        </span>
+                    </div>
+                    <h1 className="text-xl font-normal text-gray-800 mt-1">
+                        Recepción e Ingreso de Expediente (Dictamen Rectorado)
                     </h1>
-                    <p className="text-xs text-gray-500 mt-1">
-                        Formulario oficial para el alta de convenios y resoluciones de la OCRI - UNCP
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        Registro oficial en OCRI de la documentación física y proveído/dictamen derivado por Rectorado para elaboración del informe técnico.
                     </p>
                 </div>
                 <Link
@@ -246,13 +291,13 @@ export default function CreateAgreementPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* Bloque 1: Identificación del Documento */}
+                {/* Bloque 1: Datos de Recepción del Expediente */}
                 <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-[#df9f1f]" />
+                            <FolderInput className="h-4 w-4 text-[#df9f1f]" />
                             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                                Identificación del Documento
+                                Datos Generales
                             </h2>
                         </div>
                         <span className="text-xs text-gray-400 font-medium">* Campos obligatorios</span>
@@ -262,66 +307,39 @@ export default function CreateAgreementPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    N° de Convenio / Resolución <span className="text-red-500">*</span>
+                                    Oficio de Rectorado N° <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     required
-                                    value={resolutionNumber}
-                                    onChange={(e) => setResolutionNumber(e.target.value.toUpperCase())}
-                                    placeholder="R.R. N° 001-2026"
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase placeholder:normal-case placeholder-gray-400"
+                                    value={rectorateOficioNumber}
+                                    onChange={(e) => setRectorateOficioNumber(e.target.value)}
+                                    placeholder="EJ: OF. N° 129-2026-RECTORADO"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                                 />
+                                <p className="text-xs text-gray-400 italic">
+                                    El código de trámite se genera automáticamente al registrar el expediente.
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    Título Corto / Referencia <span className="text-red-500">*</span>
+                                    Unidad Solicitante
                                 </label>
                                 <input
                                     type="text"
-                                    required
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value.toUpperCase())}
-                                    placeholder="EJ: UNCP - ESSALUD"
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase placeholder:normal-case placeholder-gray-400"
+                                    value={applicantUnit}
+                                    onChange={(e) => setApplicantUnit(e.target.value)}
+                                    placeholder="EJ: FACULTAD DE INGENIERÍA / DIRECCIÓN DE RELACIONES INSTITUCIONALES"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="block text-xs font-semibold uppercase text-gray-600">
-                                Nombre Oficial del Convenio <span className="text-red-500">*</span>
-                            </label>
-                            <textarea
-                                rows={3}
-                                required
-                                value={name}
-                                onChange={(e) => setName(e.target.value.toUpperCase())}
-                                placeholder="NOMBRE COMPLETO SEGÚN RESOLUCIÓN..."
-                                className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase placeholder:normal-case placeholder-gray-400 resize-none"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Grid 2 Columnas: Categorización + Acervo / Adjuntos */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                    {/* Bloque 2: Categorización */}
-                    <div className="border border-gray-200 bg-white shadow-sm overflow-hidden h-fit">
-                        <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-                            <Tag className="h-4 w-4 text-[#df9f1f]" />
-                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                                Categorización
-                            </h2>
-                        </div>
-
-                        <div className="p-6 space-y-6">
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-gray-600 flex items-center gap-1.5">
-                                    <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                                    Institución Aliada <span className="text-red-500">*</span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-1.5 md:col-span-2">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
+                                    Entidad Solicitante / Aliada <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex items-center gap-2">
                                     <select
@@ -339,8 +357,8 @@ export default function CreateAgreementPage() {
                                     <button
                                         type="button"
                                         onClick={() => setIsModalOpen(true)}
-                                        title="Registrar nueva institución"
-                                        className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center transition-colors shrink-0"
+                                        title="Registrar nueva institución aliada"
+                                        className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                                     >
                                         <Plus className="h-4 w-4" />
                                     </button>
@@ -349,7 +367,7 @@ export default function CreateAgreementPage() {
 
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    Tipo de Convenio <span className="text-red-500">*</span>
+                                    Tipo de Convenio Solicitado <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     required
@@ -365,101 +383,174 @@ export default function CreateAgreementPage() {
                                 </select>
                             </div>
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
+                                    Representante / Solicitante de la Entidad
+                                </label>
+                                <input
+                                    type="text"
+                                    value={applicantName}
+                                    onChange={(e) => setApplicantName(e.target.value)}
+                                    placeholder="EJ: DR. CARLOS ALARCÓN (RECTOR / DIRECTOR)"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
+                                    Correo de Contacto del Solicitante
+                                </label>
+                                <input
+                                    type="email"
+                                    value={applicantEmail}
+                                    onChange={(e) => setApplicantEmail(e.target.value)}
+                                    placeholder="contacto@institucion.edu.pe"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bloque 2: Propuesta de Convenio */}
+                <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-[#df9f1f]" />
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                            Asunto y Objeto de la Propuesta de Convenio
+                        </h2>
                     </div>
 
-                    {/* Bloque 3: Acervo y Vigencia */}
-                    <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-                        <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                    <div className="p-6 space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
+                                Título Corto / Referencia del Convenio <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="EJ: PROPUESTA CONVENIO MARCO UNCP - ESSALUD"
+                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
+                                Objeto o Finalidad de la Propuesta
+                            </label>
+                            <textarea
+                                rows={3}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="DESCRIPCIÓN DEL PROPÓSITO DEL CONVENIO, ÁREAS DE COOPERACIÓN, MOVILIDAD ACADÉMICA, INVESTIGACIÓN CONJUNTA..."
+                                className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase resize-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bloque 3: Digitalización del Oficio de Solicitud */}
+                <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                             <Paperclip className="h-4 w-4 text-[#df9f1f]" />
                             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                                Acervo y Vigencia (Opcional)
+                                Digitalización del Oficio de Solicitud (PDF) <span className="text-red-500">*</span>
                             </h2>
                         </div>
-
-                        <div className="p-6 space-y-5">
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-amber-700">
-                                    Dictamen / Documento Original (Opcional)
-                                </label>
-                                <p className="text-[11px] text-gray-500">
-                                    Sustento de la solicitud de dictamen de rectorado o suscripción.
-                                </p>
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={(e) => setDictamenFile(e.target.files?.[0] || null)}
-                                    className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100 cursor-pointer border border-gray-300"
-                                />
-                            </div>
-
-                            <hr className="border-gray-200" />
-
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-blue-700">
-                                    Adjuntar Convenio Firmado (PDF)
-                                </label>
-                                <input
-                                    ref={documentInputRef}
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={handleDocumentChange}
-                                    className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-800 hover:file:bg-blue-100 cursor-pointer border border-gray-300"
-                                />
-                            </div>
-
-                            {documentFile && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                                    <div className="space-y-1.5">
-                                        <label className="block text-xs font-semibold uppercase text-gray-600">
-                                            Fecha de Inicio <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="date"
-                                            required
-                                            value={startDate}
-                                            onChange={(e) => setStartDate(e.target.value)}
-                                            className="w-full px-3 py-2 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="block text-xs font-semibold uppercase text-gray-600">
-                                            Fecha de Fin <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="date"
-                                            required
-                                            value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
-                                            className="w-full px-3 py-2 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {pdfPreviewUrl && (
-                                <div className="mt-4 space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
-                                        <span>Vista Previa del Documento</span>
-                                        <button
-                                            type="button"
-                                            onClick={handleClearPdf}
-                                            className="text-red-600 hover:underline cursor-pointer"
-                                        >
-                                            Quitar PDF
-                                        </button>
-                                    </div>
-                                    <div className="w-full h-[380px] bg-gray-100 border border-gray-300 overflow-hidden">
-                                        <iframe
-                                            src={pdfPreviewUrl}
-                                            className="w-full h-full border-0"
-                                            title="Vista Previa de Convenio PDF"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <span className="text-xs text-red-500 font-medium">Obligatorio</span>
                     </div>
 
+                    <div className="p-6 space-y-4">
+                        <p className="text-xs text-gray-500">
+                            Adjunte la digitalización del oficio/proveído de Rectorado con el que se deriva el trámite a la OCRI para la elaboración del informe técnico.
+                        </p>
+
+                        <input
+                            ref={oficioInputRef}
+                            type="file"
+                            accept=".pdf"
+                            required
+                            onChange={handleOficioChange}
+                            className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100 cursor-pointer border border-gray-300"
+                        />
+
+                        {oficioPreviewUrl && (
+                            <div className="space-y-2 pt-2">
+                                <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
+                                    <span>Vista Previa del Oficio de Solicitud</span>
+                                    <button
+                                        type="button"
+                                        onClick={handleClearOficio}
+                                        className="text-red-600 hover:underline cursor-pointer"
+                                    >
+                                        Quitar PDF
+                                    </button>
+                                </div>
+                                <div className="w-full h-[320px] bg-gray-100 border border-gray-300 overflow-hidden">
+                                    <iframe
+                                        src={oficioPreviewUrl}
+                                        className="w-full h-full border-0"
+                                        title="Vista Previa del Oficio"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Bloque 4: Propuesta de Convenio */}
+                <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-[#df9f1f]" />
+                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                                Propuesta de Convenio (PDF) <span className="text-red-500">*</span>
+                            </h2>
+                        </div>
+                        <span className="text-xs text-red-500 font-medium">Obligatorio</span>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        <p className="text-xs text-gray-500">
+                            Adjunte el proyecto/propuesta de convenio remitido por la entidad solicitante.
+                        </p>
+
+                        <input
+                            ref={propuestaInputRef}
+                            type="file"
+                            accept=".pdf"
+                            required
+                            onChange={handlePropuestaChange}
+                            className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-800 hover:file:bg-blue-100 cursor-pointer border border-gray-300"
+                        />
+
+                        {propuestaPreviewUrl && (
+                            <div className="space-y-2 pt-2">
+                                <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
+                                    <span>Vista Previa de la Propuesta</span>
+                                    <button
+                                        type="button"
+                                        onClick={handleClearPropuesta}
+                                        className="text-red-600 hover:underline cursor-pointer"
+                                    >
+                                        Quitar PDF
+                                    </button>
+                                </div>
+                                <div className="w-full h-[320px] bg-gray-100 border border-gray-300 overflow-hidden">
+                                    <iframe
+                                        src={propuestaPreviewUrl}
+                                        className="w-full h-full border-0"
+                                        title="Vista Previa de la Propuesta"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Barra de Acciones Final */}
@@ -478,12 +569,12 @@ export default function CreateAgreementPage() {
                         {saving ? (
                             <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>Registrando en el Sistema...</span>
+                                <span>Recepcionando e Ingresando...</span>
                             </>
                         ) : (
                             <>
                                 <Save className="h-4 w-4" />
-                                <span>Registrar en el Sistema</span>
+                                <span>Registrar e Iniciar Evaluación Técnica</span>
                             </>
                         )}
                     </button>
@@ -498,17 +589,17 @@ export default function CreateAgreementPage() {
                         <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
                             <X className="h-5 w-5" />
                         </button>
 
                         <div>
                             <h3 className="text-base font-semibold text-gray-800">
-                                Registrar Nueva Institución
+                                Registrar Nueva Institución Aliada
                             </h3>
                             <p className="text-xs text-gray-500">
-                                Ingresa los datos básicos para añadirla al directorio.
+                                Ingrese los datos de la entidad solicitante para seleccionarla.
                             </p>
                         </div>
 
@@ -521,7 +612,7 @@ export default function CreateAgreementPage() {
                                     type="text"
                                     required
                                     value={newInstName}
-                                    onChange={(e) => setNewInstName(e.target.value.toUpperCase())}
+                                    onChange={(e) => setNewInstName(e.target.value)}
                                     placeholder="Ej. UNIVERSIDAD NACIONAL DE INGENIERÍA"
                                     className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                                 />
@@ -535,7 +626,7 @@ export default function CreateAgreementPage() {
                                     <button
                                         type="button"
                                         onClick={() => setIsCustomCountry(!isCustomCountry)}
-                                        className="text-xs font-semibold text-blue-600 hover:underline"
+                                        className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
                                     >
                                         {isCustomCountry ? 'Seleccionar existente' : 'Escribir país nuevo'}
                                     </button>
@@ -558,7 +649,7 @@ export default function CreateAgreementPage() {
                                         type="text"
                                         required
                                         value={customCountry}
-                                        onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
+                                        onChange={(e) => setCustomCountry(e.target.value)}
                                         placeholder="Ej. ARGENTINA"
                                         className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
                                     />
@@ -587,7 +678,7 @@ export default function CreateAgreementPage() {
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer"
                                 >
                                     Cancelar
                                 </button>

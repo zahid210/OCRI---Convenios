@@ -3,25 +3,48 @@ import { Prisma } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilterReportsDto } from './dto/filter-reports.dto';
+import {
+  deriveTemporalStatus,
+  EXPIRATION_WARNING_DAYS,
+  IN_FLIGHT_STATUSES,
+} from '../common/process.constants';
 
 const STATUS_LABELS = [
-  'En Proceso',
+  'En Trámite',
   'Vigente',
   'Por Vencer',
   'Vencido',
+  'No Suscrito',
+  'Sin Fecha',
 ] as const;
 
-type AgreementWithRelations = {
-  id: bigint;
-  title: string;
-  name?: string | null;
-  resolution_number?: string | null;
-  status: string;
-  start_date?: Date | null;
-  end_date?: Date | null;
-  institutions?: { name: string; country: string } | null;
-  agreement_types?: { name: string } | null;
+/** Mapa UPPERCASE → etiqueta legible (coincide con STATUS_LABELS). */
+const TEMPORAL_STATUS_LABEL: Record<string, string> = {
+  VIGENTE: 'Vigente',
+  POR_VENCER: 'Por Vencer',
+  VENCIDO: 'Vencido',
+  SIN_FECHA: 'Sin Fecha',
 };
+
+/** Estados previos a la suscripción del convenio. */
+const IN_FLIGHT = [...IN_FLIGHT_STATUSES];
+
+type AgreementWithRelations = Prisma.agreementsGetPayload<{
+  include: {
+    institutions: { select: { name: true; country: true } };
+    agreement_types: { select: { name: true } };
+  };
+}>;
+
+export interface ReportSummary {
+  total: number;
+  por_estado: Record<string, number>;
+  en_tramite: number;
+  vigentes: number;
+  proximos_a_vencer: number;
+  vencidos: number;
+  no_suscritos: number;
+}
 
 @Injectable()
 export class ReportsService {
@@ -42,38 +65,40 @@ export class ReportsService {
       where.institution_id = BigInt(filter.institution_id);
     }
 
-    if (filter.status) {
+    if (filter.status === 'En Trámite') {
+      where.process_status = { in: IN_FLIGHT };
+    } else if (filter.status === 'No Suscrito') {
+      where.process_status = 'NO_SUSCRITO';
+    } else if (
+      filter.status === 'Vigente' ||
+      filter.status === 'Por Vencer' ||
+      filter.status === 'Vencido'
+    ) {
       const now = new Date();
       now.setHours(0, 0, 0, 0);
 
-      if (filter.status === 'En Proceso') {
-        where.status = 'En Proceso';
-      } else if (filter.status === 'Vigente') {
-        where.status = 'Vigente';
-        where.AND = [
-          {
-            OR: [{ end_date: null }, { end_date: { gte: now } }],
-          },
-        ];
+      where.process_status = {
+        in: ['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'],
+      };
+
+      if (filter.status === 'Vigente') {
+        const warningDate = new Date(now);
+        warningDate.setDate(warningDate.getDate() + EXPIRATION_WARNING_DAYS);
+        where.end_date = { gte: warningDate };
+        where.validity_status = { in: ['VIGENTE', 'SUSPENDIDO'] };
       } else if (filter.status === 'Por Vencer') {
         const warningDate = new Date(now);
-        warningDate.setDate(warningDate.getDate() + 90);
-
-        where.status = 'Vigente';
-        where.end_date = {
-          gte: now,
-          lte: warningDate,
-        };
-      } else if (filter.status === 'Vencido') {
+        warningDate.setDate(warningDate.getDate() + EXPIRATION_WARNING_DAYS);
+        where.end_date = { gte: now, lte: warningDate };
+        where.validity_status = { in: ['VIGENTE', 'SUSPENDIDO'] };
+      } else {
         where.OR = [
-          { status: 'Vencido' },
+          { validity_status: 'VENCIDO' },
           {
-            status: 'Vigente',
+            validity_status: { in: ['VIGENTE', 'SUSPENDIDO'] },
             end_date: { lt: now },
           },
         ];
-      } else {
-        where.status = filter.status;
       }
     }
 
@@ -94,44 +119,22 @@ export class ReportsService {
   }
 
   private deriveStatus(a: AgreementWithRelations): string {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    if (a.process_status === 'NO_SUSCRITO') return 'No Suscrito';
 
-    if (a.status === 'En Proceso') return 'En Proceso';
-    if (a.status === 'Vencido') return 'Vencido';
+    const inFlight =
+      IN_FLIGHT.includes(a.process_status) ||
+      a.process_status === 'SUSCRITO' ||
+      a.process_status === 'PUBLICADO';
 
-    if (a.status === 'Vigente' && a.end_date) {
-      const end = new Date(a.end_date);
-      end.setHours(0, 0, 0, 0);
+    if (inFlight) return 'En Trámite';
 
-      if (end < now) return 'Vencido';
-
-      const warningDate = new Date(now);
-      warningDate.setDate(warningDate.getDate() + 90);
-
-      if (end <= warningDate) return 'Por Vencer';
-    }
-
-    return a.status || 'Sin estado';
+    const ts = deriveTemporalStatus(a.end_date).temporal_status;
+    return TEMPORAL_STATUS_LABEL[ts] ?? ts;
   }
 
-  private daysUntil(endDate?: Date | null): number | null {
-    if (!endDate) return null;
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(0, 0, 0, 0);
-    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 3600 * 24));
-  }
-
-  async summary(filter: FilterReportsDto) {
+  async summary(filter: FilterReportsDto): Promise<ReportSummary> {
     const agreements = await this.getAgreements(filter);
-    const counts: Record<string, number> = {
-      'En Proceso': 0,
-      Vigente: 0,
-      'Por Vencer': 0,
-      Vencido: 0,
-    };
+    const counts: Record<string, number> = {};
 
     for (const a of agreements) {
       const status = this.deriveStatus(a);
@@ -141,10 +144,11 @@ export class ReportsService {
     return {
       total: agreements.length,
       por_estado: counts,
-      proximos_a_vencer: counts['Por Vencer'],
-      vencidos: counts['Vencido'],
-      en_proceso: counts['En Proceso'],
-      vigentes: counts['Vigente'],
+      en_tramite: counts['En Trámite'] ?? 0,
+      vigentes: counts['Vigente'] ?? 0,
+      proximos_a_vencer: counts['Por Vencer'] ?? 0,
+      vencidos: counts['Vencido'] ?? 0,
+      no_suscritos: counts['No Suscrito'] ?? 0,
     };
   }
 
@@ -163,12 +167,16 @@ export class ReportsService {
     }));
   }
 
+  private normalizeCountry(c: string | null | undefined): string {
+    return (c ?? '').trim().toUpperCase() || 'SIN PAÍS';
+  }
+
   async byCountry(filter: FilterReportsDto) {
     const agreements = await this.getAgreements(filter);
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
-      const country = a.institutions?.country || 'Sin país';
+      const country = this.normalizeCountry(a.institutions?.country);
       counts[country] = (counts[country] ?? 0) + 1;
     }
 
@@ -203,7 +211,7 @@ export class ReportsService {
       if (!counts[name]) {
         counts[name] = {
           institucion: name,
-          pais: a.institutions?.country || '',
+          pais: this.normalizeCountry(a.institutions?.country),
           cantidad: 0,
         };
       }
@@ -222,35 +230,38 @@ export class ReportsService {
   async expiring(filter: FilterReportsDto) {
     const agreements = await this.getAgreements(filter);
     return agreements
-      .filter((a) => this.deriveStatus(a) === 'Por Vencer')
-      .map((a) => this.serializeRow(a, true))
+      .filter(
+        (a) =>
+          deriveTemporalStatus(a.end_date).temporal_status === 'POR_VENCER',
+      )
+      .map((a) => this.serializeRow(a))
       .sort((x, y) => (x.fecha_fin ?? '').localeCompare(y.fecha_fin ?? ''));
   }
 
   async expired(filter: FilterReportsDto) {
     const agreements = await this.getAgreements(filter);
     return agreements
-      .filter((a) => this.deriveStatus(a) === 'Vencido')
-      .map((a) => this.serializeRow(a, true))
+      .filter(
+        (a) => deriveTemporalStatus(a.end_date).temporal_status === 'VENCIDO',
+      )
+      .map((a) => this.serializeRow(a))
       .sort((x, y) => (y.fecha_fin ?? '').localeCompare(x.fecha_fin ?? ''));
   }
 
-  private serializeRow(a: AgreementWithRelations, withInstitution: boolean) {
+  private serializeRow(a: AgreementWithRelations) {
     return {
       id: Number(a.id),
-      expediente: a.resolution_number || a.title || `Convenio #${a.id}`,
+      expediente: a.tramite_code || a.resolution_number || `Convenio #${a.id}`,
       titulo: a.title,
-      institucion: withInstitution
-        ? a.institutions?.name || 'No especificada'
-        : undefined,
-      pais: withInstitution ? a.institutions?.country || 'PERÚ' : undefined,
-      tipo: withInstitution ? a.agreement_types?.name || 'Sin tipo' : undefined,
+      institucion: a.institutions?.name || 'No especificada',
+      pais: this.normalizeCountry(a.institutions?.country),
+      tipo: a.agreement_types?.name || 'Sin tipo',
       estado: this.deriveStatus(a),
       fecha_inicio: a.start_date
         ? a.start_date.toISOString().slice(0, 10)
         : null,
       fecha_fin: a.end_date ? a.end_date.toISOString().slice(0, 10) : null,
-      dias_restantes: this.daysUntil(a.end_date),
+      dias_restantes: deriveTemporalStatus(a.end_date).days_remaining,
     };
   }
 
@@ -301,11 +312,12 @@ export class ReportsService {
     wsResumen.addRow(['Métrica', 'Cantidad']);
     wsResumen.getRow(2).eachCell((cell) => (cell.style = headerStyle));
     wsResumen.addRows([
-      ['Total de convenios', summary.total],
-      ['En Proceso', summary.en_proceso],
+      ['Total de trámites/convenios', summary.total],
+      ['En Trámite (propuesta/registro)', summary.en_tramite],
       ['Vigentes', summary.vigentes],
       ['Próximos a vencer (90 días)', summary.proximos_a_vencer],
       ['Vencidos', summary.vencidos],
+      ['No suscritos', summary.no_suscritos],
     ]);
     wsResumen.getColumn(1).width = 40;
     wsResumen.getColumn(2).width = 14;

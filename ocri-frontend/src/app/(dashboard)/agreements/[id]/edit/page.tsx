@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { use } from 'react';
@@ -11,27 +11,18 @@ import {
     FileText,
     Building2,
     Tag,
+    Link2,
     Loader2,
-    Paperclip,
     Plus,
     X,
-    ExternalLink
+    ClipboardList,
 } from 'lucide-react';
 import { Agreement, Institution, AgreementType } from '@/types/agreements';
-import { fetcher, getFileUrl } from '@/lib/api';
+import { fetcher, updateAgreement } from '@/lib/api';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useUser } from '@/components/user-provider';
 import { canManage, isAdmin } from '@/lib/auth';
-
-interface AgreementDocument {
-    id: number;
-    name?: string;
-    file_path?: string;
-    filePath?: string;
-    file_url?: string;
-    fileUrl?: string;
-}
 
 export default function EditAgreementPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -39,7 +30,6 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     const toast = useToast();
     const confirm = useConfirm();
     const user = useUser();
-    const documentInputRef = useRef<HTMLInputElement>(null);
 
     // Estados de Datos Auxiliares
     const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -51,20 +41,19 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
-    // Form Principal
+    // Form Principal (UpdateAgreementDto)
     const [agreement, setAgreement] = useState<Agreement | null>(null);
-    const [resolutionNumber, setResolutionNumber] = useState('');
-    const [name, setName] = useState('');
     const [title, setTitle] = useState('');
+    const [name, setName] = useState('');
     const [institutionId, setInstitutionId] = useState('');
     const [agreementTypeId, setAgreementTypeId] = useState('');
+    const [applicantName, setApplicantName] = useState('');
+    const [applicantEmail, setApplicantEmail] = useState('');
+    const [applicantUnit, setApplicantUnit] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-
-    // Archivos y Previsualización
-    const [dictamenFile, setDictamenFile] = useState<File | null>(null);
-    const [documentFile, setDocumentFile] = useState<File | null>(null);
-    const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+    const [driveLink, setDriveLink] = useState('');
+    const [observations, setObservations] = useState('');
 
     // Modal de Creación Rápida de Institución
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -91,13 +80,17 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                 if (!isMounted) return;
 
                 setAgreement(agRes);
-                setResolutionNumber(agRes.resolution_number || '');
-                setName(agRes.name || '');
                 setTitle(agRes.title || '');
+                setName(agRes.name || '');
                 setInstitutionId(agRes.institution_id ? agRes.institution_id.toString() : '');
                 setAgreementTypeId(agRes.agreement_type_id ? agRes.agreement_type_id.toString() : '');
+                setApplicantName(agRes.applicant_name || '');
+                setApplicantEmail(agRes.applicant_email || '');
+                setApplicantUnit(agRes.applicant_unit || '');
                 setStartDate(agRes.start_date ? String(agRes.start_date).slice(0, 10) : '');
                 setEndDate(agRes.end_date ? String(agRes.end_date).slice(0, 10) : '');
+                setDriveLink(agRes.drive_link || '');
+                setObservations(agRes.observations || '');
 
                 setInstitutions(instRes || []);
                 setTypes(typeRes || []);
@@ -118,45 +111,6 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
             isMounted = false;
         };
     }, [id]);
-
-    // Limpieza de ObjectURL para evitar fugas de memoria
-    useEffect(() => {
-        return () => {
-            if (pdfPreviewUrl) {
-                URL.revokeObjectURL(pdfPreviewUrl);
-            }
-        };
-    }, [pdfPreviewUrl]);
-
-    // Manejador del Visor PDF al adjuntar nuevo documento
-    const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0] || null;
-
-        if (pdfPreviewUrl) {
-            URL.revokeObjectURL(pdfPreviewUrl);
-        }
-
-        setDocumentFile(file);
-
-        if (file && file.type === 'application/pdf') {
-            const url = URL.createObjectURL(file);
-            setPdfPreviewUrl(url);
-        } else {
-            setPdfPreviewUrl(null);
-        }
-    };
-
-    // Limpiar PDF y reiniciar input
-    const handleClearPdf = () => {
-        if (pdfPreviewUrl) {
-            URL.revokeObjectURL(pdfPreviewUrl);
-        }
-        setPdfPreviewUrl(null);
-        setDocumentFile(null);
-        if (documentInputRef.current) {
-            documentInputRef.current.value = '';
-        }
-    };
 
     // Crear Nueva Institución en Caliente
     const handleSaveInstitution = async (e: React.FormEvent) => {
@@ -206,69 +160,39 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
         }
     };
 
-    // Eliminar un archivo individual del acervo actual con aviso inmediato
-    const handleDeleteDocument = async (docId: number) => {
-        const isConfirmed = await confirm({
-            title: '¿Eliminar archivo?',
-            description:
-                'Esta acción eliminará el archivo del servidor de forma inmediata. No se puede deshacer incluso si cancelas la edición del convenio después.',
-            confirmLabel: 'Eliminar',
-            cancelLabel: 'Cancelar',
-            destructive: true,
-        });
-
-        if (!isConfirmed) return;
-
-        try {
-            await fetcher(`/agreements/documents/${docId}`, {
-                method: 'DELETE',
-            });
-            if (agreement) {
-                setAgreement({
-                    ...agreement,
-                    documents: agreement.documents?.filter((d: AgreementDocument) => d.id !== docId) || []
-                });
-            }
-            toast.success('Archivo eliminado correctamente.');
-        } catch (err) {
-            console.error('Error al eliminar archivo:', err);
-            toast.error('No se pudo eliminar el archivo.');
-        }
-    };
-
-    // Actualizar Convenio Principal
+    // Actualizar Convenio Principal (PATCH /agreements/:id)
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!institutionId || !agreementTypeId) {
-            toast.warning('Por favor, selecciona una institución y un tipo de convenio.');
+        if (!title.trim() || !institutionId || !agreementTypeId) {
+            toast.warning('Por favor, completa el título y la categorización del convenio.');
             return;
         }
 
         setSaving(true);
         try {
-            const formData = new FormData();
-            formData.append('resolution_number', resolutionNumber.trim().toUpperCase());
-            formData.append('name', name.trim().toUpperCase());
-            formData.append('title', title.trim().toUpperCase());
-            formData.append('institution_id', Number(institutionId).toString());
-            formData.append('agreement_type_id', Number(agreementTypeId).toString());
+            const payload: Record<string, unknown> = {
+                title: title.trim().toUpperCase(),
+                institution_id: Number(institutionId),
+                agreement_type_id: Number(agreementTypeId),
+                applicant_name: applicantName.trim(),
+                applicant_email: applicantEmail.trim(),
+                applicant_unit: applicantUnit.trim().toUpperCase(),
+                drive_link: driveLink.trim(),
+                observations,
+            };
 
-            if (startDate) formData.append('start_date', startDate);
-            if (endDate) formData.append('end_date', endDate);
-            if (dictamenFile) formData.append('dictamen', dictamenFile);
-            if (documentFile) formData.append('document', documentFile);
+            if (name.trim()) payload.name = name.trim().toUpperCase();
+            if (startDate) payload.start_date = startDate;
+            if (endDate) payload.end_date = endDate;
 
-            await fetcher(`/agreements/${id}`, {
-                method: 'PATCH',
-                body: formData,
-            });
+            await updateAgreement(Number(id), payload);
 
             toast.success('Convenio actualizado correctamente.');
-            router.push('/agreements');
+            router.push(`/agreements/${id}`);
         } catch (err) {
             console.error('Error al actualizar el convenio:', err);
-            toast.error('Ocurrió un error al actualizar el convenio.');
+            toast.error(err instanceof Error ? err.message : 'Ocurrió un error al actualizar el convenio.');
         } finally {
             setSaving(false);
         }
@@ -337,15 +261,19 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                         Editar Convenio Institucional
                     </h1>
                     <p className="text-xs text-gray-500 mt-1">
-                        Modificando el registro: <span className="font-bold text-[#df9f1f]">{title || resolutionNumber}</span>
+                        Modificando el registro:{' '}
+                        <span className="font-bold text-[#df9f1f]">
+                            {agreement?.tramite_code ? `${agreement.tramite_code} • ` : ''}
+                            {title || 'Sin título'}
+                        </span>
                     </p>
                 </div>
                 <Link
-                    href="/agreements"
+                    href={`/agreements/${id}`}
                     className="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm transition-colors self-start sm:self-auto"
                 >
                     <ArrowLeft className="h-4 w-4" />
-                    <span>Volver al Directorio</span>
+                    <span>Volver al Detalle</span>
                 </Link>
             </div>
 
@@ -363,50 +291,36 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                     </div>
 
                     <div className="p-6 space-y-5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    N° de Convenio / Resolución <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={resolutionNumber}
-                                    onChange={(e) => setResolutionNumber(e.target.value.toUpperCase())}
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
-                                />
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    Título Corto / Referencia <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value.toUpperCase())}
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
-                                />
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
+                                Título Corto / Referencia <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value.toUpperCase())}
+                                placeholder="EJ: CONVENIO MARCO UNCP - ESSALUD"
+                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                            />
                         </div>
 
                         <div className="space-y-1.5">
                             <label className="block text-xs font-semibold uppercase text-gray-600">
-                                Nombre Oficial del Convenio <span className="text-red-500">*</span>
+                                Denominación / Objeto del Convenio
                             </label>
                             <textarea
                                 rows={3}
-                                required
                                 value={name}
                                 onChange={(e) => setName(e.target.value.toUpperCase())}
+                                placeholder="DESCRIPCIÓN LARGA DEL CONVENIO O SU OBJETO..."
                                 className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase resize-none"
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* Grid 2 Columnas: Categorización + Acervo / Adjuntos */}
+                {/* Grid 2 Columnas: Categorización + Vigencia y Enlaces */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Categorización */}
                     <div className="border border-gray-200 bg-white shadow-sm overflow-hidden h-fit">
@@ -441,7 +355,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                         type="button"
                                         onClick={() => setIsModalOpen(true)}
                                         title="Registrar nueva institución"
-                                        className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center transition-colors shrink-0"
+                                        className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                                     >
                                         <Plus className="h-4 w-4" />
                                     </button>
@@ -469,83 +383,17 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                         </div>
                     </div>
 
-                    {/* Vigencia y Acervo Digital */}
-                    <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    {/* Vigencia y Enlaces */}
+                    <div className="border border-gray-200 bg-white shadow-sm overflow-hidden h-fit">
                         <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-                            <Paperclip className="h-4 w-4 text-[#df9f1f]" />
+                            <Link2 className="h-4 w-4 text-[#df9f1f]" />
                             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                                Acervo y Vigencia
+                                Vigencia y Enlace
                             </h2>
                         </div>
 
                         <div className="p-6 space-y-5">
-                            {/* Listado de archivos actuales adaptado para NestJS */}
-                            {agreement?.documents && agreement.documents.length > 0 ? (
-                                <div className="space-y-2 pb-2">
-                                    <p className="text-xs font-semibold text-gray-700 uppercase">Archivos guardados actualmente:</p>
-                                    <div className="space-y-2">
-                                        {agreement.documents.map((doc: AgreementDocument) => {
-                                            const rawPath = doc.file_path || doc.filePath || doc.file_url || doc.fileUrl;
-                                            const fullUrl = getFileUrl(rawPath);
-
-                                            return (
-                                                <div key={doc.id} className="flex items-center justify-between gap-2 text-xs bg-gray-50 p-2.5 border border-gray-200">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <FileText className="h-4 w-4 text-blue-500 shrink-0" />
-                                                        <span className="truncate font-medium text-gray-700" title={doc.name || 'Documento en el acervo'}>
-                                                            {doc.name || 'Documento adjunto'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        {fullUrl ? (
-                                                            <a
-                                                                href={fullUrl}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold"
-                                                            >
-                                                                <span>Ver PDF</span>
-                                                                <ExternalLink className="h-3 w-3" />
-                                                            </a>
-                                                        ) : (
-                                                            <span className="text-gray-400 italic">Ruta no disponible</span>
-                                                        )}
-                                                        {isAdmin(user) && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeleteDocument(doc.id)}
-                                                                className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-                                                                title="Eliminar archivo"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : (
-                                <p className="text-xs text-gray-400 italic">No hay ningún archivo principal en el acervo digital.</p>
-                            )}
-
-                            <hr className="border-gray-200" />
-
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-blue-700">
-                                    Subir un nuevo documento (PDF)
-                                </label>
-                                <input
-                                    ref={documentInputRef}
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={handleDocumentChange}
-                                    className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-800 hover:file:bg-blue-100 cursor-pointer border border-gray-300"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="block text-xs font-semibold uppercase text-gray-600">Fecha Inicio</label>
                                     <input
@@ -566,28 +414,94 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 </div>
                             </div>
 
-                            {pdfPreviewUrl && (
-                                <div className="mt-4 space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
-                                        <span>Vista Previa del Nuevo PDF</span>
-                                        <button
-                                            type="button"
-                                            onClick={handleClearPdf}
-                                            className="text-red-600 hover:underline cursor-pointer"
-                                        >
-                                            Quitar PDF
-                                        </button>
-                                    </div>
-                                    <div className="w-full h-[280px] bg-gray-100 border border-gray-300 overflow-hidden">
-                                        <iframe
-                                            src={pdfPreviewUrl}
-                                            className="w-full h-full border-0"
-                                            title="Vista Previa PDF"
-                                        />
-                                    </div>
-                                </div>
-                            )}
+                            <p className="text-xs text-gray-400 italic">
+                                La vigencia formal se registra en la Etapa 2 (registro del convenio); aquí puede ajustar las fechas referenciales.
+                            </p>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
+                                    Enlace de Google Drive
+                                </label>
+                                <input
+                                    type="url"
+                                    value={driveLink}
+                                    onChange={(e) => setDriveLink(e.target.value)}
+                                    placeholder="https://drive.google.com/..."
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                                />
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Bloque 3: Datos del Solicitante */}
+                <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                        <ClipboardList className="h-4 w-4 text-[#df9f1f]" />
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                            Datos del Solicitante
+                        </h2>
+                    </div>
+
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
+                                Representante / Solicitante
+                            </label>
+                            <input
+                                type="text"
+                                value={applicantName}
+                                onChange={(e) => setApplicantName(e.target.value)}
+                                placeholder="EJ: DR. CARLOS ALARCÓN"
+                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
+                                Correo de Contacto
+                            </label>
+                            <input
+                                type="email"
+                                value={applicantEmail}
+                                onChange={(e) => setApplicantEmail(e.target.value)}
+                                placeholder="contacto@institucion.edu.pe"
+                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold uppercase text-gray-600">
+                                Unidad Solicitante
+                            </label>
+                            <input
+                                type="text"
+                                value={applicantUnit}
+                                onChange={(e) => setApplicantUnit(e.target.value.toUpperCase())}
+                                placeholder="EJ: FACULTAD DE CIENCIAS"
+                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bloque 4: Observaciones */}
+                <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-[#df9f1f]" />
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                            Observaciones
+                        </h2>
+                    </div>
+
+                    <div className="p-6">
+                        <textarea
+                            rows={3}
+                            value={observations}
+                            onChange={(e) => setObservations(e.target.value)}
+                            placeholder="Notas sobre el avance o estado del trámite..."
+                            className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400 resize-none"
+                        />
                     </div>
                 </div>
 
@@ -605,9 +519,9 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                         </button>
                     )}
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 ml-auto">
                         <Link
-                            href="/agreements"
+                            href={`/agreements/${id}`}
                             className="px-5 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                             Cancelar
@@ -712,15 +626,15 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                     Tipo de Institución <span className="text-red-500">*</span>
                                 </label>
                                 <select
+                                    required
                                     value={newInstType}
                                     onChange={(e) => setNewInstType(e.target.value)}
                                     className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                 >
                                     <option value="Universidad Nacional">Universidad Nacional</option>
                                     <option value="Universidad Privada">Universidad Privada</option>
-                                    <option value="Institución Pública">Institución Pública</option>
-                                    <option value="Institución Privada">Institución Privada</option>
-                                    <option value="Empresa">Empresa</option>
+                                    <option value="Entidad Gubernamental">Entidad Gubernamental</option>
+                                    <option value="Empresa Privada">Empresa Privada</option>
                                     <option value="Organización Internacional">Organización Internacional</option>
                                     <option value="Centro de Investigación">Centro de Investigación</option>
                                 </select>
@@ -730,7 +644,7 @@ export default function EditAgreementPage({ params }: { params: Promise<{ id: st
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                                    className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                                 >
                                     Cancelar
                                 </button>

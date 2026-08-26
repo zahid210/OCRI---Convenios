@@ -1,3 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// OCRI-UNCP · Sistema de Gestión de Convenios Internacionales
+// Esquema alineado al flujo real de OCRI en 3 etapas:
+//   E1 Propuesta   : recepción → opiniones de dependencias → expediente técnico
+//                    → envío a Rectorado
+//   E2 Registro    : decisión de Rectorado (suscribe / no suscribe) → convenio
+//                    firmado → publicación → registro (semáforo activo)
+//   E3 Seguimiento : plan de trabajo → informes semestrales/finales con loop
+//                    de correcciones → conclusión del seguimiento
+// ═══════════════════════════════════════════════════════════════════════════
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,120 +17,113 @@ datasource db {
   provider = "mysql"
 }
 
-model agreement_reports {
-  id                      BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
-  agreement_id            BigInt     @db.UnsignedBigInt
-  title                   String?    @db.VarChar(255)
-  date                    DateTime   @db.Date
-  oficio_path             String?    @db.VarChar(255)
-  oficio_original_name    String?    @db.VarChar(255)
-  respuesta_path          String?    @db.VarChar(255)
-  respuesta_original_name String?    @db.VarChar(255)
-  created_at              DateTime?  @db.Timestamp(0)
-  updated_at              DateTime?  @db.Timestamp(0)
-  agreements              agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agreement_reports_agreement_id_foreign")
+// ─── Máquina de estados del proceso ─────────────────────────────────────────
 
-  @@index([agreement_id], map: "agreement_reports_agreement_id_foreign")
+enum process_status {
+  RECEPCIONADA // E1: OCRI recibe la solicitud derivada por Rectorado
+  OPINIONES_EN_CURSO // E1: oficios de solicitud de opinión generados/enviados
+  OPINIONES_COMPLETAS // E1: todas las opiniones recibidas y coordinadas
+  EXPEDIENTE_TECNICO_LISTO // E1: expediente técnico + informe/opinión OCRI elaborados
+  ENVIADO_A_RECTORADO // E1 fin: expediente + propuesta + opinión remitidos
+  NO_SUSCRITO // E2 terminal: Rectorado no suscribe; solicitante notificado
+  SUSCRITO // E2: Rectorado suscribe y remite el convenio firmado
+  PUBLICADO // E2: OCRI publicó el convenio
+  REGISTRADO // E2 fin: registrado con resolución, vigencia y responsables
+  EN_SEGUIMIENTO // E3: plan de trabajo solicitado a los responsables
+  SEGUIMIENTO_CONCLUIDO // E3 terminal: todos los informes validados e inscritos
 }
 
-model agreement_types {
-  id         BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  name       String       @db.VarChar(255)
-  created_at DateTime?    @db.Timestamp(0)
-  updated_at DateTime?    @db.Timestamp(0)
-  agreements agreements[]
+enum validity_status {
+  PENDIENTE // aún no suscrito/registrado
+  VIGENTE
+  SUSPENDIDO
+  RESCINDIDO
+  VENCIDO
 }
 
-model agreements {
-  id                     BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
-  title                  String              @db.VarChar(255)
-  name                   String?             @db.Text
-  resolution_number      String?             @unique(map: "agreements_resolution_number_unique") @db.VarChar(255)
-  institution_id         BigInt              @db.UnsignedBigInt
-  agreement_type_id      BigInt              @db.UnsignedBigInt
-  start_date             DateTime?           @db.Date
-  end_date               DateTime?           @db.Date
-  status                 String              @default("Vigente") @db.VarChar(255)
-  situation              String?             @db.Text
-  dictamen_path          String?             @db.VarChar(255)
-  dictamen_original_name String?             @db.VarChar(255)
-  created_at             DateTime?           @db.Timestamp(0)
-  updated_at             DateTime?           @db.Timestamp(0)
-  agreement_reports      agreement_reports[]
-  agreement_types        agreement_types     @relation(fields: [agreement_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agreements_agreement_type_id_foreign")
-  institutions           institutions        @relation(fields: [institution_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agreements_institution_id_foreign")
-  documents              documents[]
-  oficios                oficios[]
-  roadmap_items          roadmap_items[]
-  work_plans             work_plans[]
-
-  @@index([agreement_type_id], map: "agreements_agreement_type_id_foreign")
-  @@index([end_date], map: "agreements_end_date_index")
-  @@index([institution_id], map: "agreements_institution_id_foreign")
-  @@index([start_date], map: "agreements_start_date_index")
-  @@index([status], map: "agreements_status_index")
+enum process_stage {
+  ETAPA_1_PROPUESTA
+  ETAPA_2_REGISTRO
+  ETAPA_3_SEGUIMIENTO
 }
 
-model asistencia {
-  id             BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  practicante_id BigInt       @db.UnsignedBigInt
-  fecha          DateTime     @db.Date
-  hora_entrada   DateTime?    @db.Time(0)
-  hora_salida    DateTime?    @db.Time(0)
-  created_at     DateTime?    @db.Timestamp(0)
-  updated_at     DateTime?    @db.Timestamp(0)
-  practicantes   practicantes @relation(fields: [practicante_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "asistencia_practicante_id_foreign")
-
-  @@index([fecha], map: "asistencia_fecha_index")
-  @@index([practicante_id], map: "asistencia_practicante_id_foreign")
+enum user_role {
+  admin
+  editor
+  viewer
 }
 
-model cache {
-  key        String @id @db.VarChar(255)
-  value      String @db.MediumText
-  expiration Int
-
-  @@index([expiration], map: "cache_expiration_index")
+enum document_direction {
+  ENTRADA
+  SALIDA
+  INTERNO
 }
 
-model cache_locks {
-  key        String @id @db.VarChar(255)
-  owner      String @db.VarChar(255)
-  expiration Int
-
-  @@index([expiration], map: "cache_locks_expiration_index")
+enum opinion_request_status {
+  GENERADA
+  ENVIADA
+  RESPONDIDA
+  VALIDADA
+  OBSERVADA
+  CANCELADA
 }
 
-model documents {
-  id           BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
-  agreement_id BigInt     @db.UnsignedBigInt
-  name         String     @db.VarChar(255)
-  file_path    String     @db.VarChar(255)
-  extension    String?    @db.VarChar(255)
-  created_at   DateTime?  @db.Timestamp(0)
-  updated_at   DateTime?  @db.Timestamp(0)
-  agreements   agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "documents_agreement_id_foreign")
-
-  @@index([agreement_id], map: "documents_agreement_id_foreign")
+enum dependencia_kind {
+  RECTORADO
+  OCRI
+  UNIDAD_ORGANICA
 }
 
-model failed_jobs {
-  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
-  connection String   @db.Text
-  queue      String   @db.Text
-  payload    String   @db.LongText
-  exception  String   @db.LongText
-  failed_at  DateTime @default(now()) @db.Timestamp(0)
+enum rectorate_decision_type {
+  APPROVED // convenio suscrito
+  REJECTED // convenio no suscrito
+}
+
+enum responsable_side {
+  UNCP
+  CONTRAPARTE
+}
+
+enum deliverable_type {
+  PLAN_DE_TRABAJO
+  INFORME_SEMESTRAL
+  INFORME_FINAL
+}
+
+// Ciclo del entregable: solicitar → recibir → revisar (validar u observar con
+// correcciones) → registrar. La re-remisión tras observación incrementa versión.
+enum deliverable_status {
+  SOLICITADO
+  RECIBIDO
+  OBSERVADO
+  REGISTRADO
+}
+
+// ─── Usuarios y catálogos ────────────────────────────────────────────────────
+
+model users {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @db.VarChar(255)
+  email      String    @unique(map: "users_email_unique") @db.VarChar(255)
+  password   String    @db.VarChar(255)
+  role       user_role @default(viewer)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+
+  documents_uploaded       documents[]
+  deliverable_observations deliverable_observations[]
+
+  @@index([role])
 }
 
 model institutions {
-  id         BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  name       String       @db.VarChar(255)
-  country    String       @db.VarChar(255)
-  type       String       @default("Pública") @db.VarChar(255)
-  created_at DateTime?    @db.Timestamp(0)
-  updated_at DateTime?    @db.Timestamp(0)
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @db.VarChar(255)
+  country    String    @db.VarChar(255)
+  type       String    @default("Publica") @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+
   agreements agreements[]
 
   @@index([country], map: "institutions_country_index")
@@ -127,145 +131,246 @@ model institutions {
   @@index([type], map: "institutions_type_index")
 }
 
-model job_batches {
-  id             String  @id @db.VarChar(255)
-  name           String  @db.VarChar(255)
-  total_jobs     Int
-  pending_jobs   Int
-  failed_jobs    Int
-  failed_job_ids String  @db.LongText
-  options        String? @db.MediumText
-  cancelled_at   Int?
-  created_at     Int
-  finished_at    Int?
+model agreement_types {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+
+  agreements agreements[]
 }
 
-model jobs {
-  id           BigInt @id @default(autoincrement()) @db.UnsignedBigInt
-  queue        String @db.VarChar(255)
-  payload      String @db.LongText
-  attempts     Int    @db.UnsignedTinyInt
-  reserved_at  Int?   @db.UnsignedInt
-  available_at Int    @db.UnsignedInt
-  created_at   Int    @db.UnsignedInt
+model dependencias {
+  id                 BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  code               String           @unique @db.VarChar(30)
+  name               String           @db.VarChar(255)
+  kind               dependencia_kind
+  email              String?          @db.VarChar(255)
+  is_default_opinion Boolean          @default(false)
+  sort_order         Int              @default(0)
+  is_active          Boolean          @default(true)
+  created_at         DateTime?        @db.Timestamp(0)
+  updated_at         DateTime?        @db.Timestamp(0)
 
-  @@index([queue], map: "jobs_queue_index")
+  opinion_requests opinion_requests[]
+
+  @@index([is_active])
 }
 
-model migrations {
-  id        Int    @id @default(autoincrement()) @db.UnsignedInt
-  migration String @db.VarChar(255)
-  batch     Int
+model document_types {
+  id        BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  code      String             @unique @db.VarChar(50)
+  name      String             @db.VarChar(255)
+  direction document_direction
+  is_active Boolean            @default(true)
+
+  documents documents[]
 }
 
-model oficios {
+// ─── Entidad principal: Convenio / Trámite ──────────────────────────────────
+
+model agreements {
+  id           BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  tramite_code String  @unique @db.VarChar(30)
+  title        String  @db.VarChar(255)
+  name         String? @db.VarChar(500) // objeto/denominación completa
+
+  // Solicitud (E1): entidad que propuso el convenio y su derivación por Rectorado
+  applicant_name          String? @db.VarChar(255)
+  applicant_email         String? @db.VarChar(255)
+  applicant_unit          String? @db.VarChar(255) // unidad orgánica solicitante
+  rectorate_oficio_number String? @db.VarChar(80) // oficio con que Rectorado deriva a OCRI
+
+  institution_id    BigInt @db.UnsignedBigInt
+  agreement_type_id BigInt @db.UnsignedBigInt
+
+  // Registro (E2)
+  resolution_number String?   @unique(map: "agreements_resolution_number_unique") @db.VarChar(255)
+  start_date        DateTime? @db.Date
+  end_date          DateTime? @db.Date
+  drive_link        String?   @db.VarChar(500) // repositorio institucional
+
+  // Estado del proceso
+  process_status  process_status  @default(RECEPCIONADA)
+  validity_status validity_status @default(PENDIENTE)
+  stage           process_stage   @default(ETAPA_1_PROPUESTA)
+
+  // Decisión de Rectorado (E2)
+  rectorate_decision      rectorate_decision_type?
+  rectorate_decision_at   DateTime?                @db.Timestamp(0)
+  notified_solicitante_at DateTime?                @db.Timestamp(0) // notificación de rechazo a la entidad
+
+  // Hitos
+  published_at            DateTime? @db.Timestamp(0)
+  registered_at           DateTime? @db.Timestamp(0)
+  monitoring_concluded_at DateTime? @db.Timestamp(0)
+
+  observations String?   @db.Text
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @db.Timestamp(0)
+
+  institutions    institutions    @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agreements_institution_id_foreign")
+  agreement_types agreement_types @relation(fields: [agreement_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agreements_agreement_type_id_foreign")
+
+  documents        documents[]
+  opinion_requests opinion_requests[]
+  process_events   process_events[]
+  deliverables     deliverables[]
+  responsables     agreement_responsables[]
+
+  @@index([agreement_type_id], map: "agreements_agreement_type_id_foreign")
+  @@index([end_date], map: "agreements_end_date_index")
+  @@index([institution_id], map: "agreements_institution_id_foreign")
+  @@index([start_date], map: "agreements_start_date_index")
+  @@index([process_status])
+  @@index([validity_status])
+}
+
+// Responsables del convenio registrados durante el registro (E2); destinatarios
+// del Plan de Trabajo y de los informes (E3). Solo OCRI opera el sistema.
+model agreement_responsables {
+  id           BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id BigInt           @db.UnsignedBigInt
+  name         String           @db.VarChar(255)
+  role         String?          @db.VarChar(150)
+  side         responsable_side @default(UNCP)
+  email        String?          @db.VarChar(255)
+  phone        String?          @db.VarChar(50)
+  created_at   DateTime?        @db.Timestamp(0)
+  updated_at   DateTime?        @db.Timestamp(0)
+
+  agreements agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agreement_responsables_agreement_id_foreign")
+
+  @@index([agreement_id])
+}
+
+// ─── Documentos (repositorio único del expediente) ──────────────────────────
+
+model documents {
+  id            BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id  BigInt  @db.UnsignedBigInt
+  name          String  @db.VarChar(255)
+  file_path     String  @db.VarChar(255)
+  original_name String? @db.VarChar(255)
+  extension     String? @db.VarChar(10)
+
+  document_type_id   BigInt?             @db.UnsignedBigInt
+  direction          document_direction?
+  stage              process_stage?
+  opinion_request_id BigInt?             @db.UnsignedBigInt
+  deliverable_id     BigInt?             @db.UnsignedBigInt
+  uploaded_by_id     BigInt?             @db.UnsignedBigInt
+  created_at         DateTime?           @db.Timestamp(0)
+  updated_at         DateTime?           @db.Timestamp(0)
+
+  agreements       agreements        @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "documents_agreement_id_foreign")
+  document_types   document_types?   @relation(fields: [document_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  opinion_requests opinion_requests? @relation(fields: [opinion_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  deliverables     deliverables?     @relation(fields: [deliverable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  uploaded_by      users?            @relation(fields: [uploaded_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([agreement_id], map: "documents_agreement_id_foreign")
+  @@index([document_type_id])
+  @@index([opinion_request_id])
+  @@index([deliverable_id])
+  @@index([agreement_id, stage])
+}
+
+// ─── E1: Solicitudes de opinión a dependencias ──────────────────────────────
+
+model opinion_requests {
+  id             BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id   BigInt                 @db.UnsignedBigInt
+  dependencia_id BigInt                 @db.UnsignedBigInt
+  stage          process_stage          @default(ETAPA_1_PROPUESTA)
+  status         opinion_request_status @default(GENERADA)
+
+  oficio_number String?   @db.VarChar(80)
+  directed_to   String?   @db.VarChar(255)
+  sent_via      String?   @db.VarChar(20)
+  adesa_number  String?   @db.VarChar(80)
+  sent_at       DateTime? @db.Timestamp(0)
+  due_at        DateTime? @db.Date
+  response_date DateTime? @db.Date
+  validated_at  DateTime? @db.Timestamp(0)
+  observations  String?   @db.Text
+  created_at    DateTime? @db.Timestamp(0)
+  updated_at    DateTime? @db.Timestamp(0)
+
+  agreements   agreements   @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  dependencias dependencias @relation(fields: [dependencia_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documents    documents[]
+
+  @@unique([agreement_id, dependencia_id, stage])
+  @@index([agreement_id])
+  @@index([response_date])
+  @@index([status, due_at])
+  @@index([dependencia_id])
+}
+
+// ─── Auditoría del proceso ──────────────────────────────────────────────────
+
+model process_events {
   id                 BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
   agreement_id       BigInt         @db.UnsignedBigInt
-  roadmap_item_id    BigInt?        @db.UnsignedBigInt
-  area_name          String         @db.VarChar(255)
-  directed_to        String         @db.VarChar(255)
-  oficio_number      String         @db.VarChar(255)
-  file_path          String?        @db.VarChar(255)
-  file_original_name String?        @db.VarChar(255)
-  type               oficios_type   @default(opinion)
-  created_at         DateTime?      @db.Timestamp(0)
-  updated_at         DateTime?      @db.Timestamp(0)
-  body_html          String?        @db.LongText
-  status             String         @default("draft") @db.VarChar(255)
-  agreements         agreements     @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "oficios_agreement_id_foreign")
-  roadmap_items      roadmap_items? @relation(fields: [roadmap_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "oficios_roadmap_item_id_foreign")
+  opinion_request_id BigInt?        @db.UnsignedBigInt
+  stage              process_stage?
+  event_type         String         @db.VarChar(60)
+  description        String?        @db.VarChar(500)
+  actor_user_id      BigInt?        @db.UnsignedBigInt
+  from_value         String?        @db.VarChar(60)
+  to_value           String?        @db.VarChar(60)
+  occurred_at        DateTime       @default(now()) @db.Timestamp(0)
+  metadata           Json?
 
-  @@index([agreement_id], map: "oficios_agreement_id_foreign")
-  @@index([created_at], map: "oficios_created_at_index")
-  @@index([oficio_number], map: "oficios_oficio_number_index")
-  @@index([roadmap_item_id], map: "oficios_roadmap_item_id_foreign")
+  agreements agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([agreement_id, occurred_at])
 }
 
-model password_reset_tokens {
-  email      String    @id @db.VarChar(255)
-  token      String    @db.VarChar(255)
-  created_at DateTime? @db.Timestamp(0)
+// ─── E3: Plan de trabajo e informes ────────────────────────────────────────
+
+model deliverables {
+  id           BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id BigInt             @db.UnsignedBigInt
+  type         deliverable_type
+  title        String             @db.VarChar(255)
+  status       deliverable_status @default(SOLICITADO)
+  period       String?            @db.VarChar(50)
+  version      Int                @default(1)
+
+  requested_at  DateTime  @default(now()) @db.Timestamp(0)
+  submitted_at  DateTime? @db.Timestamp(0)
+  registered_at DateTime? @db.Timestamp(0)
+  created_at    DateTime  @default(now()) @db.Timestamp(0)
+  updated_at    DateTime  @updatedAt @db.Timestamp(0)
+
+  agreements   agreements                 @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  observations deliverable_observations[]
+  documents    documents[]
+
+  @@index([agreement_id])
+  @@index([agreement_id, type])
+  @@index([status])
 }
 
-model practicantes {
-  id         BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  nombre     String       @unique(map: "practicantes_nombre_unique") @db.VarChar(255)
-  dni        String?      @unique(map: "practicantes_dni_unique") @db.VarChar(8)
-  created_at DateTime?    @db.Timestamp(0)
-  updated_at DateTime?    @db.Timestamp(0)
-  asistencia asistencia[]
+model deliverable_observations {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  deliverable_id BigInt   @db.UnsignedBigInt
+  comment        String   @db.Text
+  created_by_id  BigInt?  @db.UnsignedBigInt
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+
+  deliverable deliverables @relation(fields: [deliverable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_by  users?       @relation(fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([deliverable_id])
 }
 
-model roadmap_documents {
-  id              BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
-  roadmap_item_id BigInt        @db.UnsignedBigInt
-  file_path       String        @db.VarChar(255)
-  original_name   String        @db.VarChar(255)
-  type            String        @default("entrada") @db.VarChar(255)
-  created_at      DateTime?     @db.Timestamp(0)
-  updated_at      DateTime?     @db.Timestamp(0)
-  roadmap_items   roadmap_items @relation(fields: [roadmap_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "roadmap_documents_roadmap_item_id_foreign")
+// ─── Configuración ──────────────────────────────────────────────────────────
 
-  @@index([roadmap_item_id], map: "roadmap_documents_roadmap_item_id_foreign")
-}
-
-model roadmap_items {
-  id                BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
-  agreement_id      BigInt              @db.UnsignedBigInt
-  area_name         String              @db.VarChar(255)
-  is_completed      Boolean             @default(false)
-  order             Int                 @default(0)
-  envio_tipo        String?             @db.VarChar(255)
-  numero_expediente String?             @db.VarChar(255)
-  created_at        DateTime?           @db.Timestamp(0)
-  updated_at        DateTime?           @db.Timestamp(0)
-  oficios           oficios[]
-  roadmap_documents roadmap_documents[]
-  agreements        agreements          @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "roadmap_items_agreement_id_foreign")
-
-  @@index([agreement_id], map: "roadmap_items_agreement_id_foreign")
-}
-
-model sessions {
-  id            String  @id @db.VarChar(255)
-  user_id       BigInt? @db.UnsignedBigInt
-  ip_address    String? @db.VarChar(45)
-  user_agent    String? @db.Text
-  payload       String  @db.LongText
-  last_activity Int
-
-  @@index([last_activity], map: "sessions_last_activity_index")
-  @@index([user_id], map: "sessions_user_id_index")
-}
-
-model users {
-  id                        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  name                      String    @db.VarChar(255)
-  email                     String    @unique(map: "users_email_unique") @db.VarChar(255)
-  email_verified_at         DateTime? @db.Timestamp(0)
-  password                  String    @db.VarChar(255)
-  two_factor_secret         String?   @db.Text
-  two_factor_recovery_codes String?   @db.Text
-  two_factor_confirmed_at   DateTime? @db.Timestamp(0)
-  remember_token            String?   @db.VarChar(100)
-  created_at                DateTime? @db.Timestamp(0)
-  updated_at                DateTime? @db.Timestamp(0)
-  role                      String    @default("admin") @db.VarChar(255)
-}
-
-model work_plans {
-  id            BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
-  agreement_id  BigInt     @db.UnsignedBigInt
-  file_path     String     @db.VarChar(255)
-  original_name String     @db.VarChar(255)
-  created_at    DateTime?  @db.Timestamp(0)
-  updated_at    DateTime?  @db.Timestamp(0)
-  agreements    agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "work_plans_agreement_id_foreign")
-
-  @@index([agreement_id], map: "work_plans_agreement_id_foreign")
-}
-
-enum oficios_type {
-  opinion
-  final
+model app_config {
+  key        String    @id @db.VarChar(80)
+  value      String    @db.VarChar(255)
+  updated_at DateTime? @db.Timestamp(0)
 }

@@ -1,28 +1,24 @@
-import { IsOptional, IsString, IsNumber, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
 
 export class FilterSeguimientoDto {
   @IsOptional()
   @IsString()
+  page?: string | number;
+
+  @IsOptional()
+  @IsString()
+  per_page?: string | number;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 
+  /** Estado exacto del proceso a filtrar */
   @IsOptional()
   @IsString()
-  status?: string;
+  process_status?: string;
 
   @IsOptional()
   @IsString()
-  pendientes?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({}, { message: 'page debe ser un número' })
-  @Min(1)
-  page?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({}, { message: 'per_page debe ser un número' })
-  @Min(1)
-  per_page?: number;
+  pendientes?: 'true' | 'false';
 }

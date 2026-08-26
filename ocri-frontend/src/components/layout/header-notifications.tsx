@@ -144,7 +144,7 @@ export function HeaderNotifications() {
                                 return (
                                     <li key={n.id}>
                                         <Link
-                                            href={`/agreements/${n.agreement_id}`}
+                                            href={`/convenios/${n.agreement_id}`}
                                             onClick={() => setOpen(false)}
                                             className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-gray-50"
                                         >

@@ -33,7 +33,9 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
 
             // Redirige al login si no estamos ya en él
             if (!window.location.pathname.startsWith('/login')) {
-                window.location.href = '/login';
+                // Redirección dura fuera del árbol de React (interceptor de sesión expirada)
+                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                window.location.assign(`${window.location.origin}/login`);
             }
         }
         throw new Error('Sesión expirada. Por favor, inicie sesión nuevamente.');
@@ -44,7 +46,15 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
         return {} as T;
     }
 
-    const data = await response.json();
+    let data;
+    try {
+        data = await response.json();
+    } catch {
+        // Backend devolvió HTML (error page, backend caído, etc.)
+        throw new Error(
+            `Error inesperado del servidor (HTTP ${response.status}). Verifique que el backend esté activo.`,
+        );
+    }
 
     if (!response.ok) {
         const errorMessage = Array.isArray(data.message)
@@ -62,27 +72,27 @@ export const fetcher = <T = unknown>(endpoint: string, options?: RequestInit): P
     fetchApi<T>(endpoint, options);
 
 /**
- * Genera la URL completa para previsualizar o descargar archivos estáticos (PDFs, resoluciones, etc.)
- * Apunta al controlador público /resoluciones del backend NestJS.
+ * Genera la URL completa para previsualizar o descargar archivos (PDFs, etc.)
+ * Apunta al controlador protegido /resoluciones del backend NestJS. Como los
+ * visores embebidos no pueden enviar cabeceras, se adjunta el token JWT por
+ * query string; el backend lo valida antes de servir el archivo.
  */
 export function getFileUrl(filePath: string | null | undefined): string {
     if (!filePath) return '';
 
-    // Si el registro traía la URL antigua de Laravel, la limpiamos
-    const cleanPath = filePath.replace(/^http:\/\/localhost:8000\/?/, '');
-
     // Si ya es una URL HTTP/HTTPS externa completa, la devolvemos tal cual
-    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-        return cleanPath;
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+        return filePath;
     }
 
-    // Extrae únicamente el nombre base del archivo ignorando subcarpetas antiguas
-    const fileName = cleanPath.split('/').pop()?.split('\\').pop() || cleanPath;
+    // Extrae únicamente el nombre base del archivo
+    const fileName = filePath.split('/').pop()?.split('\\').pop() || filePath;
 
     const storageBaseUrl = process.env.NEXT_PUBLIC_STORAGE_URL || API_URL;
+    const token = Cookies.get('access_token');
+    const qs = token ? `?token=${encodeURIComponent(token)}` : '';
 
-    // Genera la URL codificando el nombre de archivo para el controlador público de NestJS
-    return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}`;
+    return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}${qs}`;
 }
 
 /**
@@ -124,69 +134,309 @@ export async function downloadFile(endpoint: string, filename: string): Promise<
 }
 
 /* ============================================================================
- * HELPERS ESPECÍFICOS PARA EL MÓDULO DE CONVENIOS Y HOJA DE RUTA
+ * HELPERS ESPECIFICOS PARA EL MODULO DE CONVENIOS
  * ============================================================================ */
 
-/** Actualiza la nota rápida de situación/observaciones del convenio */
-export async function updateAgreementSituation(id: number, situation: string) {
-    return fetchApi(`/agreements/${id}/situation`, {
+/** Actualiza campos generales del convenio (título, fechas, resolución, etc.) */
+export async function updateAgreement(id: number, data: Record<string, unknown>) {
+    return fetchApi(`/agreements/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ situation }),
+        body: JSON.stringify(data),
     });
 }
 
-/** Inicializa o restituye los ítems por defecto de la Hoja de Ruta */
-export async function initAgreementRoadmap(id: number) {
-    return fetchApi(`/agreements/${id}/roadmap/init`, {
+/* ============================================================================
+ * HELPERS PARA EL MÓDULO DE PROCESO (ETAPA 1 BIZAGI)
+ * ============================================================================ */
+
+/** Obtiene el estado del proceso de un convenio (solicitudes, conteos, semáforo) */
+export async function getProcessStatus(agreementId: number) {
+    return fetchApi(`/process/${agreementId}/status`);
+}
+
+/** Genera solicitudes de opinión para dependencias seleccionadas */
+export async function generateOpinionRequests(
+    agreementId: number,
+    data: {
+        dependencia_ids: number[];
+        default_days?: number;
+        oficio_number?: string;
+        directed_to?: string;
+    },
+) {
+    return fetchApi(`/process/${agreementId}/opinion-requests`, {
         method: 'POST',
+        body: JSON.stringify(data),
     });
 }
 
-/** Sube un documento PDF de entrada o salida para un área específica de la Hoja de Ruta */
-export async function uploadRoadmapDocument(
-    itemId: number,
-    file: File,
-    type: 'entrada' | 'salida',
+/** Envía una solicitud de opinión a la dependencia */
+export async function sendOpinionRequest(
+    requestId: number,
+    data: {
+        sent_via?: string;
+        adesa_number?: string;
+        oficio_number?: string;
+        directed_to?: string;
+    },
+) {
+    return fetchApi(`/process/opinion-requests/${requestId}/send`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+/** Registra la respuesta de una dependencia (con archivo opcional) */
+export async function respondOpinionRequest(
+    requestId: number,
+    data: { response_date?: string; observations?: string },
+    file?: File,
 ) {
     const formData = new FormData();
-    formData.append('file', file);
+    if (data.response_date) formData.append('response_date', data.response_date);
+    if (data.observations) formData.append('observations', data.observations);
+    if (file) formData.append('file', file);
 
-    return fetchApi(`/agreements/roadmap/${itemId}/documents?type=${type}`, {
+    return fetchApi(`/process/opinion-requests/${requestId}/respond`, {
         method: 'POST',
         body: formData,
     });
 }
 
-/** Elimina un documento de la hoja de ruta por su ID */
-export async function deleteRoadmapDocument(docId: number) {
-    return fetchApi(`/agreements/roadmap/documents/${docId}`, {
+/** Valida o observa la respuesta de una dependencia */
+export async function validateOpinionRequest(
+    requestId: number,
+    data: { valid: boolean; observations?: string },
+) {
+    return fetchApi(`/process/opinion-requests/${requestId}/validate`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+/** Elimina una solicitud de opinión (solo si está en estado GENERADA) */
+export async function deleteOpinionRequest(requestId: number) {
+    return fetchApi(`/process/opinion-requests/${requestId}`, {
         method: 'DELETE',
     });
 }
 
-/** Actualiza la información de envío (ADESA con N° expediente o Correo) */
-export async function updateRoadmapEnvio(
-    itemId: number,
-    data: { envio_tipo?: string; numero_expediente?: string },
+/** Sube un documento tipado al proceso */
+export async function uploadProcessDocument(
+    agreementId: number,
+    file: File,
+    documentTypeCode: string,
+    direction?: string,
 ) {
-    return fetchApi(`/agreements/roadmap/${itemId}/envio`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_type_code', documentTypeCode);
+    if (direction) formData.append('direction', direction);
+
+    return fetchApi(`/process/${agreementId}/documents`, {
+        method: 'POST',
+        body: formData,
     });
 }
 
-/** Activa el convenio (pasa de 'En Proceso' a 'Vigente' registrando resolución y rango de fechas) */
-export async function activateAgreement(
-    id: number,
-    data: {
-        resolution_number: string;
-        start_date: string;
-        end_date: string;
-        situation?: string;
-    },
+/** OCRI declara el expediente técnico listo (con informe técnico/opinión OCRI) */
+export async function finalizeExpediente(agreementId: number) {
+    return fetchApi(`/process/${agreementId}/finalize-expediente`, {
+        method: 'POST',
+    });
+}
+
+/** Genera el expediente técnico automáticamente (merge de opiniones) */
+export async function generateExpediente(agreementId: number) {
+    return fetchApi(`/process/${agreementId}/generate-expediente`, {
+        method: 'POST',
+    });
+}
+
+/** Envía el expediente a Rectorado (requiere 3 documentos) */
+export async function sendToRectorado(agreementId: number) {
+    return fetchApi(`/process/${agreementId}/send-to-rectorado`, {
+        method: 'POST',
+    });
+}
+
+/** Obtiene el historial de eventos del proceso */
+export async function getProcessEvents(agreementId: number) {
+    return fetchApi(`/process/${agreementId}/events`);
+}
+
+/** Obtiene los documentos clasificados del proceso */
+export async function getProcessDocuments(agreementId: number) {
+    return fetchApi(`/process/${agreementId}/documents`);
+}
+
+/** Obtiene todas las dependencias activas */
+export async function getDependencias(params?: {
+    kind?: string;
+    is_active?: string;
+    search?: string;
+}) {
+    const qs = params
+        ? '?' + new URLSearchParams(params as Record<string, string>).toString()
+        : '';
+    return fetchApi(`/dependencias${qs}`);
+}
+
+/** Obtiene las dependencias que son targets por defecto de opiniones */
+export async function getDefaultOpinionTargets() {
+    return fetchApi('/dependencias/default-opinions');
+}
+
+/** Obtiene todos los tipos de documento */
+export async function getDocumentTypes(direction?: string) {
+    const qs = direction ? `?direction=${direction}` : '';
+    return fetchApi(`/document-types${qs}`);
+}
+
+// ─── Etapa 2: Publicación y Registro de Convenio ───────────────────────
+
+/** Rectorado decide sobre la propuesta (APPROVED / REJECTED) */
+export async function rectorateDecision(
+    agreementId: number,
+    decision: 'APPROVED' | 'REJECTED',
+    notificationMessage?: string,
 ) {
-    return fetchApi(`/agreements/${id}/activate`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
+    return fetchApi(`/process/${agreementId}/rectorate-decision`, {
+        method: 'POST',
+        body: JSON.stringify({
+            decision,
+            notification_message: notificationMessage,
+        }),
+    });
+}
+
+/** OCRI publica el convenio (adjunto opcional de evidencia de publicación) */
+export async function publishConvenio(agreementId: number, file?: File) {
+    if (!file) {
+        return fetchApi(`/process/${agreementId}/publish`, {
+            method: 'POST',
+        });
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi(`/process/${agreementId}/publish`, {
+        method: 'POST',
+        body: formData,
+    });
+}
+
+/** Actualiza la vigencia del convenio registrado (semáforo manual: suspender/rescindir/etc.) */
+export async function setAgreementValidity(
+    agreementId: number,
+    validity: 'VIGENTE' | 'SUSPENDIDO' | 'RESCINDIDO' | 'VENCIDO',
+    reason?: string,
+) {
+    return fetchApi(`/process/${agreementId}/validity`, {
+        method: 'POST',
+        body: JSON.stringify({ validity, reason }),
+    });
+}
+
+/** OCRI registra el convenio formalmente con resolución, vigencia, responsables y convenio firmado escaneado */
+export async function registerConvenio(
+    agreementId: number,
+    data: {
+        resolution_number?: string;
+        start_date?: string;
+        end_date?: string;
+        responsables?: Array<{
+            name: string;
+            role?: string;
+            side?: 'UNCP' | 'CONTRAPARTE';
+            email?: string;
+            phone?: string;
+        }>;
+        drive_link?: string;
+        observations?: string;
+    },
+    file?: File,
+) {
+    const formData = new FormData();
+    if (data.resolution_number) formData.append('resolution_number', data.resolution_number);
+    if (data.start_date) formData.append('start_date', data.start_date);
+    if (data.end_date) formData.append('end_date', data.end_date);
+    if (data.responsables) formData.append('responsables', JSON.stringify(data.responsables));
+    if (data.drive_link) formData.append('drive_link', data.drive_link);
+    if (data.observations) formData.append('observations', data.observations);
+    if (file) formData.append('file', file);
+
+    return fetchApi(`/process/${agreementId}/register-agreement`, {
+        method: 'POST',
+        body: formData,
+    });
+}
+
+/** Obtiene el seguimiento semaforizado de convenios vigentes */
+export async function getExpirationTracking() {
+    return fetchApi('/agreements/expiration-tracking');
+}
+
+// ─── Etapa 3: Seguimiento de Convenio ───────────────────────────────────
+
+/** Lista los entregables de un convenio */
+export async function getDeliverables(agreementId: number) {
+    return fetchApi(`/agreements/${agreementId}/deliverables`);
+}
+
+/** OCRI solicita el Plan de Trabajo */
+export async function requestWorkPlan(agreementId: number) {
+    return fetchApi(`/agreements/${agreementId}/request-workplan`, {
+        method: 'POST',
+    });
+}
+
+/** Responsable envía el Plan de Trabajo (archivo) */
+export async function submitWorkPlan(agreementId: number, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi(`/agreements/${agreementId}/submit-workplan`, {
+        method: 'POST',
+        body: formData,
+    });
+}
+
+/** OCRI solicita un Informe (Semestral o Final) */
+export async function requestReport(
+    agreementId: number,
+    type: 'INFORME_SEMESTRAL' | 'INFORME_FINAL',
+    period?: string,
+) {
+    return fetchApi(`/agreements/${agreementId}/request-report`, {
+        method: 'POST',
+        body: JSON.stringify({ type, period }),
+    });
+}
+
+/** Responsable envía un Informe o Corrección (archivo) */
+export async function submitDeliverable(deliverableId: number, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi(`/agreements/deliverables/${deliverableId}/submit`, {
+        method: 'POST',
+        body: formData,
+    });
+}
+
+/** OCRI evalúa un informe: APRUEBA (REGISTRADO) u OBSERVA (OBSERVADO + comentario) */
+export async function evaluateDeliverable(
+    deliverableId: number,
+    decision: 'APPROVED' | 'OBSERVED',
+    observations?: string,
+) {
+    return fetchApi(`/agreements/deliverables/${deliverableId}/evaluate`, {
+        method: 'POST',
+        body: JSON.stringify({ decision, observations }),
+    });
+}
+
+/** OCRI finaliza el seguimiento del convenio */
+export async function completeMonitoring(agreementId: number) {
+    return fetchApi(`/agreements/${agreementId}/complete-monitoring`, {
+        method: 'POST',
     });
 }

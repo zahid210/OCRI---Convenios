@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { user_role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -90,7 +91,7 @@ export class UsersService {
         name: dto.name,
         email: dto.email,
         password: hashedPassword,
-        role: dto.role,
+        role: dto.role as user_role,
       },
       select: {
         id: true,
@@ -136,14 +137,14 @@ export class UsersService {
     const data: {
       name?: string;
       email?: string;
-      role?: string;
+      role?: user_role;
       password?: string;
       updated_at?: Date;
     } = { updated_at: new Date() };
 
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.email !== undefined) data.email = dto.email;
-    if (dto.role !== undefined) data.role = dto.role;
+    if (dto.role !== undefined) data.role = dto.role as user_role;
     if (dto.password) data.password = await bcrypt.hash(dto.password, 10);
 
     const updated = await this.prisma.users.update({

@@ -191,7 +191,7 @@ export function HeaderSearch() {
                                     {agreements.map((a) => (
                                         <Link
                                             key={a.id}
-                                            href={`/agreements/${a.id}`}
+                                            href={`/convenios/${a.id}`}
                                             onClick={() => {
                                                 setOpen(false);
                                                 setQuery('');

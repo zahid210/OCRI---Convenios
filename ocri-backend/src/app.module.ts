@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -12,18 +10,16 @@ import { AgreementsModule } from './agreements/agreements.module';
 import { ReportsModule } from './reports/reports.module';
 import { SeguimientoModule } from './seguimiento/seguimiento.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { DependenciasModule } from './dependencias/dependencias.module';
+import { DocumentTypesModule } from './document-types/document-types.module';
+import { AppConfigModule } from './app-config/app-config.module';
+import { ProcessModule } from './process/process.module';
+import { DeliverablesModule } from './deliverables/deliverables.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
 @Module({
   imports: [
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'uploads'),
-      serveRoot: '/resoluciones',
-      serveStaticOptions: {
-        index: false,
-      },
-    }),
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -32,6 +28,11 @@ import { RolesGuard } from './auth/guards/roles.guard';
     ReportsModule,
     SeguimientoModule,
     NotificationsModule,
+    DependenciasModule,
+    DocumentTypesModule,
+    AppConfigModule,
+    ProcessModule,
+    DeliverablesModule,
   ],
   controllers: [AppController],
   providers: [

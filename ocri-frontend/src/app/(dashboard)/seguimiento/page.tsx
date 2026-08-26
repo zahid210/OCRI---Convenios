@@ -4,7 +4,6 @@ import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import {
     SeguimientoRow,
-    SeguimientoSummary,
     PaginatedResponse,
 } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
@@ -15,39 +14,20 @@ import {
     ChevronRight,
     ChevronDown,
     ChevronUp,
-    ClipboardCheck,
     Building2,
-    CalendarClock,
-    AlertTriangle,
-    Send,
-    Layers,
     Eye,
 } from 'lucide-react';
 
 export default function SeguimientoPage() {
     const [data, setData] = useState<PaginatedResponse<SeguimientoRow> | null>(null);
-    const [summary, setSummary] = useState<SeguimientoSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const [search, setSearch] = useState('');
     const [activeSearch, setActiveSearch] = useState('');
-    const [status, setStatus] = useState('');
-    const [soloPendientes, setSoloPendientes] = useState(false);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
     const [expandedId, setExpandedId] = useState<number | null>(null);
-
-    const buildParams = (p: number, pp: number, s: string, st: string, pend: boolean) => {
-        const params = new URLSearchParams({
-            page: p.toString(),
-            per_page: pp.toString(),
-            ...(s && { search: s }),
-            ...(st && { status: st }),
-            ...(pend && { pendientes: 'true' }),
-        });
-        return params.toString();
-    };
 
     useEffect(() => {
         let isMounted = true;
@@ -57,22 +37,21 @@ export default function SeguimientoPage() {
                 setLoading(true);
                 setError(null);
 
-                const query = buildParams(page, perPage, activeSearch, status, soloPendientes);
-                const querySummary = buildParams(1, 10, activeSearch, status, soloPendientes);
-
-                const [listRes, summaryRes] = await Promise.all([
-                    fetcher<PaginatedResponse<SeguimientoRow>>(`/seguimiento?${query}`),
-                    fetcher<SeguimientoSummary>(`/seguimiento/summary?${querySummary}`),
-                ]);
+                const params = new URLSearchParams({
+                    page: page.toString(),
+                    per_page: perPage.toString(),
+                    ...(activeSearch && { search: activeSearch }),
+                });
+                const query = params.toString();
+                const res = await fetcher<PaginatedResponse<SeguimientoRow>>(`/seguimiento?${query}`);
 
                 if (isMounted) {
-                    setData(listRes);
-                    setSummary(summaryRes);
+                    setData(res);
                 }
             } catch (err) {
                 if (isMounted) {
                     console.error('Error al cargar seguimiento:', err);
-                    setError('Ocurrió un error al cargar el seguimiento.');
+                    setError('Ocurrió un error al cargar los informes de ejecución.');
                 }
             } finally {
                 if (isMounted) setLoading(false);
@@ -84,7 +63,7 @@ export default function SeguimientoPage() {
         return () => {
             isMounted = false;
         };
-    }, [page, perPage, activeSearch, status, soloPendientes]);
+    }, [page, perPage, activeSearch]);
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -92,11 +71,10 @@ export default function SeguimientoPage() {
         setActiveSearch(search.trim());
     };
 
-    const statusColors: Record<string, string> = {
-        'En Proceso': 'bg-gray-100 text-gray-700 border-gray-200',
-        'Vigente': 'bg-green-50 text-green-700 border-green-200',
-        'Por Vencer': 'bg-yellow-50 text-yellow-800 border-yellow-200',
-        'Vencido': 'bg-red-50 text-red-700 border-red-200',
+    const statusMeta: Record<string, { label: string; classes: string }> = {
+        EN_SEGUIMIENTO: { label: 'En Seguimiento', classes: 'bg-green-50 text-green-700 border-green-200' },
+        SEGUIMIENTO_CONCLUIDO: { label: 'Seguimiento Concluido', classes: 'bg-gray-100 text-gray-700 border-gray-200' },
+        REGISTRADO: { label: 'Registrado', classes: 'bg-blue-50 text-blue-700 border-blue-200' },
     };
 
     const progressColor = (p: number) => {
@@ -105,23 +83,15 @@ export default function SeguimientoPage() {
         return 'bg-red-500';
     };
 
-    const summaryCards = [
-        { label: 'Convenios en seguimiento', value: summary?.total ?? 0, color: 'text-gray-800', icon: Layers },
-        { label: 'En proceso de trámite', value: summary?.en_proceso ?? 0, color: 'text-gray-600', icon: CalendarClock },
-        { label: 'Con áreas pendientes', value: summary?.con_pendientes ?? 0, color: 'text-amber-600', icon: AlertTriangle },
-        { label: 'Sin hoja de ruta', value: summary?.sin_hoja_ruta ?? 0, color: 'text-red-600', icon: ClipboardCheck },
-        { label: 'Envíos registrados', value: summary?.envios_registrados ?? 0, color: 'text-blue-600', icon: Send },
-    ];
-
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
             <div className="bg-white border border-gray-200 p-6 shadow-sm">
                 <div className="space-y-1">
-                    <h1 className="text-xl font-normal text-gray-800">Seguimiento de Trámites</h1>
+                    <h1 className="text-xl font-normal text-gray-800">Bandeja de Seguimiento</h1>
                     <div className="flex items-center gap-2 text-gray-500">
                         <Building2 className="h-4 w-4" />
                         <span className="text-xs text-gray-500">
-                            Estado de tramitación y avance de la hoja de ruta de cada convenio
+                            Convenios con informes de ejecución pendientes o concluidos
                         </span>
                     </div>
                 </div>
@@ -139,20 +109,6 @@ export default function SeguimientoPage() {
                             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
                         />
                     </div>
-                    <select
-                        value={status}
-                        onChange={(e) => {
-                            setPage(1);
-                            setStatus(e.target.value);
-                        }}
-                        className="h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                    >
-                        <option value="">Todos los estados</option>
-                        <option value="En Proceso">En Proceso</option>
-                        <option value="Vigente">Vigente</option>
-                        <option value="Por Vencer">Por Vencer</option>
-                        <option value="Vencido">Vencido</option>
-                    </select>
                     <button
                         type="submit"
                         className="inline-flex items-center justify-center gap-2 bg-[#094d37] hover:bg-[#073c2c] text-white px-4 py-2 text-sm transition-colors cursor-pointer"
@@ -160,35 +116,6 @@ export default function SeguimientoPage() {
                         Buscar
                     </button>
                 </form>
-
-                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={soloPendientes}
-                        onChange={(e) => {
-                            setPage(1);
-                            setSoloPendientes(e.target.checked);
-                        }}
-                        className="h-4 w-4 accent-[#094d37]"
-                    />
-                    <span className="text-sm text-gray-700">
-                        Solo convenios con áreas pendientes o sin hoja de ruta
-                    </span>
-                </label>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {summaryCards.map((card) => (
-                    <div key={card.label} className="bg-white border border-gray-200 shadow-sm p-5">
-                        <div className={`flex items-center gap-2 ${card.color}`}>
-                            <card.icon className="h-4 w-4" />
-                            <span className="text-[11px] font-semibold uppercase tracking-wider">
-                                {card.label}
-                            </span>
-                        </div>
-                        <div className="mt-3 text-3xl font-normal text-gray-900">{card.value}</div>
-                    </div>
-                ))}
             </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
@@ -203,19 +130,19 @@ export default function SeguimientoPage() {
                                 Estado
                             </th>
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
-                                Avance Hoja de Ruta
+                                Avance de Opiniones
                             </th>
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
-                                Áreas
+                                Dependencias
                             </th>
                             <th
                                 className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center"
-                                title="PDFs de entrada/salida de la hoja de ruta no adjuntos (existencia documental; puede diferir del estado de opinión)"
+                                title="Solicitudes de opinion con estado pendiente (no VALIDADA ni CANCELADA)"
                             >
-                                Docs Faltantes
+                                Pendientes
                             </th>
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
-                                Envíos
+                                Enviados
                             </th>
                             <th className="py-4 text-right pr-10"></th>
                         </tr>
@@ -280,8 +207,8 @@ export default function SeguimientoPage() {
 
                                             <td className="py-5 text-center">
                                                 <div className="flex justify-center">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border ${statusColors[row.status] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                                                        {row.status}
+                                                    <span className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border ${statusMeta[row.process_status]?.classes || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                                                        {statusMeta[row.process_status]?.label || row.process_status}
                                                     </span>
                                                 </div>
                                             </td>
@@ -325,9 +252,9 @@ export default function SeguimientoPage() {
                                             <td className="py-5 pr-10">
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Link
-                                                        href={`/agreements/${row.id}`}
+                                                        href={`/seguimiento/${row.id}`}
                                                         className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-                                                        title="Ver Convenio"
+                                                        title="Ver Seguimiento"
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </Link>
@@ -339,46 +266,50 @@ export default function SeguimientoPage() {
                                                 <td colSpan={7} className="px-10 py-4">
                                                     {row.sin_hoja_ruta ? (
                                                         <p className="text-sm text-gray-400">
-                                                            Este convenio no tiene hoja de ruta inicializada.
+                                                            Este convenio no tiene solicitudes de opinion registradas.
                                                         </p>
                                                     ) : (
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                            {row.areas.map((area) => {
-                                                                const completa =
-                                                                    typeof area.opinion_validada === 'boolean'
-                                                                        ? area.opinion_validada
-                                                                        : area.is_completed || (area.tiene_entrada && area.tiene_salida);
-                                                                return (
-                                                                    <div key={area.area_name} className="border border-gray-200 bg-white p-3">
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                            <span className="text-sm font-medium text-gray-800">
-                                                                                {area.area_name}
-                                                                            </span>
-                                                                            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase border ${
-                                                                                completa
-                                                                                    ? 'bg-green-50 text-green-700 border-green-200'
-                                                                                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                                            }`}>
-                                                                                {completa ? 'Opinión validada' : 'Opinión pendiente'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                                                                            <span className={`px-2 py-0.5 border ${area.tiene_entrada ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                                                                {area.tiene_entrada ? '✓ Entrada' : '✗ Entrada'}
-                                                                            </span>
-                                                                            <span className={`px-2 py-0.5 border ${area.tiene_salida ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                                                                {area.tiene_salida ? '✓ Salida' : '✗ Salida'}
-                                                                            </span>
-                                                                            {area.envio_tipo && (
-                                                                                <span className="px-2 py-0.5 border bg-blue-50 text-blue-700 border-blue-200">
-                                                                                    Envío: {area.envio_tipo === 'adesa' ? 'ADESA' : 'Correo'}
-                                                                                    {area.numero_expediente ? ` · N° ${area.numero_expediente}` : ''}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
+                                                            {row.areas.map((area) => (
+                                                                <div key={area.dependencia_name} className="border border-gray-200 bg-white p-3">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <span className="text-sm font-medium text-gray-800">
+                                                                            {area.dependencia_name}
+                                                                        </span>
+                                                                        <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase border ${
+                                                                            area.opinion_validada
+                                                                                ? 'bg-green-50 text-green-700 border-green-200'
+                                                                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                                        }`}>
+                                                                            {area.opinion_validada ? 'Opinion validada' : 'Opinion pendiente'}
+                                                                        </span>
                                                                     </div>
-                                                                );
-                                                            })}
+                                                                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                                                                        <span className={`px-2 py-0.5 border ${
+                                                                            area.status === 'VALIDADA'
+                                                                                ? 'bg-green-50 text-green-700 border-green-200'
+                                                                                : area.status === 'OBSERVADA'
+                                                                                    ? 'bg-red-50 text-red-700 border-red-200'
+                                                                                    : area.status === 'CANCELADA'
+                                                                                        ? 'bg-gray-100 text-gray-500 border-gray-200'
+                                                                                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                                        }`}>
+                                                                            {area.status}
+                                                                        </span>
+                                                                        {area.sent_via && (
+                                                                            <span className="px-2 py-0.5 border bg-blue-50 text-blue-700 border-blue-200">
+                                                                                Envio: {area.sent_via}
+                                                                                {area.adesa_number ? ` · N ${area.adesa_number}` : ''}
+                                                                            </span>
+                                                                        )}
+                                                                        {area.response_date && (
+                                                                            <span className="px-2 py-0.5 border bg-purple-50 text-purple-700 border-purple-200">
+                                                                                F. Respuesta: {area.response_date}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     )}
                                                 </td>

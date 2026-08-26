@@ -49,7 +49,7 @@ export function Header() {
                         <div className="flex flex-col">
                             <span className="font-bold tracking-tight text-white text-sm">OCRI - UNCP</span>
                             <span className="text-[10px] text-gray-300 font-medium uppercase tracking-wider">
-                                Gestión Institucional
+                                Oficina de Relaciones Interinstitucionales
                             </span>
                         </div>
                     </div>
@@ -58,13 +58,14 @@ export function Header() {
                             Módulos Principales
                         </div>
                         <Link href="/dashboard" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Dashboard</Link>
-                        <Link href="/agreements" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Convenios</Link>
+                        <Link href="/propuestas" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Bandeja de Propuestas</Link>
                         {canManage(currentUser) && (
-                            <Link href="/agreements/create" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Nuevo Registro</Link>
+                            <Link href="/propuestas/create" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Nueva Propuesta</Link>
                         )}
-                        <Link href="/institutions" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Instituciones</Link>
+                        <Link href="/convenios" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Convenios Oficiales</Link>
+                        <Link href="/seguimiento" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Bandeja de Seguimiento</Link>
+                        <Link href="/institutions" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Instituciones Aliadas</Link>
                         <Link href="/reports" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Reportes</Link>
-                        <Link href="/seguimiento" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Seguimiento</Link>
                         {isAdmin(currentUser) && (
                             <Link href="/users" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Usuarios</Link>
                         )}

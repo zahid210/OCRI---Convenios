@@ -6,12 +6,19 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error(
+    'JWT_SECRET no está definido o es demasiado corto (mínimo 32 caracteres). Configúrelo en el archivo .env antes de iniciar.',
+  );
+}
+
 @Module({
   imports: [
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'OCRI_SECRET_KEY_2026',
+      secret: JWT_SECRET,
       signOptions: { expiresIn: '8h' },
     }),
   ],

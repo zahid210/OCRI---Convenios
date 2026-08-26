@@ -7,29 +7,57 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
+const trim = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+
 export class CreateAgreementDto {
-  @IsNotEmpty({ message: 'El título es obligatorio' })
+  @IsNotEmpty({ message: 'El asunto de la propuesta es obligatorio' })
   @IsString()
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
+  @Transform(trim)
   title: string;
 
+  /** Objeto / denominación completa de la propuesta */
   @IsOptional()
   @IsString()
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
+  @Transform(trim)
   name?: string;
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
+  @Transform(trim)
+  tramite_code?: string;
+
+  /** Entidad Solicitante que remitió la propuesta a Rectorado */
+  @IsOptional()
+  @IsString()
+  @Transform(trim)
+  applicant_name?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(trim)
+  applicant_email?: string;
+
+  /** Unidad orgánica solicitante (facultad, oficina, etc.) */
+  @IsOptional()
+  @IsString()
+  @Transform(trim)
+  applicant_unit?: string;
+
+  /** Oficio con que Rectorado deriva la solicitud a OCRI */
+  @IsOptional()
+  @IsString()
+  @Transform(trim)
+  rectorate_oficio_number?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(trim)
   resolution_number?: string;
 
-  @IsNotEmpty({ message: 'La institución es obligatoria' })
+  @IsNotEmpty({
+    message: 'La institución contraparte de la propuesta es obligatoria',
+  })
   @Transform(({ value }: { value: unknown }) => Number(value))
   @IsNumber({}, { message: 'institution_id debe ser un número' })
   institution_id: number;
@@ -55,15 +83,6 @@ export class CreateAgreementDto {
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  status?: string;
-
-  @IsOptional()
-  @IsString()
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  situation?: string;
+  @Transform(trim)
+  observations?: string;
 }

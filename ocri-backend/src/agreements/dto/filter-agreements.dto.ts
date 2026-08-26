@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FilterAgreementsDto {
@@ -18,9 +18,15 @@ export class FilterAgreementsDto {
   @IsString()
   search?: string;
 
+  /** Agrupado por ámbito del flujo: propuestas en trámite o registrados */
+  @IsOptional()
+  @IsIn(['tramite', 'registrados'])
+  scope?: 'tramite' | 'registrados';
+
+  /** Estado exacto del proceso (RECEPCIONADA, OPINIONES_EN_CURSO, ...) */
   @IsOptional()
   @IsString()
-  status?: string;
+  process_status?: string;
 
   @IsOptional()
   @Type(() => Number)

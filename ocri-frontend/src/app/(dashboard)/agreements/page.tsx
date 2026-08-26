@@ -15,9 +15,58 @@ import {
     Loader2,
     ChevronLeft,
     ChevronRight,
-    Clock,
     Building2
 } from 'lucide-react';
+
+const EN_TRAMITE_LABELS: Record<string, string> = {
+    RECEPCIONADA: 'Solicitud recibida',
+    OPINIONES_EN_CURSO: 'Opiniones en curso',
+    OPINIONES_COMPLETAS: 'Opiniones completas',
+    EXPEDIENTE_TECNICO_LISTO: 'Expediente técnico listo',
+    ENVIADO_A_RECTORADO: 'Enviado a Rectorado',
+    SUSCRITO: 'Suscrito',
+    PUBLICADO: 'Publicado',
+};
+
+const ESTADO_BADGES: Record<string, string> = {
+    'En Trámite': 'bg-gray-100 text-gray-700 border-gray-200',
+    'No suscrito': 'bg-red-100 text-red-800 border-red-200',
+    'Vigente': 'bg-green-50 text-green-700 border-green-200',
+    'Por vencer': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    'Vencido': 'bg-red-50 text-red-700 border-red-200',
+    'Sin fecha': 'bg-gray-50 text-gray-500 border-gray-200',
+};
+
+interface EstadoDisplay {
+    grupo: string;
+    label: string;
+}
+
+function getEstadoDisplay(agreement: Pick<Agreement, 'process_status' | 'end_date'>): EstadoDisplay {
+    const ps: string = agreement.process_status;
+
+    if (ps === 'NO_SUSCRITO') {
+        return { grupo: 'No suscrito', label: 'No suscrito' };
+    }
+    if (EN_TRAMITE_LABELS[ps]) {
+        return { grupo: 'En Trámite', label: EN_TRAMITE_LABELS[ps] };
+    }
+
+    if (!agreement.end_date) {
+        return { grupo: 'Sin fecha', label: 'Sin fecha' };
+    }
+    const endDate = new Date(agreement.end_date);
+    const now = new Date();
+    const diffDays = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+
+    if (endDate < now) {
+        return { grupo: 'Vencido', label: 'Vencido' };
+    }
+    if (diffDays <= 90) {
+        return { grupo: 'Por vencer', label: 'Por vencer' };
+    }
+    return { grupo: 'Vigente', label: 'Vigente' };
+}
 
 export default function AgreementsIndexPage() {
     const [data, setData] = useState<PaginatedResponse<Agreement> | null>(null);
@@ -28,7 +77,6 @@ export default function AgreementsIndexPage() {
     const [status, setStatus] = useState('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
-    const [hoveredRowId, setHoveredRowId] = useState<number | null>(null);
     const user = useUser();
 
     useEffect(() => {
@@ -41,7 +89,6 @@ export default function AgreementsIndexPage() {
                     page: page.toString(),
                     per_page: perPage.toString(),
                     ...(activeSearch && { search: activeSearch }),
-                    ...(status && { status }),
                 });
                 const res = await fetcher<PaginatedResponse<Agreement>>(`/agreements?${params.toString()}`);
 
@@ -85,13 +132,17 @@ export default function AgreementsIndexPage() {
 
     const filterColors: Record<string, string> = {
         '': 'bg-gray-800 text-white border-gray-800',
-        'En Proceso': 'bg-gray-500 text-white border-gray-500',
+        'En Trámite': 'bg-gray-500 text-white border-gray-500',
         'Vigente': 'bg-green-700 text-white border-green-700',
-        'Por Vencer': 'bg-yellow-500 text-white border-yellow-500',
+        'Por vencer': 'bg-yellow-500 text-white border-yellow-500',
         'Vencido': 'bg-red-700 text-white border-red-700',
     };
 
     const inactiveColor = 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50';
+
+    const rows = (data?.data ?? []).filter(
+        (agreement) => !status || getEstadoDisplay(agreement).grupo === status,
+    );
 
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
@@ -148,7 +199,7 @@ export default function AgreementsIndexPage() {
                     >
                         Todos
                     </button>
-                    {['En Proceso', 'Vigente', 'Por Vencer', 'Vencido'].map((estado) => (
+                    {['En Trámite', 'Vigente', 'Por vencer', 'Vencido'].map((estado) => (
                         <button
                             key={estado}
                             onClick={() => {
@@ -204,55 +255,21 @@ export default function AgreementsIndexPage() {
                                     {error}
                                 </td>
                             </tr>
-                        ) : data?.data.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <tr>
                                 <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
                                     No se encontraron convenios.
                                 </td>
                             </tr>
                         ) : (
-                            data?.data.map((agreement, index) => {
-                                const roadmap = agreement.roadmap_items;
-                                const hasFinalDocument = !!agreement.final_document_exists;
-                                const pendingOpinions = roadmap && !hasFinalDocument
-                                    ? roadmap
-                                        .filter((item: { roadmap_documents?: Array<{ type?: string }>; area_name?: string; is_completed?: boolean }) => {
-                                            const entrada = item.roadmap_documents?.some((d: { type?: string }) => d.type === 'entrada');
-                                            const salida = item.roadmap_documents?.some((d: { type?: string }) => d.type === 'salida');
-                                            return !(item.is_completed || (entrada && salida));
-                                        })
-                                        .map((i: { area_name?: string }) => i.area_name || '')
-                                        .filter(Boolean)
-                                    : [];
-                                const hasPending = pendingOpinions.length > 0;
-
-                                // Cálculo de Badge
-                                let labelText = agreement.status || 'Sin estado';
-                                let badgeClasses = 'bg-gray-100 text-gray-700 border-gray-200';
-
-                                if (agreement.status === 'Vigente' && agreement.end_date) {
-                                    const endDate = new Date(agreement.end_date);
-                                    const now = new Date();
-                                    const diffDays = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
-
-                                    if (endDate < now) {
-                                        badgeClasses = 'bg-red-50 text-red-700 border-red-200';
-                                        labelText = 'Vencido';
-                                    } else if (diffDays <= 90) {
-                                        badgeClasses = 'bg-yellow-50 text-yellow-800 border-yellow-200';
-                                        labelText = 'Por Vencer';
-                                    } else {
-                                        badgeClasses = 'bg-green-50 text-green-700 border-green-200';
-                                    }
-                                } else if (agreement.status === 'Vigente') {
-                                    badgeClasses = 'bg-green-50 text-green-700 border-green-200';
-                                } else if (agreement.status === 'En Proceso') {
-                                    badgeClasses = 'bg-gray-100 text-gray-700 border-gray-200';
-                                }
+                            rows.map((agreement) => {
+                                // Badge de estado
+                                const estado = getEstadoDisplay(agreement);
+                                const labelText = estado.label;
+                                const badgeClasses =
+                                    ESTADO_BADGES[estado.grupo] || 'bg-gray-100 text-gray-700 border-gray-200';
 
                                 const inst = agreement.institutions;
-                                // Para las primeras filas desplegamos hacia abajo, para las últimas hacia arriba
-                                const isFirstRow = index < 2;
 
                                 return (
                                     <tr
@@ -262,57 +279,18 @@ export default function AgreementsIndexPage() {
                                         {/* Expediente / Resolución */}
                                         <td className="py-5">
                                             <div className="flex items-center gap-4 ml-10">
-                                                {/* Contenedor relativo solo para el ícono y su tooltip */}
-                                                <div
-                                                    className="relative"
-                                                    onMouseEnter={() => setHoveredRowId(agreement.id)}
-                                                    onMouseLeave={() => setHoveredRowId(null)}
-                                                >
-                                                    {/* Ícono institucional de documento */}
-                                                    <div className={`p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0 cursor-pointer ${
-                                                        hasPending ? 'border-amber-400 bg-amber-50 text-amber-600' : ''
-                                                    }`}>
-                                                        <FileText className="h-4 w-4" />
-                                                    </div>
-
-                                                    {/* Tooltip con posicionamiento inteligente */}
-                                                    {hasPending && hoveredRowId === agreement.id && (
-                                                        <div className={`absolute left-full ml-3 z-50 w-72 pointer-events-none drop-shadow-xl ${
-                                                            isFirstRow ? 'top-0' : 'bottom-0'
-                                                        }`}>
-                                                            <div className="bg-white border border-gray-200 p-4 text-xs">
-                                                                <div className="flex items-center gap-2 mb-2 border-b border-gray-100 pb-1.5">
-                                                                    <Clock className="h-4 w-4 text-amber-500" />
-                                                                    <span className="font-semibold text-gray-700 uppercase tracking-wider">
-                                                                        Opiniones Pendientes
-                                                                    </span>
-                                                                </div>
-                                                                <div className="space-y-1.5">
-                                                                    {pendingOpinions.map((area: string, idx: number) => (
-                                                                        <div key={idx} className="flex items-center gap-2 text-gray-700">
-                                                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                                                                            <span>Falta opinión de <strong>{area}</strong></span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                                <div className="mt-2 pt-2 border-t border-gray-100">
-                                                                    <span className="text-[11px] text-gray-400 font-medium">
-                                                                        {pendingOpinions.length} área(s) pendiente(s)
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            {/* Flechita lateral apuntando al ícono */}
-                                                            <div className={`w-2.5 h-2.5 bg-white border-b border-l border-gray-200 transform rotate-45 absolute -left-1.5 ${
-                                                                isFirstRow ? 'top-3' : 'bottom-3'
-                                                            }`} />
-                                                        </div>
-                                                    )}
+                                                <div className="p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0">
+                                                    <FileText className="h-4 w-4" />
                                                 </div>
-
                                                 <div>
                                                     <div className="font-medium text-gray-800 text-sm">
                                                         {agreement.resolution_number || agreement.title || `Convenio #${agreement.id}`}
                                                     </div>
+                                                    {agreement.tramite_code && (
+                                                        <div className="text-[11px] font-mono text-[#0b5a41] font-semibold">
+                                                            {agreement.tramite_code}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -337,7 +315,7 @@ export default function AgreementsIndexPage() {
                                                         {formatDate(agreement.end_date)}
                                                     </span>
                                             ) : (
-                                                <span className="text-xs italic text-gray-400">Sin fecha</span>
+                                                <span className="text-xs italic text-gray-400">Sin vigencia</span>
                                             )}
                                         </td>
 
@@ -354,9 +332,16 @@ export default function AgreementsIndexPage() {
                                         <td className="py-5 pr-12">
                                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Link
+                                                    href={`/agreements/${agreement.id}/process`}
+                                                    className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors"
+                                                    title="Ver Flujo de Proceso"
+                                                >
+                                                    <FileText className="h-4 w-4" />
+                                                </Link>
+                                                <Link
                                                     href={`/agreements/${agreement.id}`}
                                                     className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-                                                    title="Ver Convenio"
+                                                    title="Ver Detalle"
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Link>
