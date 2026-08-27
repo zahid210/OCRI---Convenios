@@ -14,7 +14,8 @@ import {
     Loader2,
     ChevronLeft,
     ChevronRight,
-    Building2
+    Building2,
+    ChevronDown,
 } from 'lucide-react';
 
 const EN_TRAMITE_LABELS: Record<string, string> = {
@@ -237,14 +238,14 @@ export default function PropuestasPage() {
                                         </td>
 
                                         <td className="py-5 pr-12">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <Link
                                                     href={`/propuestas/${agreement.id}`}
-                                                    className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors"
-                                                    title="Ver Propuesta"
+                                                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     <Eye className="h-4 w-4" />
+                                                    Ver
                                                 </Link>
                                             </div>
                                         </td>
@@ -262,6 +263,7 @@ export default function PropuestasPage() {
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
                             <div className="flex items-center gap-2">
                                 <span>Mostrar</span>
+                                <div className="relative">
                                 <select
                                     value={perPage}
                                     onChange={(e) => {
@@ -269,7 +271,7 @@ export default function PropuestasPage() {
                                         setPerPage(Number(e.target.value));
                                         setPage(1);
                                     }}
-                                    className="bg-white border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
+                                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
                                 >
                                     {[10, 15, 25, 50, 100].map((count) => (
                                         <option key={count} value={count}>
@@ -277,6 +279,8 @@ export default function PropuestasPage() {
                                         </option>
                                     ))}
                                 </select>
+                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                                 <span>por página</span>
                             </div>
 

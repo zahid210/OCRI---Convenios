@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, ChevronDown } from 'lucide-react';
 import { InstitutionItem } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
 import { useToast } from '@/components/ui/toast';
@@ -157,17 +157,20 @@ export default function InstitutionModal({
                         </div>
 
                         {!isCustomCountry ? (
-                            <select
-                                value={selectedCountry}
-                                onChange={(e) => setSelectedCountry(e.target.value)}
-                                className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                            >
-                                {countries.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="w-full relative">
+                                <select
+                                    value={selectedCountry}
+                                    onChange={(e) => setSelectedCountry(e.target.value)}
+                                    className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                >
+                                    {countries.map((c) => (
+                                        <option key={c} value={c}>
+                                            {c}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                            </div>
                         ) : (
                             <input
                                 type="text"
@@ -184,17 +187,20 @@ export default function InstitutionModal({
                         <label className="block text-xs font-semibold uppercase text-gray-600">
                             Tipo de Institución <span className="text-red-500">*</span>
                         </label>
-                        <select
-                            value={type}
-                            onChange={(e) => setType(e.target.value)}
-                            className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                        >
-                            <option value="Universidad Nacional">Universidad Nacional</option>
-                            <option value="Universidad Privada">Universidad Privada</option>
-                            <option value="Entidad Gubernamental">Entidad Gubernamental</option>
-                            <option value="Empresa Privada">Empresa Privada</option>
-                            <option value="Organización Internacional">Organización Internacional</option>
-                        </select>
+                        <div className="w-full relative">
+                            <select
+                                value={type}
+                                onChange={(e) => setType(e.target.value)}
+                                className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                            >
+                                <option value="Universidad Nacional">Universidad Nacional</option>
+                                <option value="Universidad Privada">Universidad Privada</option>
+                                <option value="Entidad Gubernamental">Entidad Gubernamental</option>
+                                <option value="Empresa Privada">Empresa Privada</option>
+                                <option value="Organización Internacional">Organización Internacional</option>
+                            </select>
+                            <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">

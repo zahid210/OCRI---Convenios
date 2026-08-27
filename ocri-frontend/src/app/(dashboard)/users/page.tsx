@@ -18,6 +18,7 @@ import {
     Users as UsersIcon,
     Shield,
     X,
+    ChevronDown,
 } from 'lucide-react';
 
 const ROLES = ['admin', 'editor', 'viewer'];
@@ -293,27 +294,27 @@ export default function UsersPage() {
                                         </td>
 
                                         <td className="py-4 pr-10">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     type="button"
                                                     onClick={() => openEdit(user)}
-                                                    className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors cursor-pointer"
-                                                    title="Editar Usuario"
+                                                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
                                                 >
                                                     <Pencil className="h-4 w-4" />
+                                                    Editar
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleDelete(user)}
                                                     disabled={deletingId === user.id}
-                                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
-                                                    title="Eliminar Usuario"
+                                                    className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors cursor-pointer disabled:opacity-50"
                                                 >
                                                     {deletingId === user.id ? (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
                                                     ) : (
                                                         <Trash2 className="h-4 w-4" />
                                                     )}
+                                                    Eliminar
                                                 </button>
                                             </div>
                                         </td>
@@ -330,18 +331,21 @@ export default function UsersPage() {
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
                             <div className="flex items-center gap-2">
                                 <span>Mostrar</span>
+                                <div className="relative">
                                 <select
                                     value={perPage}
                                     onChange={(e) => {
                                         setPerPage(Number(e.target.value));
                                         setPage(1);
                                     }}
-                                    className="bg-white border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
+                                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
                                 >
                                     {[10, 15, 25, 50].map((count) => (
                                         <option key={count} value={count}>{count}</option>
                                     ))}
                                 </select>
+                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                                 <span>por página</span>
                             </div>
 
@@ -441,11 +445,12 @@ export default function UsersPage() {
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Rol <span className="text-red-500">*</span>
                                 </label>
+                                <div className="w-full relative">
                                 <select
                                     value={form.role}
                                     onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
                                     disabled={editingUser?.id === currentUser?.id}
-                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f] disabled:opacity-50"
+                                    className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f] disabled:opacity-50"
                                 >
                                     {ROLES.map((role) => (
                                         <option key={role} value={role}>
@@ -453,6 +458,8 @@ export default function UsersPage() {
                                         </option>
                                     ))}
                                 </select>
+                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                                 <p className="text-[11px] text-gray-400">
                                     Admin: acceso completo · Editor: gestiona convenios e instituciones · Solo Lectura: consulta.
                                 </p>

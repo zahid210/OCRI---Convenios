@@ -30,18 +30,11 @@ function useToastContext() {
   return context
 }
 
-const VARIANT_BORDER: Record<ToastVariant, string> = {
-  success: "border-l-emerald-500",
-  error: "border-l-red-500",
-  warning: "border-l-amber-500",
-  info: "border-l-sky-500",
-}
-
-const VARIANT_ICON: Record<ToastVariant, { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; className: string }> = {
-  success: { icon: CheckCircle2, className: "text-emerald-600" },
-  error: { icon: CircleAlert, className: "text-red-600" },
-  warning: { icon: TriangleAlert, className: "text-amber-600" },
-  info: { icon: Info, className: "text-sky-600" },
+const VARIANT_STYLE: Record<ToastVariant, { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; rootClass: string }> = {
+  success: { icon: CheckCircle2, rootClass: "bg-[#0b6e4f]" },
+  error: { icon: CircleAlert, rootClass: "bg-red-600" },
+  warning: { icon: TriangleAlert, rootClass: "bg-[#df9f1f]" },
+  info: { icon: Info, rootClass: "bg-sky-600" },
 }
 
 function ToastViewport() {
@@ -52,28 +45,27 @@ function ToastViewport() {
       <Toast.Viewport className="pointer-events-none fixed right-0 bottom-0 z-50 flex max-h-screen w-full flex-col gap-2 p-4 sm:max-w-sm">
         {toasts.map((toast) => {
           const variant = (toast.type as ToastVariant) || "info"
-          const borderClass = VARIANT_BORDER[variant] || VARIANT_BORDER.info
-          const { icon: Icon, className: iconClass } = VARIANT_ICON[variant] || VARIANT_ICON.info
+          const { icon: Icon, rootClass } = VARIANT_STYLE[variant] || VARIANT_STYLE.info
           return (
             <Toast.Root
               key={toast.id}
               toast={toast}
               swipeDirection={[]}
               className={cn(
-                "pointer-events-auto w-full rounded-lg border border-gray-200 border-l-4 bg-white px-4 py-3 text-gray-800 shadow-lg",
+                "pointer-events-auto w-full px-4 py-3 text-white shadow-xl",
                 "transition duration-200 ease-in-out",
                 "data-starting-style:translate-x-4 data-starting-style:opacity-0 data-ending-style:translate-x-4 data-ending-style:opacity-0",
-                borderClass
+                rootClass
               )}
             >
-              <div className="flex items-start gap-3">
-                <Icon className={cn("mt-0.5 size-5 shrink-0", iconClass)} aria-hidden="true" />
+              <div className="flex items-center gap-3">
+                <Icon className="size-5 shrink-0" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <Toast.Title className="text-sm leading-snug font-medium break-words">
                     {toast.title}
                   </Toast.Title>
                   {toast.description && (
-                    <Toast.Description className="mt-0.5 text-sm leading-snug break-words text-gray-500">
+                    <Toast.Description className="mt-0.5 text-sm leading-snug break-words text-white/90">
                       {toast.description}
                     </Toast.Description>
                   )}
@@ -81,7 +73,7 @@ function ToastViewport() {
                 <Toast.Close
                   onClick={() => close(toast.id)}
                   aria-label="Cerrar notificación"
-                  className="shrink-0 cursor-pointer rounded-md p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-[#df9f1f] focus-visible:outline-none"
+                  className="shrink-0 cursor-pointer rounded-sm p-0.5 text-white/80 transition-colors hover:bg-black/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
                 >
                   <XIcon className="size-4" />
                 </Toast.Close>

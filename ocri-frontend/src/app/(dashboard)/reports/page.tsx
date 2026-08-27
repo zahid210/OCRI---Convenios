@@ -24,6 +24,7 @@ import {
     CalendarClock,
     AlertTriangle,
     Layers,
+    ChevronDown,
 } from 'lucide-react';
 
 interface ReportFilters {
@@ -207,7 +208,7 @@ export default function ReportsPage() {
     ];
 
     const filterSelectClass =
-        'w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]';
+        'appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]';
 
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
@@ -254,66 +255,78 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="space-y-1">
                         <label className="block text-xs font-semibold uppercase text-gray-600">Estado</label>
-                        <select
-                            value={filters.status}
-                            onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-                            className={filterSelectClass}
-                        >
-                            <option value="">Todos los estados</option>
-                            <option value="En Trámite">En Trámite</option>
-                            <option value="Vigente">Vigente</option>
-                            <option value="Por Vencer">Por Vencer</option>
-                            <option value="Vencido">Vencido</option>
-                            <option value="No Suscrito">No Suscrito</option>
-                        </select>
+                        <div className="w-full relative">
+                            <select
+                                value={filters.status}
+                                onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+                                className={filterSelectClass}
+                            >
+                                <option value="">Todos los estados</option>
+                                <option value="En Trámite">En Trámite</option>
+                                <option value="Vigente">Vigente</option>
+                                <option value="Por Vencer">Por Vencer</option>
+                                <option value="Vencido">Vencido</option>
+                                <option value="No Suscrito">No Suscrito</option>
+                            </select>
+                            <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        </div>
                     </div>
 
                     <div className="space-y-1">
                         <label className="block text-xs font-semibold uppercase text-gray-600">País</label>
-                        <select
-                            value={filters.country}
-                            onChange={(e) => setFilters((f) => ({ ...f, country: e.target.value }))}
-                            className={filterSelectClass}
-                        >
-                            <option value="">Todos los países</option>
-                            {countries.map((c) => (
-                                <option key={c} value={c}>
-                                    {c}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="w-full relative">
+                            <select
+                                value={filters.country}
+                                onChange={(e) => setFilters((f) => ({ ...f, country: e.target.value }))}
+                                className={filterSelectClass}
+                            >
+                                <option value="">Todos los países</option>
+                                {countries.map((c) => (
+                                    <option key={c} value={c}>
+                                        {c}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        </div>
                     </div>
 
                     <div className="space-y-1">
                         <label className="block text-xs font-semibold uppercase text-gray-600">Tipo de Convenio</label>
-                        <select
-                            value={filters.typeId}
-                            onChange={(e) => setFilters((f) => ({ ...f, typeId: e.target.value }))}
-                            className={filterSelectClass}
-                        >
-                            <option value="">Todos los tipos</option>
-                            {types.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                    {t.name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="w-full relative">
+                            <select
+                                value={filters.typeId}
+                                onChange={(e) => setFilters((f) => ({ ...f, typeId: e.target.value }))}
+                                className={filterSelectClass}
+                            >
+                                <option value="">Todos los tipos</option>
+                                {types.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                        {t.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        </div>
                     </div>
 
                     <div className="space-y-1">
                         <label className="block text-xs font-semibold uppercase text-gray-600">Institución</label>
-                        <select
-                            value={filters.institutionId}
-                            onChange={(e) => setFilters((f) => ({ ...f, institutionId: e.target.value }))}
-                            className={filterSelectClass}
-                        >
-                            <option value="">Todas las instituciones</option>
-                            {institutions.map((inst) => (
-                                <option key={inst.id} value={inst.id}>
-                                    {inst.name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="w-full relative">
+                            <select
+                                value={filters.institutionId}
+                                onChange={(e) => setFilters((f) => ({ ...f, institutionId: e.target.value }))}
+                                className={filterSelectClass}
+                            >
+                                <option value="">Todas las instituciones</option>
+                                {institutions.map((inst) => (
+                                    <option key={inst.id} value={inst.id}>
+                                        {inst.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        </div>
                     </div>
                 </div>
 

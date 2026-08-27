@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
     deleteOpinionRequest,
+    downloadFile,
     finalizeExpediente,
     generateExpediente,
     generateOpinionRequests,
@@ -22,6 +23,7 @@ import {
     CheckCircle2,
     ChevronDown,
     ChevronUp,
+    Download,
     ExternalLink,
     FileCheck,
     FileText,
@@ -290,6 +292,25 @@ export default function Stage1Propuesta({
         }
     };
 
+    const handleDownloadDocument = async (doc: (typeof documents)[number]) => {
+        if (!doc.file_path) {
+            toast.error('Este documento no tiene un archivo asociado.');
+            return;
+        }
+        try {
+            const fileName = doc.file_path.split('/').pop()?.split('\\').pop() || doc.file_path;
+            await downloadFile(
+                `/resoluciones/${encodeURIComponent(fileName)}`,
+                doc.original_name || doc.name || fileName,
+            );
+            toast.success('Descarga iniciada.');
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error ? err.message : 'Error al descargar el documento';
+            toast.error(message);
+        }
+    };
+
     const [isAutoSending, setIsAutoSending] = useState(false);
 
     useEffect(() => {
@@ -527,7 +548,7 @@ export default function Stage1Propuesta({
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center gap-2">
                                                     {actionsOpen && req.status === 'GENERADA' && (
                                                         <button
                                                             onClick={(e) => {
@@ -538,10 +559,10 @@ export default function Stage1Propuesta({
                                                                 setDirectedTo('');
                                                                 setShowSendModal(req.id);
                                                             }}
-                                                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                                            title="Enviar solicitud"
+                                                            className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                         >
                                                             <Send className="h-4 w-4" />
+                                                            Enviar
                                                         </button>
                                                     )}
                                                     {actionsOpen && req.status === 'ENVIADA' && (
@@ -550,10 +571,10 @@ export default function Stage1Propuesta({
                                                                 e.stopPropagation();
                                                                 openRespondModal(req.id);
                                                             }}
-                                                            className="p-1.5 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition-colors"
-                                                            title="Registrar respuesta"
+                                                            className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                         >
                                                             <FileText className="h-4 w-4" />
+                                                            Responder
                                                         </button>
                                                     )}
                                                     {actionsOpen && req.status === 'GENERADA' && (
@@ -562,10 +583,10 @@ export default function Stage1Propuesta({
                                                                 e.stopPropagation();
                                                                 handleDeleteRequest(req.id);
                                                             }}
-                                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                            title="Eliminar"
+                                                            className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
+                                                            Eliminar
                                                         </button>
                                                     )}
                                                     {expandedRequest === req.id ? (
@@ -682,7 +703,7 @@ export default function Stage1Propuesta({
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center gap-2">
                                                     {actionsOpen && req.status === 'RESPONDIDA' && (
                                                         <>
                                                             <button
@@ -694,10 +715,10 @@ export default function Stage1Propuesta({
                                                                         valid: true,
                                                                     });
                                                                 }}
-                                                                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors"
-                                                                title="Validar opinión"
+                                                                className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors"
                                                             >
                                                                 <ShieldCheck className="h-4 w-4" />
+                                                                Validar
                                                             </button>
                                                             <button
                                                                 onClick={(e) => {
@@ -708,10 +729,10 @@ export default function Stage1Propuesta({
                                                                         valid: false,
                                                                     });
                                                                 }}
-                                                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                                title="Observar opinión"
+                                                                className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
                                                             >
                                                                 <AlertTriangle className="h-4 w-4" />
+                                                                Observar
                                                             </button>
                                                         </>
                                                     )}
@@ -853,6 +874,9 @@ export default function Stage1Propuesta({
                                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
                                         Enlace
                                     </th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                        Descargar
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -879,15 +903,28 @@ export default function Stage1Propuesta({
                                                 : '—'}
                                         </td>
                                         <td className="px-6 py-3 text-right">
-                                            <a
-                                                href={getFileUrl(doc.file_path)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <div className="flex items-center justify-end gap-3">
+                                                <a
+                                                    href={getFileUrl(doc.file_path)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline"
+                                                >
+                                                    Ver
+                                                    <ExternalLink className="h-3.5 w-3.5" />
+                                                </a>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-3 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDownloadDocument(doc)}
                                                 className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline"
+                                                title="Descargar documento"
                                             >
-                                                Ver
-                                                <ExternalLink className="h-3.5 w-3.5" />
-                                            </a>
+                                                Descargar
+                                                <Download className="h-3.5 w-3.5" />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -1000,15 +1037,18 @@ export default function Stage1Propuesta({
                             <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
                                 Vía de envío
                             </label>
-                            <select
-                                value={sendVia}
-                                onChange={(e) => setSendVia(e.target.value)}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                            >
-                                <option value="ADESA">ADESA</option>
-                                <option value="CORREO">Correo</option>
-                                <option value="MANUAL">Entrega Manual</option>
-                            </select>
+                            <div className="w-full relative">
+                                <select
+                                    value={sendVia}
+                                    onChange={(e) => setSendVia(e.target.value)}
+                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                >
+                                    <option value="ADESA">ADESA</option>
+                                    <option value="CORREO">Correo</option>
+                                    <option value="MANUAL">Entrega Manual</option>
+                                </select>
+                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                            </div>
                         </div>
                         {sendVia === 'ADESA' && (
                             <div>
@@ -1228,20 +1268,23 @@ export default function Stage1Propuesta({
                             <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
                                 Tipo de documento <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                value={uploadTypeCode}
-                                onChange={(e) => {
-                                    setUploadTypeCode(e.target.value);
-                                    setUploadFile(null);
-                                }}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                            >
-                                {Object.entries(DOCUMENT_TYPE_LABELS).map(([code, label]) => (
-                                    <option key={code} value={code}>
-                                        {label}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="w-full relative">
+                                <select
+                                    value={uploadTypeCode}
+                                    onChange={(e) => {
+                                        setUploadTypeCode(e.target.value);
+                                        setUploadFile(null);
+                                    }}
+                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                >
+                                    {Object.entries(DOCUMENT_TYPE_LABELS).map(([code, label]) => (
+                                        <option key={code} value={code}>
+                                            {label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                            </div>
                         </div>
                         )}
                         <div>

@@ -14,6 +14,7 @@ import {
     Building2,
     Calendar,
     CheckCircle2,
+    ChevronDown,
     FileCheck,
     Loader2,
     Plus,
@@ -607,22 +608,25 @@ export default function Stage2Registro({
                                                 placeholder="Coordinador"
                                             />
                                         </div>
-                                        <div className="col-span-4 sm:col-span-2">
+                                            <div className="col-span-4 sm:col-span-2">
                                             <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
                                                 Lado
                                             </label>
-                                            <select
-                                                value={resp.side}
-                                                onChange={(e) =>
-                                                    updateResponsable(idx, {
-                                                        side: e.target.value as 'UNCP' | 'CONTRAPARTE',
-                                                    })
-                                                }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                            >
-                                                <option value="UNCP">UNCP</option>
-                                                <option value="CONTRAPARTE">Contraparte</option>
-                                            </select>
+                                            <div className="w-full relative">
+                                                <select
+                                                    value={resp.side}
+                                                    onChange={(e) =>
+                                                        updateResponsable(idx, {
+                                                            side: e.target.value as 'UNCP' | 'CONTRAPARTE',
+                                                        })
+                                                    }
+                                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                                >
+                                                    <option value="UNCP">UNCP</option>
+                                                    <option value="CONTRAPARTE">Contraparte</option>
+                                                </select>
+                                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                            </div>
                                         </div>
                                         <div className="col-span-4 sm:col-span-2">
                                             <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
@@ -664,9 +668,10 @@ export default function Stage2Registro({
                                                             ),
                                                         )
                                                     }
-                                                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                    className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
+                                                    Eliminar
                                                 </button>
                                             )}
                                         </div>

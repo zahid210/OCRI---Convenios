@@ -16,7 +16,8 @@ import {
     FileUp,
     UploadCloud,
     Eye,
-    FileX2
+    FileX2,
+    ChevronDown
 } from 'lucide-react';
 import { Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
@@ -320,25 +321,28 @@ export default function CreatePropuestaPage() {
                                     Entidad Solicitante <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex items-center gap-2">
-                                    <select
-                                        required
-                                        value={institutionId}
-                                        onChange={(e) => setInstitutionId(e.target.value)}
-                                        className="flex-1 h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                    >
-                                        {institutions.map((inst) => (
-                                            <option key={`inst-create-${inst.id}`} value={inst.id}>
-                                                {inst.name} {inst.country ? `(${inst.country})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="relative flex-1">
+                                        <select
+                                            required
+                                            value={institutionId}
+                                            onChange={(e) => setInstitutionId(e.target.value)}
+                                            className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                        >
+                                            {institutions.map((inst) => (
+                                                <option key={`inst-create-${inst.id}`} value={inst.id}>
+                                                    {inst.name} {inst.country ? `(${inst.country})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => setIsModalOpen(true)}
-                                        title="Registrar nueva institución aliada"
-                                        className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                                        className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center gap-1.5 text-sm transition-colors shrink-0 cursor-pointer"
                                     >
                                         <Plus className="h-4 w-4" />
+                                        Registrar
                                     </button>
                                 </div>
                             </div>
@@ -388,18 +392,21 @@ export default function CreatePropuestaPage() {
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Tipo de Convenio Solicitado <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    required
-                                    value={agreementTypeId}
-                                    onChange={(e) => setAgreementTypeId(e.target.value)}
-                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    {types.map((type) => (
-                                        <option key={`type-${type.id}`} value={type.id}>
-                                            {type.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        required
+                                        value={agreementTypeId}
+                                        onChange={(e) => setAgreementTypeId(e.target.value)}
+                                        className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    >
+                                        {types.map((type) => (
+                                            <option key={`type-${type.id}`} value={type.id}>
+                                                {type.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                             </div>
                         </div>
 
@@ -629,17 +636,20 @@ export default function CreatePropuestaPage() {
                                 </div>
 
                                 {!isCustomCountry ? (
-                                    <select
-                                        value={selectedCountry}
-                                        onChange={(e) => setSelectedCountry(e.target.value)}
-                                        className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                    >
-                                        {countries.map((c) => (
-                                            <option key={c} value={c}>
-                                                {c}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            value={selectedCountry}
+                                            onChange={(e) => setSelectedCountry(e.target.value)}
+                                            className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                        >
+                                            {countries.map((c) => (
+                                                <option key={c} value={c}>
+                                                    {c}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                    </div>
                                 ) : (
                                     <input
                                         type="text"
@@ -656,18 +666,21 @@ export default function CreatePropuestaPage() {
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Tipo de Institución <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    required
-                                    value={newInstType}
-                                    onChange={(e) => setNewInstType(e.target.value)}
-                                    className="w-full h-10 px-3 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    <option value="Universidad Nacional">Universidad Nacional</option>
-                                    <option value="Universidad Privada">Universidad Privada</option>
-                                    <option value="Entidad Gubernamental">Entidad Gubernamental</option>
-                                    <option value="Empresa Privada">Empresa Privada</option>
-                                    <option value="Organización Internacional">Organización Internacional</option>
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        required
+                                        value={newInstType}
+                                        onChange={(e) => setNewInstType(e.target.value)}
+                                        className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    >
+                                        <option value="Universidad Nacional">Universidad Nacional</option>
+                                        <option value="Universidad Privada">Universidad Privada</option>
+                                        <option value="Entidad Gubernamental">Entidad Gubernamental</option>
+                                        <option value="Empresa Privada">Empresa Privada</option>
+                                        <option value="Organización Internacional">Organización Internacional</option>
+                                    </select>
+                                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                             </div>
 
                             <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">

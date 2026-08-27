@@ -402,18 +402,21 @@ export default function Stage3Seguimiento({
                     {canManage && processStatus === 'EN_SEGUIMIENTO' && (
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-4 border-t border-gray-100">
                             <div className="flex flex-wrap items-center gap-2">
-                                <select
-                                    value={reportType}
-                                    onChange={(e) =>
-                                        setReportType(
-                                            e.target.value as 'INFORME_SEMESTRAL' | 'INFORME_FINAL',
-                                        )
-                                    }
-                                    className="border border-gray-300 px-3 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    <option value="INFORME_SEMESTRAL">Informe Semestral</option>
-                                    <option value="INFORME_FINAL">Informe Final</option>
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        value={reportType}
+                                        onChange={(e) =>
+                                            setReportType(
+                                                e.target.value as 'INFORME_SEMESTRAL' | 'INFORME_FINAL',
+                                            )
+                                        }
+                                        className="appearance-none border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    >
+                                        <option value="INFORME_SEMESTRAL">Informe Semestral</option>
+                                        <option value="INFORME_FINAL">Informe Final</option>
+                                    </select>
+                                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                                 {reportType === 'INFORME_SEMESTRAL' && (
                                     <input
                                         value={reportPeriod}

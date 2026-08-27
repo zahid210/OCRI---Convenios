@@ -111,9 +111,10 @@ export default function ProcessPage({
                     <div className="flex items-center gap-3">
                         <Link
                             href={`/agreements/${agreementId}`}
-                            className="p-2 hover:bg-gray-100 transition-colors"
+                            className="inline-flex items-center gap-1.5 text-sm text-[#0b6e4f] hover:underline shrink-0"
                         >
-                            <ArrowLeft className="h-5 w-5 text-gray-600" />
+                            <ArrowLeft className="h-4 w-4" />
+                            Volver
                         </Link>
                         <div className="space-y-1">
                             <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2">

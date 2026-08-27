@@ -15,7 +15,8 @@ import {
     Loader2,
     ChevronLeft,
     ChevronRight,
-    Building2
+    Building2,
+    ChevronDown
 } from 'lucide-react';
 
 const EN_TRAMITE_LABELS: Record<string, string> = {
@@ -330,28 +331,28 @@ export default function AgreementsIndexPage() {
 
                                         {/* Acciones */}
                                         <td className="py-5 pr-12">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <Link
                                                     href={`/agreements/${agreement.id}/process`}
-                                                    className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors"
-                                                    title="Ver Flujo de Proceso"
+                                                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                 >
                                                     <FileText className="h-4 w-4" />
+                                                    Flujo
                                                 </Link>
                                                 <Link
                                                     href={`/agreements/${agreement.id}`}
-                                                    className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-                                                    title="Ver Detalle"
+                                                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                 >
                                                     <Eye className="h-4 w-4" />
+                                                    Ver
                                                 </Link>
                                                 {canManage(user) && (
                                                     <Link
                                                         href={`/agreements/${agreement.id}/edit`}
-                                                        className="p-1.5 text-gray-500 hover:text-[#df9f1f] hover:bg-gray-100 transition-colors"
-                                                        title="Editar Convenio"
+                                                        className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                     >
                                                         <Pencil className="h-4 w-4" />
+                                                        Editar
                                                     </Link>
                                                 )}
                                             </div>
@@ -370,21 +371,24 @@ export default function AgreementsIndexPage() {
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
                             <div className="flex items-center gap-2">
                                 <span>Mostrar</span>
-                                <select
-                                    value={perPage}
-                                    onChange={(e) => {
-                                        setLoading(true);
-                                        setPerPage(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                    className="bg-white border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    {[10, 15, 25, 50, 100].map((count) => (
-                                        <option key={count} value={count}>
-                                            {count}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        value={perPage}
+                                        onChange={(e) => {
+                                            setLoading(true);
+                                            setPerPage(Number(e.target.value));
+                                            setPage(1);
+                                        }}
+                                        className="appearance-none w-full bg-white border border-gray-300 pl-3 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
+                                    >
+                                        {[10, 15, 25, 50, 100].map((count) => (
+                                            <option key={count} value={count}>
+                                                {count}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                                 <span>por página</span>
                             </div>
 

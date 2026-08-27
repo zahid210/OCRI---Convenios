@@ -15,6 +15,7 @@ import {
     Search,
     Network,
     XCircle,
+    ChevronDown,
 } from 'lucide-react';
 
 const KIND_LABELS: Record<string, string> = {
@@ -105,13 +106,13 @@ export default function DependenciasPage() {
                     method: 'PATCH',
                     body: JSON.stringify(body),
                 });
-                toast.success('Dependencia actualizada.');
+                toast.success('Dependencia actualizada correctamente.');
             } else {
                 await fetchApi('/dependencias', {
                     method: 'POST',
                     body: JSON.stringify(body),
                 });
-                toast.success('Dependencia creada.');
+                toast.success('Dependencia creada correctamente.');
             }
 
             setShowForm(false);
@@ -146,7 +147,7 @@ export default function DependenciasPage() {
 
         try {
             await fetchApi(`/dependencias/${dep.id}`, { method: 'DELETE' });
-            toast.success('Dependencia eliminada.');
+            toast.success('Dependencia eliminada correctamente.');
             await loadData();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al eliminar';
@@ -275,20 +276,20 @@ export default function DependenciasPage() {
                                         )}
                                     </td>
                                     <td className="py-4 pr-10">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-2">
                                             <button
                                                 onClick={() => handleEdit(dep)}
-                                                className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-                                                title="Editar"
+                                                className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                             >
                                                 <Pencil className="h-4 w-4" />
+                                                Editar
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(dep)}
-                                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                title="Eliminar"
+                                                className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
                                             >
                                                 <Trash2 className="h-4 w-4" />
+                                                Eliminar
                                             </button>
                                         </div>
                                     </td>
@@ -324,15 +325,18 @@ export default function DependenciasPage() {
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Tipo</label>
+                                <div className="w-full relative">
                                 <select
                                     value={formKind}
                                     onChange={(e) => setFormKind(e.target.value as 'RECTORADO' | 'OCRI' | 'UNIDAD_ORGANICA')}
-                                    className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                 >
                                     <option value="RECTORADO">Rectorado</option>
                                     <option value="OCRI">OCRI</option>
                                     <option value="UNIDAD_ORGANICA">Unidad Orgánica</option>
                                 </select>
+                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
                             </div>
                             <div className="col-span-2">
                                 <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Nombre</label>
