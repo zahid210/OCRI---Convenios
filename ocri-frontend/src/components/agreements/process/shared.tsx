@@ -74,7 +74,7 @@ export const OPINION_STATUS_COLORS: Record<string, string> = {
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
     OFICIO_SOLICITUD: 'Oficio de Solicitud de Convenio',
-    PROPUESTA_CONVENIO: 'Propuesta de Convenio Inicial (PDF)',
+    PROPUESTA_CONVENIO: 'Propuesta de Convenio Inicial',
     OFICIO_SOLICITUD_OPINION: 'Oficio de Solicitud de Opinión',
     OFICIO_RESPUESTA_OPINION: 'Oficio de Respuesta de Opinión',
     EXPEDIENTE_TECNICO: 'Expediente Técnico',
@@ -174,12 +174,6 @@ export function TemporalBadge({
             </span>
         );
     }
-
-    return (
-        <span className="inline-flex items-center px-2 py-0.5 text-xs border bg-green-50 text-green-700 border-green-200">
-            En plazo ({diffDays}d)
-        </span>
-    );
 }
 
 export function FlowTimeline({ current }: { current: ProcessStatus }) {

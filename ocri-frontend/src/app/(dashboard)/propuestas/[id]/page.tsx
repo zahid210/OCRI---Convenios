@@ -8,7 +8,6 @@ import {
 import {
     AlertTriangle,
     ArrowLeft,
-    Clock,
     Loader2,
 } from 'lucide-react';
 import { ProcessStatusResponse } from '@/types/agreements';
@@ -20,7 +19,6 @@ import {
     FlowTimeline,
     PROCESS_STATUS_LABELS,
     ProcessDetail,
-    STAGE_LABELS,
 } from '@/components/agreements/process/shared';
 
 const ETAPA2_STATUSES = [
@@ -100,30 +98,20 @@ export default function PropuestaDetailPage({
                         </Link>
                         <div className="space-y-1">
                             <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-[#df9f1f]" />
-                                Propuesta: {agreement.title}
+                                {agreement.title}
                             </h1>
                             <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
                                 {agreement.tramite_code ? (
                                     <>
-                                        Expediente:{' '}
                                         <span className="font-medium">{agreement.tramite_code}</span>
-                                        {' · '}
                                     </>
                                 ) : (
                                     <>Expediente #{agreementId} · </>
                                 )}
-                                <span className="font-medium">
-                                    {PROCESS_STATUS_LABELS[agreement.process_status] ??
-                                        agreement.process_status}
-                                </span>
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 text-xs border bg-[#fdf6e7] text-[#a97b12] border-[#ecd9ad]">
-                            {STAGE_LABELS[agreement.stage]}
-                        </span>
                     </div>
                 </div>
 

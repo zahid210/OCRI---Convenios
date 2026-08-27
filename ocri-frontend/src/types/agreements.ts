@@ -1,3 +1,5 @@
+import {OpinionRequestStatus} from "@/types/opinionRequestStatus";
+
 export interface Institution {
     id: number;
     name: string;
@@ -263,14 +265,6 @@ export interface DocumentType {
     direction: 'ENTRADA' | 'SALIDA' | 'INTERNO';
     is_active: boolean;
 }
-
-export type OpinionRequestStatus =
-    | 'GENERADA'
-    | 'ENVIADA'
-    | 'RESPONDIDA'
-    | 'VALIDADA'
-    | 'OBSERVADA'
-    | 'CANCELADA';
 
 export interface OpinionRequest {
     id: number;

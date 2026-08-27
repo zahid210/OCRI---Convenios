@@ -465,7 +465,7 @@ export default function Stage1Propuesta({
             </div>
 
             <SectionCard
-                title={`Selección de Dependencias / Opiniones (${counts.total})`}
+                title={`Solicitud de Opiniones (${counts.total})`}
                 icon={Users}
                 action={
                     canManage && GENERATION_STATUSES.includes(processStatus) ? (
@@ -474,14 +474,14 @@ export default function Stage1Propuesta({
                             className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                         >
                             <Plus className="h-4 w-4" />
-                            Generar
+                            Solicitar
                         </button>
                     ) : undefined
                 }
             >
                 {opinion_requests.length === 0 ? (
                     <div className="py-12 text-center text-sm text-gray-500">
-                        No hay solicitudes de opinión generadas.
+                        No hay solicitudes de opiniones.
                     </div>
                 ) : (
                     <div className="space-y-6">
@@ -828,17 +828,6 @@ export default function Stage1Propuesta({
                                     Generar Expediente
                                 </button>
                             )}
-                            <button
-                                onClick={() => {
-                                    setUploadFile(null);
-                                    setUploadTypeCode('EXPEDIENTE_TECNICO');
-                                    setShowUploadModal(true);
-                                }}
-                                className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
-                            >
-                                <Upload className="h-4 w-4" />
-                                Subir Documento
-                            </button>
                         </div>
                     ) : undefined
                 }
@@ -910,7 +899,7 @@ export default function Stage1Propuesta({
 
             {showGenerateModal && (
                 <ModalShell
-                    title="Generar Solicitudes de Opinión"
+                    title="Solicitar Opiniones"
                     icon={MessageSquare}
                     size="lg"
                     footer={
@@ -927,7 +916,7 @@ export default function Stage1Propuesta({
                                 className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
                             >
                                 {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
-                                Generar ({selectedDeps.length})
+                                Solicitar ({selectedDeps.length})
                             </button>
                         </>
                     }
