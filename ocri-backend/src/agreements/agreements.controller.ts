@@ -56,15 +56,15 @@ export class AgreementsController {
 
   /**
    * E1 · OCRI registra la solicitud de propuesta recibida de Rectorado.
-   * Adjuntos: oficio_solicitud (Oficio de Solicitud) y propuesta (Propuesta de Convenio).
+   * Adjuntos opcionales: dictamen (Dictamen) y documentos_origen (Documentos de Origen, múltiples).
    */
   @Roles('admin', 'editor')
   @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
       [
-        { name: 'oficio_solicitud', maxCount: 1 },
-        { name: 'propuesta', maxCount: 1 },
+        { name: 'dictamen', maxCount: 1 },
+        { name: 'documentos_origen', maxCount: 20 },
       ],
       safeMulterOptions(),
     ),
@@ -73,8 +73,8 @@ export class AgreementsController {
     @Body() createAgreementDto: CreateAgreementDto,
     @UploadedFiles()
     files?: {
-      oficio_solicitud?: UploadedFileLike[];
-      propuesta?: UploadedFileLike[];
+      dictamen?: UploadedFileLike[];
+      documentos_origen?: UploadedFileLike[];
     },
   ) {
     return this.agreementsService.create(createAgreementDto, files);

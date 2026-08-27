@@ -75,6 +75,8 @@ export const OPINION_STATUS_COLORS: Record<string, string> = {
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
     OFICIO_SOLICITUD: 'Oficio de Solicitud de Convenio',
     PROPUESTA_CONVENIO: 'Propuesta de Convenio Inicial',
+    DICTAMEN: 'Dictamen',
+    DOCUMENTO_DE_ORIGEN: 'Documento de Origen',
     OFICIO_SOLICITUD_OPINION: 'Oficio de Solicitud de Opinión',
     OFICIO_RESPUESTA_OPINION: 'Oficio de Respuesta de Opinión',
     EXPEDIENTE_TECNICO: 'Expediente Técnico',

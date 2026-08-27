@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
@@ -54,22 +53,11 @@ export class AgreementsService {
   async create(
     dto: CreateAgreementDto,
     files?: {
-      oficio_solicitud?: UploadedFileLike[];
-      propuesta?: UploadedFileLike[];
+      dictamen?: UploadedFileLike[];
+      documentos_origen?: UploadedFileLike[];
     },
   ) {
     const now = new Date();
-
-    if (!files?.oficio_solicitud?.[0]) {
-      throw new BadRequestException(
-        'Debe adjuntar el Oficio de Solicitud (archivo oficio_solicitud).',
-      );
-    }
-    if (!files?.propuesta?.[0]) {
-      throw new BadRequestException(
-        'Debe adjuntar la Propuesta de Convenio (archivo propuesta).',
-      );
-    }
 
     const tramiteCode =
       dto.tramite_code?.trim() ||
@@ -106,15 +94,15 @@ export class AgreementsService {
         fallbackName: string;
       }> = [
         {
-          file: files?.oficio_solicitud?.[0],
-          code: 'OFICIO_SOLICITUD',
-          fallbackName: 'Oficio de Solicitud',
+          file: files?.dictamen?.[0],
+          code: 'DICTAMEN',
+          fallbackName: 'Dictamen',
         },
-        {
-          file: files?.propuesta?.[0],
-          code: 'PROPUESTA_CONVENIO',
-          fallbackName: 'Propuesta de Convenio',
-        },
+        ...(files?.documentos_origen ?? []).map((file) => ({
+          file,
+          code: 'DOCUMENTO_DE_ORIGEN',
+          fallbackName: 'Documento de Origen',
+        })),
       ];
 
       for (const spec of docSpecs) {
@@ -143,8 +131,8 @@ export class AgreementsService {
             JSON.stringify({
               tramite_code: tramiteCode,
               applicant_name: dto.applicant_name ?? null,
-              has_oficio_solicitud: Boolean(files?.oficio_solicitud?.[0]),
-              has_propuesta: Boolean(files?.propuesta?.[0]),
+              has_dictamen: Boolean(files?.dictamen?.[0]),
+              documentos_origen_count: files?.documentos_origen?.length ?? 0,
             }),
           ) as Prisma.InputJsonValue,
           occurred_at: now,

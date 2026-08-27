@@ -6,14 +6,15 @@ import Link from 'next/link';
 import {
     ArrowLeft,
     Save,
-    FileText,
     Tag,
     Loader2,
     Paperclip,
     Plus,
     X,
     FolderInput,
-    ShieldCheck
+    Gavel,
+    FileUp,
+    UploadCloud
 } from 'lucide-react';
 import { Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
@@ -22,8 +23,8 @@ import { useToast } from '@/components/ui/toast';
 export default function CreatePropuestaPage() {
     const router = useRouter();
     const toast = useToast();
-    const oficioInputRef = useRef<HTMLInputElement>(null);
-    const propuestaInputRef = useRef<HTMLInputElement>(null);
+    const dictamenInputRef = useRef<HTMLInputElement>(null);
+    const origenInputRef = useRef<HTMLInputElement>(null);
 
     const [institutions, setInstitutions] = useState<Institution[]>([]);
     const [types, setTypes] = useState<AgreementType[]>([]);
@@ -42,10 +43,11 @@ export default function CreatePropuestaPage() {
     const [name, setName] = useState('');
     const [agreementTypeId, setAgreementTypeId] = useState('');
 
-    const [oficioFile, setOficioFile] = useState<File | null>(null);
-    const [oficioPreviewUrl, setOficioPreviewUrl] = useState<string | null>(null);
-    const [propuestaFile, setPropuestaFile] = useState<File | null>(null);
-    const [propuestaPreviewUrl, setPropuestaPreviewUrl] = useState<string | null>(null);
+    const [dictamenFile, setDictamenFile] = useState<File | null>(null);
+    const [dictamenPreviewUrl, setDictamenPreviewUrl] = useState<string | null>(null);
+    const [origenFiles, setOrigenFiles] = useState<File[]>([]);
+    const [origenPreviews, setOrigenPreviews] = useState<{ name: string; url: string | null }[]>([]);
+    const [isDraggingOrigen, setIsDraggingOrigen] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newInstName, setNewInstName] = useState('');
@@ -84,45 +86,64 @@ export default function CreatePropuestaPage() {
 
     useEffect(() => {
         return () => {
-            if (oficioPreviewUrl) URL.revokeObjectURL(oficioPreviewUrl);
-            if (propuestaPreviewUrl) URL.revokeObjectURL(propuestaPreviewUrl);
+            if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
+            origenPreviews.forEach((p) => {
+                if (p.url) URL.revokeObjectURL(p.url);
+            });
         };
-    }, [oficioPreviewUrl, propuestaPreviewUrl]);
+    }, [dictamenPreviewUrl, origenPreviews]);
 
-    const handleOficioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDictamenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
-        if (oficioPreviewUrl) URL.revokeObjectURL(oficioPreviewUrl);
-        setOficioFile(file);
+        if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
+        setDictamenFile(file);
         if (file && file.type === 'application/pdf') {
-            setOficioPreviewUrl(URL.createObjectURL(file));
+            setDictamenPreviewUrl(URL.createObjectURL(file));
         } else {
-            setOficioPreviewUrl(null);
+            setDictamenPreviewUrl(null);
         }
     };
 
-    const handleClearOficio = () => {
-        if (oficioPreviewUrl) URL.revokeObjectURL(oficioPreviewUrl);
-        setOficioPreviewUrl(null);
-        setOficioFile(null);
-        if (oficioInputRef.current) oficioInputRef.current.value = '';
+    const handleClearDictamen = () => {
+        if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
+        setDictamenPreviewUrl(null);
+        setDictamenFile(null);
+        if (dictamenInputRef.current) dictamenInputRef.current.value = '';
     };
 
-    const handlePropuestaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0] || null;
-        if (propuestaPreviewUrl) URL.revokeObjectURL(propuestaPreviewUrl);
-        setPropuestaFile(file);
-        if (file && file.type === 'application/pdf') {
-            setPropuestaPreviewUrl(URL.createObjectURL(file));
-        } else {
-            setPropuestaPreviewUrl(null);
-        }
+    const addOrigenFiles = (fileList: FileList | File[]) => {
+        const files = Array.from(fileList);
+        if (files.length === 0) return;
+        setOrigenFiles((prev) => [...prev, ...files]);
+        setOrigenPreviews((prev) => [
+            ...prev,
+            ...files.map((f) => ({
+                name: f.name,
+                url: f.type === 'application/pdf' ? URL.createObjectURL(f) : null,
+            })),
+        ]);
     };
 
-    const handleClearPropuesta = () => {
-        if (propuestaPreviewUrl) URL.revokeObjectURL(propuestaPreviewUrl);
-        setPropuestaPreviewUrl(null);
-        setPropuestaFile(null);
-        if (propuestaInputRef.current) propuestaInputRef.current.value = '';
+    const handleOrigenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files ? Array.from(e.target.files) : [];
+        if (files.length === 0) return;
+        addOrigenFiles(files);
+        if (origenInputRef.current) origenInputRef.current.value = '';
+    };
+
+    const handleOrigenDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDraggingOrigen(false);
+        addOrigenFiles(e.dataTransfer.files);
+    };
+
+    const handleRemoveOrigen = (index: number) => {
+        setOrigenFiles((prev) => prev.filter((_, i) => i !== index));
+        setOrigenPreviews((prev) => {
+            const removed = prev[index];
+            if (removed?.url) URL.revokeObjectURL(removed.url);
+            return prev.filter((_, i) => i !== index);
+        });
     };
 
     const handleSaveInstitution = async (e: React.FormEvent) => {
@@ -180,16 +201,6 @@ export default function CreatePropuestaPage() {
             return;
         }
 
-        if (!oficioFile) {
-            toast.warning('Debe adjuntar el oficio de solicitud digitalizado (PDF).');
-            return;
-        }
-
-        if (!propuestaFile) {
-            toast.warning('Debe adjuntar la propuesta de convenio (PDF).');
-            return;
-        }
-
         setSaving(true);
 
         try {
@@ -204,8 +215,8 @@ export default function CreatePropuestaPage() {
             if (applicantEmail.trim()) formData.append('applicant_email', applicantEmail.trim());
             if (applicantUnit.trim()) formData.append('applicant_unit', applicantUnit.trim());
 
-            formData.append('oficio_solicitud', oficioFile);
-            formData.append('propuesta', propuestaFile);
+            if (dictamenFile) formData.append('dictamen', dictamenFile);
+            origenFiles.forEach((f) => formData.append('documentos_origen', f));
 
             const created = await fetcher<{ id: number }>('/agreements', {
                 method: 'POST',
@@ -273,35 +284,35 @@ export default function CreatePropuestaPage() {
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     N° Dictamen <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={rectorateOficioNumber}
-                                    onChange={(e) => setRectorateOficioNumber(e.target.value)}
-                                    placeholder="EJ: DIC. N° 129-2026-RECTORADO"
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
-                                />
-                                <p className="text-xs text-gray-400 italic">
-                                    El código de trámite se genera automáticamente al registrar el expediente.
-                                </p>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        required
+                                        value={rectorateOficioNumber}
+                                        onChange={(e) => setRectorateOficioNumber(e.target.value)}
+                                        placeholder="EJ: DIC. N° 129-2026-RECTORADO"
+                                        className="flex-1 px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                                    />
+                                    <input
+                                        ref={dictamenInputRef}
+                                        type="file"
+                                        accept=".pdf,.doc,.docx"
+                                        className="hidden"
+                                        onChange={handleDictamenChange}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => dictamenInputRef.current?.click()}
+                                        title="Adjuntar dictamen"
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-[#df9f1f] text-[#a97b12] hover:bg-amber-50 transition-colors shrink-0 cursor-pointer"
+                                    >
+                                        <Gavel className="h-4 w-4" />
+                                        {dictamenFile ? 'Dictamen adjunto' : 'Adjuntar dictamen'}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    Unidad Solicitante
-                                </label>
-                                <input
-                                    type="text"
-                                    value={applicantUnit}
-                                    onChange={(e) => setApplicantUnit(e.target.value)}
-                                    placeholder="EJ: FACULTAD DE INGENIERÍA / DIRECCIÓN DE RELACIONES INSTITUCIONALES"
-                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-1.5 md:col-span-2">
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
                                     Entidad Solicitante <span className="text-red-500">*</span>
                                 </label>
@@ -327,6 +338,38 @@ export default function CreatePropuestaPage() {
                                         <Plus className="h-4 w-4" />
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                        {dictamenFile && (
+                            <div className="flex items-center gap-2 text-xs">
+                                <span className="text-[#0b6e4f] font-medium truncate max-w-[220px]">
+                                    {dictamenFile.name}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleClearDictamen}
+                                    className="text-red-600 hover:underline shrink-0 cursor-pointer"
+                                >
+                                    Quitar
+                                </button>
+                            </div>
+                        )}
+                        <p className="text-xs text-gray-400 italic -mt-2">
+                            El código de trámite se genera automáticamente al registrar el expediente.
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
+                                    Unidad Solicitante
+                                </label>
+                                <input
+                                    type="text"
+                                    value={applicantUnit}
+                                    onChange={(e) => setApplicantUnit(e.target.value)}
+                                    placeholder="EJ: FACULTAD DE INGENIERÍA / DIRECCIÓN DE RELACIONES INSTITUCIONALES"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                                />
                             </div>
 
                             <div className="space-y-1.5">
@@ -417,97 +460,79 @@ export default function CreatePropuestaPage() {
                 </div>
 
                 <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Paperclip className="h-4 w-4 text-[#df9f1f]" />
-                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                                 Oficio de Solicitud (PDF) <span className="text-red-500">*</span>
-                            </h2>
-                        </div>
-                        <span className="text-xs text-red-500 font-medium">Obligatorio</span>
+                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                        <Paperclip className="h-4 w-4 text-[#df9f1f]" />
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                            Documentos de Origen
+                        </h2>
+                        <span className="text-xs text-gray-400 font-medium ml-auto">Opcional</span>
                     </div>
 
                     <div className="p-6 space-y-4">
                         <p className="text-xs text-gray-500">
-                            Adjunte el oficio/proveído de Rectorado con el que se deriva el trámite a la OCRI para la elaboración del informe técnico.
+                            Arrastre o seleccione los documentos de origen del trámite (oficio, propuesta, anexos, etc.). Estos documentos se incorporarán al expediente técnico en orden cronológico.
                         </p>
 
-                        <input
-                            ref={oficioInputRef}
-                            type="file"
-                            accept=".pdf"
-                            required
-                            onChange={handleOficioChange}
-                            className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100 cursor-pointer border border-gray-300"
-                        />
-
-                        {oficioPreviewUrl && (
-                            <div className="space-y-2 pt-2">
-                                <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
-                                    <span>Vista Previa del Oficio de Solicitud</span>
-                                    <button
-                                        type="button"
-                                        onClick={handleClearOficio}
-                                        className="text-red-600 hover:underline cursor-pointer"
-                                    >
-                                        Quitar PDF
-                                    </button>
-                                </div>
-                                <div className="w-full h-[320px] bg-gray-100 border border-gray-300 overflow-hidden">
-                                    <iframe
-                                        src={oficioPreviewUrl}
-                                        className="w-full h-full border-0"
-                                        title="Vista Previa del Oficio"
-                                    />
-                                </div>
+                        <div
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                setIsDraggingOrigen(true);
+                            }}
+                            onDragLeave={() => setIsDraggingOrigen(false)}
+                            onDrop={handleOrigenDrop}
+                            onClick={() => origenInputRef.current?.click()}
+                            className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed transition-colors cursor-pointer px-6 py-12 text-center ${
+                                isDraggingOrigen
+                                    ? 'border-[#df9f1f] bg-amber-50'
+                                    : 'border-gray-300 bg-gray-50 hover:border-[#df9f1f] hover:bg-amber-50/40'
+                            }`}
+                        >
+                            <input
+                                ref={origenInputRef}
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                multiple
+                                onChange={handleOrigenChange}
+                                className="hidden"
+                            />
+                            <div className="p-3 rounded-full bg-amber-100 text-[#df9f1f]">
+                                <UploadCloud className="h-8 w-8" />
                             </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-                    <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-[#df9f1f]" />
-                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                                Propuesta de Convenio (PDF) <span className="text-red-500">*</span>
-                            </h2>
+                            <p className="text-sm font-semibold text-gray-700">
+                                {isDraggingOrigen ? 'Suelte los documentos aquí' : 'Arrastrar aquí los documentos'}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                                o haga clic para seleccionar · PDF, DOC, DOCX
+                            </p>
                         </div>
-                        <span className="text-xs text-red-500 font-medium">Obligatorio</span>
-                    </div>
 
-                    <div className="p-6 space-y-4">
-                        <p className="text-xs text-gray-500">
-                            Adjunte el proyecto/propuesta de convenio remitido por la entidad solicitante.
-                        </p>
-
-                        <input
-                            ref={propuestaInputRef}
-                            type="file"
-                            accept=".pdf"
-                            required
-                            onChange={handlePropuestaChange}
-                            className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-800 hover:file:bg-blue-100 cursor-pointer border border-gray-300"
-                        />
-
-                        {propuestaPreviewUrl && (
+                        {origenFiles.length > 0 && (
                             <div className="space-y-2 pt-2">
                                 <div className="flex items-center justify-between text-xs text-gray-500 font-semibold uppercase">
-                                    <span>Vista Previa de la Propuesta</span>
-                                    <button
-                                        type="button"
-                                        onClick={handleClearPropuesta}
-                                        className="text-red-600 hover:underline cursor-pointer"
-                                    >
-                                        Quitar PDF
-                                    </button>
+                                    <span>Documentos de Origen Adjuntos ({origenFiles.length})</span>
                                 </div>
-                                <div className="w-full h-[320px] bg-gray-100 border border-gray-300 overflow-hidden">
-                                    <iframe
-                                        src={propuestaPreviewUrl}
-                                        className="w-full h-full border-0"
-                                        title="Vista Previa de la Propuesta"
-                                    />
+                                <div className="divide-y divide-gray-100 border border-gray-200">
+                                    {origenFiles.map((file, index) => (
+                                        <div
+                                            key={`origen-${index}-${file.name}`}
+                                            className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                                        >
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <FileUp className="h-4 w-4 shrink-0 text-gray-400" />
+                                                <span className="truncate text-gray-700">{file.name}</span>
+                                                <span className="text-xs text-gray-400 shrink-0">
+                                                    ({(file.size / 1024).toFixed(0)} KB)
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveOrigen(index)}
+                                                className="text-red-600 hover:underline shrink-0 cursor-pointer"
+                                            >
+                                                Quitar
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}

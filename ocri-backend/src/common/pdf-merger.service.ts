@@ -137,29 +137,32 @@ export class PdfMergerService {
   }
 
   /**
-   * Fusiona todos los Oficios de Respuesta de Opinión (PDF) de un convenio
-   * en un solo archivo PDF, ordenados por Fecha de Respuesta de Dependencia (ASC).
+   * Fusiona todos los archivos PDF del convenio en un solo PDF (Expediente Técnico),
+   * ordenados cronológicamente (del más antiguo al más reciente) según su fecha de
+   * creación/emisión. Incluye los documentos de origen, dictamen, oficios, respuestas
+   * de opinión de dependencias y cualquier otro documento del proceso.
    * Retorna la ruta relativa del archivo generado.
    */
   async mergeOpinionResponses(agreementId: number): Promise<string> {
     const documents = await this.prisma.documents.findMany({
-      where: {
-        agreement_id: BigInt(agreementId),
-        document_types: { code: 'OFICIO_RESPUESTA_OPINION' },
-      },
+      where: { agreement_id: BigInt(agreementId) },
       include: {
         document_types: { select: { code: true } },
         opinion_requests: { select: { response_date: true } },
       },
     });
 
-    if (documents.length === 0) {
+    const pdfDocs = documents
+      .filter((d) => d.extension === 'pdf')
+      .filter((d) => d.document_types?.code !== 'EXPEDIENTE_TECNICO');
+
+    if (pdfDocs.length === 0) {
       throw new Error(
-        'No hay oficios de respuesta de opinión para fusionar.',
+        'No hay documentos PDF para fusionar en el expediente técnico.',
       );
     }
 
-    documents.sort((a, b) => {
+    pdfDocs.sort((a, b) => {
       const dateA = a.opinion_requests?.response_date
         ? new Date(a.opinion_requests.response_date).getTime()
         : a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -171,7 +174,7 @@ export class PdfMergerService {
 
     const mergedPdf = await PDFDocument.create();
 
-    for (const doc of documents) {
+    for (const doc of pdfDocs) {
       const filePath = path.resolve('uploads', doc.file_path);
       try {
         const pdfBytes = await fs.readFile(filePath);
@@ -196,7 +199,7 @@ export class PdfMergerService {
     await fs.writeFile(outputPath, mergedBytes);
 
     this.logger.log(
-      `Expediente técnico generado: ${filename} (${documents.length} documentos fusionados, ordenados por fecha de respuesta)`,
+      `Expediente técnico generado: ${filename} (${pdfDocs.length} documentos PDF fusionados, ordenados cronológicamente)`,
     );
 
     return filename;

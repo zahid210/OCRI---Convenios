@@ -65,6 +65,16 @@ async function main() {
         name: 'Propuesta de Convenio para Firmar',
         direction: 'SALIDA',
       },
+      {
+        code: 'DICTAMEN',
+        name: 'Dictamen de Rectorado',
+        direction: 'ENTRADA',
+      },
+      {
+        code: 'DOCUMENTO_DE_ORIGEN',
+        name: 'Documento de Origen',
+        direction: 'ENTRADA',
+      },
       // E2: Publicación y registro
       {
         code: 'CONVENIO_FIRMADO',
