@@ -14,7 +14,9 @@ import {
     FolderInput,
     Gavel,
     FileUp,
-    UploadCloud
+    UploadCloud,
+    Eye,
+    FileX2
 } from 'lucide-react';
 import { Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
@@ -48,6 +50,7 @@ export default function CreatePropuestaPage() {
     const [origenFiles, setOrigenFiles] = useState<File[]>([]);
     const [origenPreviews, setOrigenPreviews] = useState<{ name: string; url: string | null }[]>([]);
     const [isDraggingOrigen, setIsDraggingOrigen] = useState(false);
+    const [isDictamenPreviewOpen, setIsDictamenPreviewOpen] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newInstName, setNewInstName] = useState('');
@@ -341,7 +344,16 @@ export default function CreatePropuestaPage() {
                             </div>
                         </div>
                         {dictamenFile && (
-                            <div className="flex items-center gap-2 text-xs">
+                            <div className="flex items-center gap-3 text-xs">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDictamenPreviewOpen(true)}
+                                    title="Visualizar dictamen"
+                                    className="inline-flex items-center gap-1.5 px-2 py-1 border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors shrink-0 cursor-pointer"
+                                >
+                                    <Eye className="h-3.5 w-3.5" />
+                                    Visualizar
+                                </button>
                                 <span className="text-[#0b6e4f] font-medium truncate max-w-[220px]">
                                     {dictamenFile.name}
                                 </span>
@@ -470,7 +482,7 @@ export default function CreatePropuestaPage() {
 
                     <div className="p-6 space-y-4">
                         <p className="text-xs text-gray-500">
-                            Arrastre o seleccione los documentos de origen del trámite (oficio, propuesta, anexos, etc.). Estos documentos se incorporarán al expediente técnico en orden cronológico.
+                            Arrastre o seleccione los documentos de origen del trámite.
                         </p>
 
                         <div
@@ -502,7 +514,7 @@ export default function CreatePropuestaPage() {
                                 {isDraggingOrigen ? 'Suelte los documentos aquí' : 'Arrastrar aquí los documentos'}
                             </p>
                             <p className="text-xs text-gray-400">
-                                o haga clic para seleccionar · PDF, DOC, DOCX
+                                o haga clic para seleccionar.
                             </p>
                         </div>
 
@@ -675,6 +687,52 @@ export default function CreatePropuestaPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {isDictamenPreviewOpen && dictamenFile && (
+                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+                    <div className="bg-white border border-gray-200 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-xl">
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Gavel className="h-4 w-4 text-[#df9f1f] shrink-0" />
+                                <h3 className="text-sm font-semibold text-gray-800 truncate">
+                                    Vista Previa del Dictamen
+                                </h3>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400 truncate max-w-[240px]">
+                                    {dictamenFile.name}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDictamenPreviewOpen(false)}
+                                    className="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
+                                    title="Cerrar"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-auto bg-gray-100">
+                            {dictamenPreviewUrl ? (
+                                <iframe
+                                    src={dictamenPreviewUrl}
+                                    className="w-full h-full min-h-[70vh] border-0"
+                                    title="Vista Previa del Dictamen"
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                                    <FileX2 className="h-10 w-10 text-gray-300" />
+                                    <p className="text-sm text-gray-500">
+                                        No es posible previsualizar este tipo de archivo en el navegador.
+                                    </p>
+                                    <p className="text-xs text-gray-400">{dictamenFile.name}</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
