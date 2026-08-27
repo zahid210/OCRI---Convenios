@@ -877,7 +877,7 @@ export class ProcessService {
         .filter((code): code is string => Boolean(code)),
     );
 
-    const requiredForFinalize = ['EXPEDIENTE_TECNICO', 'INFORME_TECNICO_OCRI'];
+    const requiredForFinalize = ['EXPEDIENTE_TECNICO'];
     const missingDocs = requiredForFinalize.filter(
       (code) => !uploadedCodes.has(code),
     );
@@ -1009,6 +1009,12 @@ export class ProcessService {
     if (agreement.process_status !== 'ENVIADO_A_RECTORADO') {
       throw new BadRequestException(
         `La decisión de Rectorado se registra desde ENVIADO_A_RECTORADO. Estado actual: ${agreement.process_status}`,
+      );
+    }
+
+    if (decision !== 'APPROVED' && decision !== 'REJECTED') {
+      throw new BadRequestException(
+        `La decisión debe ser APPROVED o REJECTED. Valor recibido: ${decision ?? '(vacío)'}`,
       );
     }
 

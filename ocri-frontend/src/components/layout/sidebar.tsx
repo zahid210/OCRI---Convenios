@@ -58,18 +58,7 @@ export function Sidebar() {
 
     return (
         <aside className="hidden w-64 flex-col bg-[#0b5a41] md:flex z-10 shadow-lg">
-            {/* Cabecera del Sidebar */}
-            <div className="flex items-center gap-3 px-6 py-5 border-b border-[#08422f] bg-[#094d37]">
-                <div className="flex h-10 w-10 items-center justify-center bg-white text-[#0b5a41] font-bold text-sm">
-                    OC
-                </div>
-                <div className="flex flex-col">
-                    <span className="font-bold tracking-tight text-white text-sm">OCRI - UNCP</span>
-                    <span className="text-[10px] text-gray-300 font-medium uppercase tracking-wider">
-                        Oficina de Relaciones Interinstitucionales
-                    </span>
-                </div>
-            </div>
+
 
             {/* Navegación */}
             <div className="flex-1 overflow-auto py-5 space-y-5">

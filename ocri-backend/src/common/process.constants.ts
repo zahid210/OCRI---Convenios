@@ -61,8 +61,7 @@ export const IN_FLIGHT_STATUSES: ProcessStatus[] = [
 /** Documentos exigidos para remitir el expediente a Rectorado (fin de E1). */
 export const REQUIRED_DOCS_TO_SEND_TO_RECTORADO = [
   'EXPEDIENTE_TECNICO',
-  'PROPUESTA_CONVENIO',
-  'INFORME_TECNICO_OCRI',
+  'PROPUESTA_CONVENIO_FIRMA',
   'OFICIO_RESPUESTA_RECTORADO',
 ] as const;
 

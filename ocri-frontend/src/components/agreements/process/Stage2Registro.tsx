@@ -5,9 +5,8 @@ import {
     publishConvenio,
     rectorateDecision,
     registerConvenio,
-    setAgreementValidity,
 } from '@/lib/api';
-import { ProcessStatus, ValidityStatus } from '@/types/agreements';
+import { ProcessStatus } from '@/types/agreements';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
@@ -24,11 +23,7 @@ import {
 import {
     ModalShell,
     SectionCard,
-    VALIDITY_COLORS,
-    VALIDITY_LABELS,
 } from './shared';
-
-type SettableValidity = Exclude<ValidityStatus, 'PENDIENTE'>;
 
 interface ResponsableRow {
     name: string;
@@ -46,8 +41,6 @@ const EMPTY_RESPONSABLE: ResponsableRow = {
     phone: '',
 };
 
-const VALIDITY_OPTIONS: SettableValidity[] = ['VIGENTE', 'SUSPENDIDO', 'RESCINDIDO', 'VENCIDO'];
-
 export default function Stage2Registro({
     agreementId,
     processStatus,
@@ -55,7 +48,7 @@ export default function Stage2Registro({
     decidedAt,
     publishedAt,
     registeredAt,
-    validityStatus,
+    validityStatus: _validityStatus,
     canManage,
     onRefresh,
 }: {
@@ -65,7 +58,7 @@ export default function Stage2Registro({
     decidedAt?: string | null;
     publishedAt?: string | null;
     registeredAt?: string | null;
-    validityStatus?: ValidityStatus | null;
+    validityStatus?: unknown;
     canManage: boolean;
     onRefresh: () => Promise<void>;
 }) {
@@ -92,10 +85,6 @@ export default function Stage2Registro({
         { ...EMPTY_RESPONSABLE },
     ]);
 
-    const [newValidity, setNewValidity] = useState<SettableValidity | ''>('');
-    const [validityReason, setValidityReason] = useState('');
-    const [isUpdatingValidity, setIsUpdatingValidity] = useState(false);
-
     const formatDate = (value?: string | null) =>
         value ? new Date(value).toLocaleDateString('es-PE') : null;
 
@@ -107,10 +96,6 @@ export default function Stage2Registro({
             regFile &&
             validResponsables.length > 0,
     );
-
-    const showValidityManager =
-        Boolean(registeredAt) &&
-        ['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'].includes(processStatus);
 
     const handleApprove = async () => {
         const confirmed = await confirm({
@@ -226,33 +211,6 @@ export default function Stage2Registro({
             toast.error(message);
         } finally {
             setIsRegistering(false);
-        }
-    };
-
-    const handleUpdateValidity = async () => {
-        if (!newValidity) {
-            toast.error('Seleccione la nueva vigencia.');
-            return;
-        }
-        const confirmed = await confirm({
-            title: 'Cambiar Vigencia',
-            description: `¿Establecer la vigencia del convenio como ${VALIDITY_LABELS[newValidity]}?`,
-            destructive: newValidity !== 'VIGENTE',
-        });
-        if (!confirmed) return;
-
-        setIsUpdatingValidity(true);
-        try {
-            await setAgreementValidity(agreementId, newValidity, validityReason || undefined);
-            toast.success(`Vigencia actualizada a ${VALIDITY_LABELS[newValidity]}.`);
-            setNewValidity('');
-            setValidityReason('');
-            await onRefresh();
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Error al actualizar vigencia';
-            toast.error(message);
-        } finally {
-            setIsUpdatingValidity(false);
         }
     };
 
@@ -417,76 +375,6 @@ export default function Stage2Registro({
                     ))}
                 </div>
             </SectionCard>
-
-            {showValidityManager && (
-                <SectionCard title="Gestión de Vigencia" icon={CheckCircle2}>
-                    <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-                        <div>
-                            <span className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                Vigencia actual
-                            </span>
-                            <span
-                                className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
-                                    validityStatus
-                                        ? VALIDITY_COLORS[validityStatus]
-                                        : 'bg-gray-50 text-gray-500 border-gray-200'
-                                }`}
-                            >
-                                {validityStatus
-                                    ? VALIDITY_LABELS[validityStatus]
-                                    : 'Pendiente'}
-                            </span>
-                        </div>
-                        {canManage && processStatus !== 'SEGUIMIENTO_CONCLUIDO' && (
-                            <>
-                                <div className="w-full lg:w-48">
-                                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                        Nueva vigencia
-                                    </label>
-                                    <select
-                                        value={newValidity}
-                                        onChange={(e) =>
-                                            setNewValidity(e.target.value as SettableValidity | '')
-                                        }
-                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {VALIDITY_OPTIONS.map((v) => (
-                                            <option key={v} value={v}>
-                                                {VALIDITY_LABELS[v]}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                        Motivo{' '}
-                                        <span className="normal-case font-normal">(opcional)</span>
-                                    </label>
-                                    <input
-                                        value={validityReason}
-                                        onChange={(e) => setValidityReason(e.target.value)}
-                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
-                                        placeholder="Motivo del cambio de vigencia..."
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleUpdateValidity}
-                                    disabled={isUpdatingValidity || !newValidity}
-                                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-2 text-sm transition-colors disabled:opacity-50 shrink-0"
-                                >
-                                    {isUpdatingValidity ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <CheckCircle2 className="h-4 w-4" />
-                                    )}
-                                    Actualizar Vigencia
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </SectionCard>
-            )}
 
             {showRejectModal && (
                 <ModalShell

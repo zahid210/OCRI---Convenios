@@ -124,9 +124,8 @@ export default function Stage1Propuesta({
 
     const hasExpediente = uploadedTypeCodes.has('EXPEDIENTE_TECNICO');
     const hasOficioRectorado = uploadedTypeCodes.has('OFICIO_RESPUESTA_RECTORADO');
-    const hasPropuestaConvenio = uploadedTypeCodes.has('PROPUESTA_CONVENIO');
-    const hasInformeOCRI = uploadedTypeCodes.has('INFORME_TECNICO_OCRI');
-    const allRectoradoReady = hasExpediente && hasOficioRectorado && hasPropuestaConvenio && hasInformeOCRI;
+    const hasPropuestaFirma = uploadedTypeCodes.has('PROPUESTA_CONVENIO_FIRMA');
+    const allRectoradoReady = hasExpediente && hasOficioRectorado && hasPropuestaFirma;
 
     const respondingRequest = opinion_requests.find((r) => r.id === showRespondModal);
 
@@ -411,7 +410,7 @@ export default function Stage1Propuesta({
                             {/* 3. Propuesta de Convenio para Firmar */}
                             <div className="flex items-center justify-between p-3 border border-gray-200 bg-gray-50">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    {hasPropuestaConvenio ? (
+                                    {hasPropuestaFirma ? (
                                         <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
                                     ) : (
                                         <div className="h-5 w-5 rounded-full border-2 border-gray-300 shrink-0" />
@@ -421,7 +420,7 @@ export default function Stage1Propuesta({
                                         <div className="text-xs text-gray-500">Documento .docx con el texto final del convenio para firma</div>
                                     </div>
                                 </div>
-                                {hasPropuestaConvenio ? (
+                                {hasPropuestaFirma ? (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-100 border border-green-200 shrink-0">
                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                         Cargada
@@ -429,8 +428,8 @@ export default function Stage1Propuesta({
                                 ) : (
                                     <button
                                         onClick={() => {
-                                            setUploadTargetType('PROPUESTA_CONVENIO');
-                                            setUploadTypeCode('PROPUESTA_CONVENIO');
+                                            setUploadTargetType('PROPUESTA_CONVENIO_FIRMA');
+                                            setUploadTypeCode('PROPUESTA_CONVENIO_FIRMA');
                                             setShowUploadModal(true);
                                         }}
                                         className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
@@ -441,15 +440,6 @@ export default function Stage1Propuesta({
                                 )}
                             </div>
                         </div>
-
-                        {allRectoradoReady && (
-                            <div className="mt-4 p-3 bg-green-50 border border-green-200 flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 text-green-600 animate-spin" />
-                                <span className="text-sm text-green-700 font-medium">
-                                    Todos los documentos listos. Enviando expediente a Rectorado...
-                                </span>
-                            </div>
-                        )}
                     </SectionCard>
                 )}
 

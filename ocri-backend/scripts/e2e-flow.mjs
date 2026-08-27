@@ -74,6 +74,103 @@ function pdfBlob(name) {
   return new File([bytes], name, { type: 'application/pdf' });
 }
 
+function docxBlob(name) {
+  // Minimal DOCX: ZIP with content_types.xml, _rels/.rels, word/document.xml
+  // We create a small ZIP manually using deflate-compatible bytes.
+  const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '</Types>';
+  const rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    '</Relationships>';
+  const docXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:body><w:p><w:r><w:t>Test</w:t></w:r></w:p></w:body></w:document>';
+  const docRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>';
+
+  // Build minimal ZIP with STORED (not deflated) entries for simplicity
+  const encoder = new TextEncoder();
+  const files = [
+    { name: '[Content_Types].xml', data: encoder.encode(contentTypes) },
+    { name: '_rels/.rels', data: encoder.encode(rels) },
+    { name: 'word/document.xml', data: encoder.encode(docXml) },
+    { name: 'word/_rels/document.xml.rels', data: encoder.encode(docRels) },
+  ];
+
+  const parts = [];
+  const centralDir = [];
+  let offset = 0;
+
+  for (const file of files) {
+    const nameBytes = encoder.encode(file.name);
+    const localHeader = new Uint8Array(30 + nameBytes.length + file.data.length);
+    // Local file header signature
+    new DataView(localHeader.buffer).setUint32(0, 0x04034b50, true);
+    new DataView(localHeader.buffer).setUint16(4, 20, true); // version needed
+    localHeader.set(nameBytes, 30);
+    localHeader.set(file.data, 30 + nameBytes.length);
+    // CRC32 placeholder (0) + compressed size = uncompressed size (STORED)
+    new DataView(localHeader.buffer).setUint32(14, crc32(file.data), true);
+    new DataView(localHeader.buffer).setUint32(18, file.data.length, true);
+    new DataView(localHeader.buffer).setUint32(22, file.data.length, true);
+    new DataView(localHeader.buffer).setUint16(26, nameBytes.length, true);
+
+    // Central directory entry
+    const cdEntry = new Uint8Array(46 + nameBytes.length);
+    new DataView(cdEntry.buffer).setUint32(0, 0x02014b50, true);
+    new DataView(cdEntry.buffer).setUint16(4, 20, true);
+    cdEntry.set(nameBytes, 46);
+    new DataView(cdEntry.buffer).setUint32(16, crc32(file.data), true);
+    new DataView(cdEntry.buffer).setUint32(20, file.data.length, true);
+    new DataView(cdEntry.buffer).setUint32(24, file.data.length, true);
+    new DataView(cdEntry.buffer).setUint16(28, nameBytes.length, true);
+    new DataView(cdEntry.buffer).setUint32(42, offset, true);
+
+    parts.push(localHeader);
+    centralDir.push(cdEntry);
+    offset += localHeader.length;
+  }
+
+  const cdOffset = offset;
+  let cdSize = 0;
+  for (const cd of centralDir) { cdSize += cd.length; parts.push(cd); }
+
+  const endRecord = new Uint8Array(22);
+  new DataView(endRecord.buffer).setUint32(0, 0x06054b50, true);
+  new DataView(endRecord.buffer).setUint16(8, files.length, true);
+  new DataView(endRecord.buffer).setUint16(10, files.length, true);
+  new DataView(endRecord.buffer).setUint32(12, cdSize, true);
+  new DataView(endRecord.buffer).setUint32(16, cdOffset, true);
+  parts.push(endRecord);
+
+  const total = parts.reduce((s, p) => s + p.length, 0);
+  const zip = new Uint8Array(total);
+  let pos = 0;
+  for (const p of parts) { zip.set(p, pos); pos += p.length; }
+
+  return new File([zip], name, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+
+function crc32(data) {
+  let table = crc32._table;
+  if (!table) {
+    table = crc32._table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      table[i] = c;
+    }
+  }
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xFF];
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
 async function main() {
   console.log(`=== E2E OCRI contra ${BASE} ===`);
 
@@ -203,21 +300,21 @@ async function main() {
   });
   check('revalidar opinión observada', vRe.status < 300);
 
-  // 9. Generar expediente técnico (auto-merge de opiniones) y documento OCRI
+  // 9. Generar expediente técnico (auto-merge de opiniones) y documentos para Rectorado
   const genExp = await api('POST', `/process/${agrA}/generate-expediente`, { expect: 201 });
   check('generate-expediente (merge automático)', genExp.status < 300);
-
-  const fInform = new FormData();
-  fInform.append('document_type_code', 'INFORME_TECNICO_OCRI');
-  fInform.append('file', pdfBlob('informe_tecnico_ocri.pdf'));
-  const upInform = await api('POST', `/process/${agrA}/documents`, { form: fInform });
-  check('subir INFORME_TECNICO_OCRI', upInform.status < 300);
 
   const fOficioResp = new FormData();
   fOficioResp.append('document_type_code', 'OFICIO_RESPUESTA_RECTORADO');
   fOficioResp.append('file', pdfBlob('oficio_respuesta_rectorado.pdf'));
   const upOficioResp = await api('POST', `/process/${agrA}/documents`, { form: fOficioResp });
   check('subir OFICIO_RESPUESTA_RECTORADO', upOficioResp.status < 300);
+
+  const fPropuestaFirma = new FormData();
+  fPropuestaFirma.append('document_type_code', 'PROPUESTA_CONVENIO_FIRMA');
+  fPropuestaFirma.append('file', docxBlob('propuesta-convenio-firma.docx'));
+  const upPropuestaFirma = await api('POST', `/process/${agrA}/documents`, { form: fPropuestaFirma });
+  check('subir PROPUESTA_CONVENIO_FIRMA (.docx)', upPropuestaFirma.status < 300);
 
   const fin = await api('POST', `/process/${agrA}/finalize-expediente`, { expect: 201 });
   const stFin = await api('GET', `/process/${agrA}/status`);
@@ -305,8 +402,8 @@ async function main() {
   const wpReq = await api('POST', `/agreements/${agrA}/request-workplan`);
   const stSeg = await api('GET', `/process/${agrA}/status`);
   check(
-    'solicitar plan de trabajo -> EN_SEGUIMIENTO',
-    wpReq.status < 300 && stSeg.json?.agreement?.process_status === 'EN_SEGUIMIENTO',
+    'solicitar plan de trabajo (plan ya auto-creado, sigue REGISTRADO)',
+    wpReq.status < 300 && stSeg.json?.agreement?.process_status === 'REGISTRADO',
     stSeg.json?.agreement?.process_status,
   );
 
@@ -346,7 +443,12 @@ async function main() {
   const apprWp = await api('POST', `/agreements/deliverables/${wpDeliverable.id}/evaluate`, {
     json: { decision: 'APPROVED' },
   });
-  check('registro del plan corregido', apprWp.status < 300);
+  const stAfterPlan = await api('GET', `/process/${agrA}/status`);
+  check(
+    'plan aprobado -> EN_SEGUIMIENTO automatico',
+    apprWp.status < 300 && stAfterPlan.json?.agreement?.process_status === 'EN_SEGUIMIENTO',
+    stAfterPlan.json?.agreement?.process_status,
+  );
 
   const flowReport = async (type, period, fname) => {
     const reqRep = await api('POST', `/agreements/${agrA}/request-report`, {
@@ -411,15 +513,16 @@ async function main() {
   await api('POST', `/process/opinion-requests/${ridB}/validate`, { json: { valid: true } });
 
   await api('POST', `/process/${agrB}/generate-expediente`);
-  const fDocB2 = new FormData();
-  fDocB2.append('document_type_code', 'INFORME_TECNICO_OCRI');
-  fDocB2.append('file', pdfBlob('b-informe.pdf'));
-  await api('POST', `/process/${agrB}/documents`, { form: fDocB2 });
 
   const fOficioRespB = new FormData();
   fOficioRespB.append('document_type_code', 'OFICIO_RESPUESTA_RECTORADO');
   fOficioRespB.append('file', pdfBlob('b-oficio_respuesta.pdf'));
   await api('POST', `/process/${agrB}/documents`, { form: fOficioRespB });
+
+  const fPropuestaFirmaB = new FormData();
+  fPropuestaFirmaB.append('document_type_code', 'PROPUESTA_CONVENIO_FIRMA');
+  fPropuestaFirmaB.append('file', docxBlob('b-propuesta-firma.docx'));
+  await api('POST', `/process/${agrB}/documents`, { form: fPropuestaFirmaB });
 
   await api('POST', `/process/${agrB}/finalize-expediente`);
   await api('POST', `/process/${agrB}/send-to-rectorado`);

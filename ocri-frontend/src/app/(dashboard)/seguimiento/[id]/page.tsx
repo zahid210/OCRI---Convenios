@@ -6,7 +6,6 @@ import { getDeliverables, getProcessStatus } from '@/lib/api';
 import {
     AlertTriangle,
     ArrowLeft,
-    Calendar,
     Clock,
     Loader2,
 } from 'lucide-react';
@@ -91,10 +90,6 @@ export default function SeguimientoDetailPage({
 
     const { agreement } = status;
 
-    const sortedEvents = [...(status.events ?? [])].sort(
-        (a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime(),
-    );
-
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
             {/* Header */}
@@ -158,47 +153,6 @@ export default function SeguimientoDetailPage({
                 canManage={manage}
                 onRefresh={loadData}
             />
-
-            {/* Historial de eventos */}
-            <div className="border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-[#df9f1f]" />
-                        Historial del Proceso
-                    </h2>
-                </div>
-                <div className="p-6 flex flex-col flex-1">
-                    {sortedEvents.length === 0 ? (
-                        <div className="py-12 text-center text-sm text-gray-500">
-                            No hay eventos registrados.
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-gray-100">
-                            {sortedEvents.map((event) => (
-                                <div key={event.id} className="py-3 flex items-start gap-3">
-                                    <div className="mt-0.5">
-                                        <Calendar className="h-4 w-4 text-gray-400" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-800">
-                                            {event.description || event.event_type}
-                                        </p>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {new Date(event.occurred_at).toLocaleString('es-PE')}
-                                            {event.from_value && event.to_value && (
-                                                <>
-                                                    {' · '}
-                                                    {event.from_value} → {event.to_value}
-                                                </>
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
         </div>
     );
 }

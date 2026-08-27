@@ -6,7 +6,6 @@ import {
     evaluateDeliverable,
     getFileUrl,
     requestReport,
-    requestWorkPlan,
     submitDeliverable,
     submitWorkPlan,
 } from '@/lib/api';
@@ -229,7 +228,6 @@ export default function Stage3Seguimiento({
     const toast = useToast();
     const confirm = useConfirm();
 
-    const [isRequestingWorkPlan, setIsRequestingWorkPlan] = useState(false);
     const [reportType, setReportType] = useState<'INFORME_SEMESTRAL' | 'INFORME_FINAL'>(
         'INFORME_SEMESTRAL',
     );
@@ -247,30 +245,12 @@ export default function Stage3Seguimiento({
     const workPlans = deliverables.filter((d) => d.type === 'PLAN_DE_TRABAJO');
     const reports = deliverables.filter((d) => d.type !== 'PLAN_DE_TRABAJO');
 
-    const canRequestWorkPlan =
-        canManage && processStatus === 'REGISTRADO' && workPlans.length === 0;
-
     const allRegistered = deliverables.length > 0 &&
         deliverables.every((d) => d.status === 'REGISTRADO');
     const hasFinalReportRegistered = deliverables.some(
         (d) => d.type === 'INFORME_FINAL' && d.status === 'REGISTRADO',
     );
     const canCompleteMonitoring = processStatus === 'EN_SEGUIMIENTO' && allRegistered && hasFinalReportRegistered;
-
-    const handleRequestWorkPlan = async () => {
-        setIsRequestingWorkPlan(true);
-        try {
-            await requestWorkPlan(agreementId);
-            toast.success('Plan de Trabajo solicitado a los Responsables.');
-            await onRefresh();
-        } catch (err: unknown) {
-            const message =
-                err instanceof Error ? err.message : 'Error al solicitar Plan de Trabajo';
-            toast.error(message);
-        } finally {
-            setIsRequestingWorkPlan(false);
-        }
-    };
 
     const handleSubmitFile = async (deliverable: Deliverable, file: File) => {
         try {
@@ -357,22 +337,6 @@ export default function Stage3Seguimiento({
         <SectionCard
             title="Seguimiento del Convenio"
             icon={ClipboardList}
-            action={
-                canRequestWorkPlan ? (
-                    <button
-                        onClick={handleRequestWorkPlan}
-                        disabled={isRequestingWorkPlan}
-                        className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-                    >
-                        {isRequestingWorkPlan ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Send className="h-4 w-4" />
-                        )}
-                        Solicitar Plan de Trabajo
-                    </button>
-                ) : undefined
-            }
         >
             {processStatus === 'SEGUIMIENTO_CONCLUIDO' && (
                 <div className="mb-6 bg-green-50 border border-green-200 p-4 text-sm text-green-800 flex items-start gap-2">
@@ -388,7 +352,7 @@ export default function Stage3Seguimiento({
             ) : deliverables.length === 0 ? (
                 <div className="py-12 text-center text-sm text-gray-500">
                     {processStatus === 'REGISTRADO'
-                        ? 'Aún no hay entregables. Solicite el Plan de Trabajo para iniciar el seguimiento.'
+                        ? 'El convenio está registrado. Pulse "Iniciar Seguimiento" para formalizar la etapa.'
                         : 'No hay entregables registrados.'}
                 </div>
             ) : (

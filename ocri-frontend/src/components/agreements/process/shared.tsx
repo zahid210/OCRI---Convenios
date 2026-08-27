@@ -74,19 +74,21 @@ export const OPINION_STATUS_COLORS: Record<string, string> = {
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
     OFICIO_SOLICITUD: 'Oficio de Solicitud de Convenio',
-    PROPUESTA_CONVENIO: 'Propuesta de Convenio (.docx)',
+    PROPUESTA_CONVENIO: 'Propuesta de Convenio Inicial (PDF)',
     OFICIO_SOLICITUD_OPINION: 'Oficio de Solicitud de Opinión',
     OFICIO_RESPUESTA_OPINION: 'Oficio de Respuesta de Opinión',
     EXPEDIENTE_TECNICO: 'Expediente Técnico',
     INFORME_TECNICO_OCRI: 'Informe Técnico / Opinión OCRI',
     OFICIO_ENVIO_RECTORADO: 'Oficio de Envío a Rectorado',
     OFICIO_RESPUESTA_RECTORADO: 'Oficio de Respuesta a Rectorado',
+    PROPUESTA_CONVENIO_FIRMA: 'Propuesta de Convenio para Firmar (.docx)',
     CONVENIO_FIRMADO: 'Convenio Firmado Escaneado',
     PUBLICACION: 'Publicación del Convenio',
 };
 
 export const DOC_TYPE_ACCEPT: Record<string, string> = {
-    PROPUESTA_CONVENIO: '.docx',
+    PROPUESTA_CONVENIO: '.pdf',
+    PROPUESTA_CONVENIO_FIRMA: '.docx',
 };
 
 export const DELIVERABLE_STATUS_LABELS: Record<string, string> = {

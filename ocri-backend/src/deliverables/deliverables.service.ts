@@ -129,51 +129,10 @@ export class DeliverablesService {
     });
 
     if (existing) {
-      if (agreement.process_status === 'REGISTRADO') {
-        await this.prisma.$transaction(async (tx) => {
-          validateTransition('REGISTRADO', 'EN_SEGUIMIENTO');
-          await tx.agreements.update({
-            where: { id: BigInt(agreementId) },
-            data: {
-              process_status: 'EN_SEGUIMIENTO',
-              stage: 'ETAPA_3_SEGUIMIENTO',
-              updated_at: new Date(),
-            },
-          });
-          await this.logEvent(
-            tx,
-            BigInt(agreementId),
-            'SEGUIMIENTO_INICIADO',
-            'Plan de Trabajo ya registrado. Se confirma el inicio de la etapa de seguimiento.',
-            userId,
-          );
-        });
-      }
       return serializeBigInt(existing);
     }
 
     const deliverable = await this.prisma.$transaction(async (tx) => {
-      // El primer entregable inicia formalmente la etapa de seguimiento
-      if (agreement.process_status === 'REGISTRADO') {
-        validateTransition('REGISTRADO', 'EN_SEGUIMIENTO');
-        await tx.agreements.update({
-          where: { id: BigInt(agreementId) },
-          data: {
-            process_status: 'EN_SEGUIMIENTO',
-            stage: 'ETAPA_3_SEGUIMIENTO',
-            updated_at: new Date(),
-          },
-        });
-
-        await this.logEvent(
-          tx,
-          BigInt(agreementId),
-          'SEGUIMIENTO_INICIADO',
-          'OCRI solicitó el Plan de Trabajo a los responsables del convenio. Inicia la etapa de seguimiento.',
-          userId,
-        );
-      }
-
       const d = await tx.deliverables.create({
         data: {
           agreement_id: BigInt(agreementId),
@@ -428,6 +387,32 @@ export class DeliverablesService {
           `OCRI revisó, validó y registró: ${deliverable.title} (v${deliverable.version}).`,
           userId,
         );
+
+        // Auto-transition REGISTRADO -> EN_SEGUIMIENTO when PLAN_DE_TRABAJO is approved
+        if (deliverable.type === 'PLAN_DE_TRABAJO') {
+          const agreement = await tx.agreements.findUnique({
+            where: { id: deliverable.agreement_id },
+            select: { process_status: true },
+          });
+          if (agreement && agreement.process_status === 'REGISTRADO') {
+            validateTransition('REGISTRADO', 'EN_SEGUIMIENTO');
+            await tx.agreements.update({
+              where: { id: deliverable.agreement_id },
+              data: {
+                process_status: 'EN_SEGUIMIENTO',
+                stage: 'ETAPA_3_SEGUIMIENTO',
+                updated_at: now,
+              },
+            });
+            await this.logEvent(
+              tx,
+              deliverable.agreement_id,
+              'SEGUIMIENTO_INICIADO',
+              'Plan de Trabajo aprobado. Inicia formalmente la etapa de seguimiento.',
+              userId,
+            );
+          }
+        }
 
         await this.concludeIfComplete(tx, deliverable.agreement_id, userId);
       } else {

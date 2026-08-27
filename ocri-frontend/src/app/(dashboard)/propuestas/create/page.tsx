@@ -237,10 +237,6 @@ export default function CreatePropuestaPage() {
             <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
-                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
-                            Mesa de Entrada OCRI
-                        </span>
                     </div>
                     <h1 className="text-xl font-normal text-gray-800 mt-1">
                         Nueva Propuesta
@@ -275,14 +271,14 @@ export default function CreatePropuestaPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    Oficio de Rectorado N° <span className="text-red-500">*</span>
+                                    N° Dictamen <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     required
                                     value={rectorateOficioNumber}
                                     onChange={(e) => setRectorateOficioNumber(e.target.value)}
-                                    placeholder="EJ: OF. N° 129-2026-RECTORADO"
+                                    placeholder="EJ: DIC. N° 129-2026-RECTORADO"
                                     className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                                 />
                                 <p className="text-xs text-gray-400 italic">
@@ -307,7 +303,7 @@ export default function CreatePropuestaPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="space-y-1.5 md:col-span-2">
                                 <label className="block text-xs font-semibold uppercase text-gray-600">
-                                    Entidad Solicitante / Aliada <span className="text-red-500">*</span>
+                                    Entidad Solicitante <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex items-center gap-2">
                                     <select
@@ -386,14 +382,14 @@ export default function CreatePropuestaPage() {
                     <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
                         <Tag className="h-4 w-4 text-[#df9f1f]" />
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                            Asunto y Objeto de la Propuesta de Convenio
+                            Objeto de la Propuesta de Convenio
                         </h2>
                     </div>
 
                     <div className="p-6 space-y-5">
                         <div className="space-y-1.5">
                             <label className="block text-xs font-semibold uppercase text-gray-600">
-                                Título Corto / Referencia del Convenio <span className="text-red-500">*</span>
+                                Título del Convenio <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -407,7 +403,7 @@ export default function CreatePropuestaPage() {
 
                         <div className="space-y-1.5">
                             <label className="block text-xs font-semibold uppercase text-gray-600">
-                                Objeto o Finalidad de la Propuesta
+                                Objeto de la Propuesta
                             </label>
                             <textarea
                                 rows={3}
@@ -425,7 +421,7 @@ export default function CreatePropuestaPage() {
                         <div className="flex items-center gap-2">
                             <Paperclip className="h-4 w-4 text-[#df9f1f]" />
                             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                                Digitalización del Oficio de Solicitud (PDF) <span className="text-red-500">*</span>
+                                 Oficio de Solicitud (PDF) <span className="text-red-500">*</span>
                             </h2>
                         </div>
                         <span className="text-xs text-red-500 font-medium">Obligatorio</span>
@@ -433,7 +429,7 @@ export default function CreatePropuestaPage() {
 
                     <div className="p-6 space-y-4">
                         <p className="text-xs text-gray-500">
-                            Adjunte la digitalización del oficio/proveído de Rectorado con el que se deriva el trámite a la OCRI para la elaboración del informe técnico.
+                            Adjunte el oficio/proveído de Rectorado con el que se deriva el trámite a la OCRI para la elaboración del informe técnico.
                         </p>
 
                         <input

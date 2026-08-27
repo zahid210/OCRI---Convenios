@@ -60,6 +60,11 @@ async function main() {
         name: 'Oficio de Respuesta a Rectorado',
         direction: 'SALIDA',
       },
+      {
+        code: 'PROPUESTA_CONVENIO_FIRMA',
+        name: 'Propuesta de Convenio para Firmar',
+        direction: 'SALIDA',
+      },
       // E2: Publicación y registro
       {
         code: 'CONVENIO_FIRMADO',
