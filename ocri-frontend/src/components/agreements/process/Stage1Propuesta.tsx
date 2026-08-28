@@ -6,15 +6,17 @@ import {
     downloadFile,
     finalizeExpediente,
     generateExpediente,
+    generateOficioOpinion,
     generateOpinionRequests,
     getDefaultOpinionTargets,
     getFileUrl,
+    getOficioOpinionTemplate,
     respondOpinionRequest,
-    sendOpinionRequest,
     sendToRectorado,
     uploadProcessDocument,
     validateOpinionRequest,
 } from '@/lib/api';
+import OficioEditor from './OficioEditor';
 import { Dependencia } from '@/types/agreements';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -31,11 +33,11 @@ import {
     Loader2,
     MessageSquare,
     Plus,
-    Send,
     ShieldCheck,
     Trash2,
     Upload,
     Users,
+    X,
 } from 'lucide-react';
 import {
     DOCUMENT_TYPE_LABELS,
@@ -90,6 +92,10 @@ export default function Stage1Propuesta({
     const [oficioNumber, setOficioNumber] = useState('');
     const [directedTo, setDirectedTo] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [oficioHtml, setOficioHtml] = useState('');
+    const [oficioCss, setOficioCss] = useState('');
+    const [showOficioEditor, setShowOficioEditor] = useState(false);
+    const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
     const [respondDate, setRespondDate] = useState('');
     const [respondObs, setRespondObs] = useState('');
@@ -103,7 +109,6 @@ export default function Stage1Propuesta({
     const [uploadTypeCode, setUploadTypeCode] = useState('EXPEDIENTE_TECNICO');
     const [isUploading, setIsUploading] = useState(false);
 
-    const [isFinalizing, setIsFinalizing] = useState(false);
     const [isGeneratingExpediente, setIsGeneratingExpediente] = useState(false);
 
     useEffect(() => {
@@ -164,23 +169,56 @@ export default function Stage1Propuesta({
         }
     };
 
-    const handleSendRequest = async (requestId: number) => {
+    const openGenerateOficioModal = async (requestId: number) => {
+        setSendVia('ADESA');
+        setAdesaNumber('');
+        setOficioNumber('');
+        setDirectedTo('');
+        setOficioHtml('');
+        setOficioCss('');
+        setShowOficioEditor(false);
+        setShowSendModal(requestId);
+        setIsLoadingTemplate(true);
+        try {
+            const data = (await getOficioOpinionTemplate(requestId)) as {
+                html: string;
+                css: string;
+            };
+            setOficioHtml(data.html ?? '');
+            setOficioCss(data.css ?? '');
+        } catch {
+            toast.error('No se pudo cargar la plantilla del oficio.');
+            setShowSendModal(null);
+        } finally {
+            setIsLoadingTemplate(false);
+        }
+    };
+
+    const handleGenerateOficio = async (requestId: number) => {
+        if (!oficioHtml || !oficioHtml.trim()) {
+            toast.error('El contenido del oficio no puede estar vacío.');
+            return;
+        }
         setIsSending(true);
         try {
-            await sendOpinionRequest(requestId, {
+            await generateOficioOpinion(requestId, {
+                bodyHtml: oficioHtml,
                 sent_via: sendVia,
                 adesa_number: adesaNumber || undefined,
                 oficio_number: oficioNumber || undefined,
                 directed_to: directedTo || undefined,
             });
-            toast.success('Solicitud enviada correctamente.');
+            toast.success('Oficio generado y adjuntado correctamente.');
             setShowSendModal(null);
+            setShowOficioEditor(false);
             setAdesaNumber('');
             setOficioNumber('');
             setDirectedTo('');
+            setOficioHtml('');
+            setOficioCss('');
             await onRefresh();
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Error al enviar solicitud';
+            const message = err instanceof Error ? err.message : 'Error al generar el oficio';
             toast.error(message);
         } finally {
             setIsSending(false);
@@ -553,16 +591,12 @@ export default function Stage1Propuesta({
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                setSendVia('ADESA');
-                                                                setAdesaNumber('');
-                                                                setOficioNumber('');
-                                                                setDirectedTo('');
-                                                                setShowSendModal(req.id);
+                                                                openGenerateOficioModal(req.id);
                                                             }}
                                                             className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                         >
-                                                            <Send className="h-4 w-4" />
-                                                            Enviar
+                                                            <FileText className="h-4 w-4" />
+                                                            Generar Oficio
                                                         </button>
                                                     )}
                                                     {actionsOpen && req.status === 'ENVIADA' && (
@@ -1003,16 +1037,19 @@ export default function Stage1Propuesta({
 
             {showSendModal !== null && (
                 <ModalShell
-                    title="Registrar Envío de Solicitud"
-                    icon={Send}
+                    title="Generar Oficio"
+                    icon={FileText}
                     footer={
                         <>
                             <button
                                 onClick={() => {
                                     setShowSendModal(null);
+                                    setShowOficioEditor(false);
                                     setAdesaNumber('');
                                     setOficioNumber('');
                                     setDirectedTo('');
+                                    setOficioHtml('');
+                                    setOficioCss('');
                                 }}
                                 className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                             >
@@ -1020,75 +1057,134 @@ export default function Stage1Propuesta({
                             </button>
                             <button
                                 onClick={() =>
-                                    showSendModal !== null && handleSendRequest(showSendModal)
+                                    showSendModal !== null &&
+                                    handleGenerateOficio(showSendModal)
                                 }
-                                disabled={isSending}
+                                disabled={isSending || isLoadingTemplate}
                                 className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
                             >
                                 {isSending && <Loader2 className="h-4 w-4 animate-spin" />}
-                                <Send className="h-4 w-4" />
-                                Registrar Envío
+                                <FileText className="h-4 w-4" />
+                                Generar y Adjuntar
                             </button>
                         </>
                     }
                 >
                     <div className="p-6 space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                Vía de envío
-                            </label>
-                            <div className="w-full relative">
-                                <select
-                                    value={sendVia}
-                                    onChange={(e) => setSendVia(e.target.value)}
-                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    <option value="ADESA">ADESA</option>
-                                    <option value="CORREO">Correo</option>
-                                    <option value="MANUAL">Entrega Manual</option>
-                                </select>
-                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                            </div>
-                        </div>
-                        {sendVia === 'ADESA' && (
+                    <div>
+                        <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
+                            Documento a generar
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => setShowOficioEditor(true)}
+                            disabled={isLoadingTemplate}
+                            className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-[#df9f1f] hover:text-[#df9f1f] transition-colors disabled:opacity-50"
+                        >
+                            {isLoadingTemplate ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <FileText className="h-4 w-4" />
+                            )}
+                            Previsualizar y editar
+                        </button>
+                        <p className="text-xs text-gray-400 mt-1">
+                            Se abrirá el documento completo del oficio en una ventana para revisar y corregir su contenido.
+                        </p>
+                    </div>
+                    <div className="border-t border-gray-200 pt-4">
                             <div>
                                 <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                    N° Expediente ADESA
+                                    Vía de envío
+                                </label>
+                                <div className="w-full relative">
+                                    <select
+                                        value={sendVia}
+                                        onChange={(e) => setSendVia(e.target.value)}
+                                        className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                    >
+                                        <option value="ADESA">ADESA</option>
+                                        <option value="CORREO">Correo</option>
+                                        <option value="MANUAL">Entrega Manual</option>
+                                    </select>
+                                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                </div>
+                            </div>
+                            {sendVia === 'ADESA' && (
+                                <div className="mt-4">
+                                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                                        N° Expediente ADESA
+                                    </label>
+                                    <input
+                                        value={adesaNumber}
+                                        onChange={(e) => setAdesaNumber(e.target.value)}
+                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                                        placeholder="Ej: 00123-2026"
+                                    />
+                                </div>
+                            )}
+                            <div className="mt-4">
+                                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                                    N° de Oficio{' '}
+                                    <span className="normal-case font-normal">(opcional)</span>
                                 </label>
                                 <input
-                                    value={adesaNumber}
-                                    onChange={(e) => setAdesaNumber(e.target.value)}
+                                    value={oficioNumber}
+                                    onChange={(e) => setOficioNumber(e.target.value)}
                                     className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
-                                    placeholder="Ej: 00123-2026"
+                                    placeholder="Ej: 045-2026-OCRI"
                                 />
                             </div>
-                        )}
-                        <div>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                N° de Oficio{' '}
-                                <span className="normal-case font-normal">(opcional)</span>
-                            </label>
-                            <input
-                                value={oficioNumber}
-                                onChange={(e) => setOficioNumber(e.target.value)}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
-                                placeholder="Ej: 045-2026-OCRI"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                Dirigido a{' '}
-                                <span className="normal-case font-normal">(opcional)</span>
-                            </label>
-                            <input
-                                value={directedTo}
-                                onChange={(e) => setDirectedTo(e.target.value)}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
-                                placeholder="Nombre del destinatario..."
-                            />
+                            <div className="mt-4">
+                                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                                    Dirigido a{' '}
+                                    <span className="normal-case font-normal">(opcional)</span>
+                                </label>
+                                <input
+                                    value={directedTo}
+                                    onChange={(e) => setDirectedTo(e.target.value)}
+                                    className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                                    placeholder="Nombre del destinatario..."
+                                />
+                            </div>
                         </div>
                     </div>
                 </ModalShell>
+            )}
+
+            {showSendModal !== null && showOficioEditor && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 sm:p-6">
+                    <div className="bg-white border border-gray-200 shadow-xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden">
+                        <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-[#df9f1f]" />
+                            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                                Previsualizar y editar oficio
+                            </h2>
+                            <button
+                                onClick={() => setShowOficioEditor(false)}
+                                title="Cerrar"
+                                className="ml-auto p-1 text-gray-500 hover:text-gray-800 transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="flex-1 bg-gray-100 overflow-hidden">
+                            <OficioEditor
+                                initialHtml={oficioHtml}
+                                css={oficioCss}
+                                onChange={setOficioHtml}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa]">
+                            <button
+                                onClick={() => setShowOficioEditor(false)}
+                                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {showRespondModal !== null && (

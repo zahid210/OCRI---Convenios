@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Oficio OCRI UNCP</title>
+    <style>
+        /* Estilos generales */
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #ffffff;
+            /* "Helvetica" a propósito: html-pdf-lite no la resuelve a ninguna
+               fuente del sistema y usa la familia Helvetica embebida de PDFKit
+               (regular/bold/italic). Si se listara "Arial", el motor la empareja
+               con arial.ttf y las negritas NO se renderizan: Windows nombra el
+               archivo bold "arialbd.ttf" y el clasificador del motor no detecta
+               el token "Bold", por lo que toda la familia cae al peso regular.
+               En navegador Helvetica se sustituye por Arial, así la vista previa
+               se ve igual y el PDF sí aplica negritas/cursivas. */
+            font-family: Helvetica;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #000;
+        }
+
+        /* Contenedor principal (hoja A4). El padding se declara por lado (no el
+           shorthand de 4 valores): el motor no expande el shorthand y lo leería
+           como un único número en puntos (25pt en vez de 25mm). Valores iguales
+           a la plantilla original: 25mm 25mm 25mm 30mm. */
+        .document {
+            padding-top: 25mm;
+            padding-right: 25mm;
+            padding-bottom: 25mm;
+            padding-left: 30mm;
+            width: 210mm;
+            min-height: 297mm;
+            box-sizing: border-box;
+        }
+
+        /* Encabezado: logos izquierda/derecha y texto central. Grid en lugar de
+           tabla: tanto el navegador (vista previa) como el motor del PDF sitúan
+           las columnas 15%/70%/15% exactamente igual, sin el margin ni las
+           inflaciones de fila que añaden las tablas. */
+        .header-table {
+            display: grid;
+            grid-template-columns: 15% 70% 15%;
+            margin-bottom: 10px;
+        }
+        .header-logo-left {
+            text-align: left;
+        }
+        .header-logo-right {
+            text-align: right;
+        }
+        .header-logo-left img,
+        .header-logo-right img {
+            width: 75px;
+            /* El preflight de Tailwind hace `img { display: block }`, con lo que
+               el `text-align` del contenedor deja de alinear la imagen en la
+               vista previa (navegador). En su lugar se alinea con márgenes
+               automáticos: html-pdf-lite los ignora y sigue posicionando la
+               imagen por su `text-align` heredado, así el PDF no cambia. */
+            display: block;
+        }
+        .header-logo-left img {
+            margin-right: auto;
+        }
+        .header-logo-right img {
+            margin-left: auto;
+        }
+        .header-text {
+            text-align: center;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+        .univ-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .office-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 3px 0 0 0;
+        }
+
+        /* Epígrafe */
+        .epigraph {
+            text-align: center;
+            font-size: 12px;
+            font-style: italic;
+            font-weight: bold;
+            margin-top: 10px;
+            margin-bottom: 18px;
+        }
+
+        /* Fecha */
+        .doc-date {
+            text-align: right;
+            margin-bottom: 18px;
+            padding-right: 20px;
+        }
+
+        /* Número de Documento */
+        .doc-number {
+            font-weight: bold;
+            text-decoration: underline;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        /* Destinatario */
+        .addressee {
+            margin-bottom: 10px;
+        }
+        .addressee p {
+            margin: 2px 0;
+        }
+        .addressee .role {
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        /* Asunto y Referencia (grid de 2 columnas en lugar de tabla). La
+           columna de la etiqueta debe ser lo bastante ancha para que
+           "Referencia:" quepa en una sola línea (12% la partía y el dos
+           puntos pasaba a la siguiente fila). */
+        .subject-table {
+            display: grid;
+            grid-template-columns: 20% 80%;
+            margin-bottom: 12px;
+        }
+        .subject-label {
+            font-weight: bold;
+        }
+        .subject-content {
+            text-align: justify;
+            font-weight: bold;
+        }
+
+        /* Cuerpo del documento */
+        .body-text {
+            text-align: justify;
+            margin-bottom: 18px;
+        }
+        .body-text p {
+            margin: 0 0 10px 0;
+        }
+
+        /* Despedida */
+        .closing {
+            text-align: justify;
+            margin-bottom: 60px;
+        }
+
+        /* Sección de Firma y Sello. La imagen `sello-firma.png` (firma + sello
+           ya combinados) y el nombre/cargo se centran en la hoja con
+           `text-align: center` sobre un bloque (.signature-box) que ocupa SIEMPRE
+           el ancho completo del contenido. Este esquema es robusto e idéntico en
+           la vista previa (navegador) y en el PDF (html-pdf-lite), porque NO
+           depende del ancho del contenedor (a diferencia de `margin-left`/`width`
+            en %, que se resuelven sobre anchos de contenedor distintos y provocan
+            desalineación preview<->PDF). "Atentamente," va en su propio bloque
+            (.signature-atentamente) centrado pero compensado ~20px a la izquierda
+            (con padding-right), para quedar encima del sello y apenas a su
+            izquierda, como en el oficio original. La imagen queda pequeña (110px)
+            y separada del texto con un margen. */
+        .signature-section {
+            /* Sin width ni margin-left: el bloque ocupa todo el ancho. */
+            position: relative;
+        }
+        .signature-atentamente {
+            text-align: center;
+            /* Desplaza "Atentamente," a la izquierda del centro (del sello): el
+               padding-derecho reduce el área de centrado solo de este bloque, lo
+               que mueve el texto hacia la izquierda (~mitad del padding) sin
+               afectar al sello ni al nombre. Valor en px: idéntico en la vista
+               previa y el PDF. */
+            padding-right: 120px;
+        }
+        .signature-box {
+            text-align: center;
+            position: relative;
+            margin-top: 10px;
+        }
+        .signature-img {
+            text-align: center;
+            /* Separación entre la imagen y el texto del nombre (no pegado). */
+            margin-bottom: 10px;
+        }
+        .signature-img img {
+            width: 110px;
+            /* Igual que con los logos: el preflight de Tailwind vuelve block la
+               imagen, rompiendo el centrado por `text-align` en la vista previa.
+               `display:block; margin:0 auto` la centra en el navegador sin
+               afectar al PDF (que la centra por su `text-align` heredado). */
+            display: block;
+            margin: 0 auto;
+        }
+        .signature-line {
+            margin-top: 0;
+        }
+        .signature-name {
+            font-weight: bold;
+            font-size: 12px;
+            margin: 0;
+        }
+        .signature-title {
+            margin: 0;
+            font-size: 12px;
+        }
+
+        /* Pie de página (Copias) */
+        .footer {
+            margin-top: 0;
+            font-size: 11px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="document">
+        {{CUERPO}}
+    </div>
+</body>
+</html>

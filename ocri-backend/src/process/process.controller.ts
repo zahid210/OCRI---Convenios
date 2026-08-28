@@ -127,6 +127,43 @@ export class ProcessController {
     return this.processService.deleteOpinionRequest(id, req.user?.id);
   }
 
+  /** Devuelve el cuerpo editable precargado del oficio de solicitud de opinión */
+  @Roles('admin', 'editor')
+  @Get('opinion-requests/:id/oficio/template')
+  getOficioOpinionTemplate(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.processService.getOficioOpinionTemplate(id);
+  }
+
+  /** Genera el oficio, lo adjunta automáticamente y marca la solicitud como enviada */
+  @Roles('admin', 'editor')
+  @Post('opinion-requests/:id/oficio/generate')
+  generateOficioOpinion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body()
+    body: {
+      bodyHtml: string;
+      sent_via?: string;
+      adesa_number?: string;
+      oficio_number?: string;
+      directed_to?: string;
+    },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.generateOficioOpinion(
+      id,
+      {
+        bodyHtml: body.bodyHtml,
+        sent_via: body.sent_via,
+        adesa_number: body.adesa_number,
+        oficio_number: body.oficio_number,
+        directed_to: body.directed_to,
+      },
+      req.user?.id,
+    );
+  }
+
   // ─── E1 · Expediente técnico y envío a Rectorado ───────────────────────────
 
   /** Genera el expediente técnico fusionando automáticamente los oficios de respuesta */

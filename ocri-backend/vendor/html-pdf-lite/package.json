@@ -1,0 +1,77 @@
+{
+  "name": "html-pdf-lite",
+  "version": "1.2.2",
+  "description": "Fast HTML to PDF for Node.js without Chromium or Puppeteer — 7.6x faster cold start, tiny PDFs, native color emoji. Ideal for invoices, reports, and serverless.",
+  "main": "src/index.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./src/index.js"
+    }
+  },
+  "types": "index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BohdanShtelmakh/html-to-pdf.git"
+  },
+  "homepage": "https://github.com/BohdanShtelmakh/html-to-pdf#readme",
+  "bugs": {
+    "url": "https://github.com/BohdanShtelmakh/html-to-pdf/issues"
+  },
+  "funding": "https://send.monobank.ua/jar/3WznEHehpC",
+  "keywords": [
+    "html-to-pdf",
+    "html2pdf",
+    "html",
+    "pdf",
+    "pdfkit",
+    "node-pdf",
+    "no-chromium",
+    "no-puppeteer",
+    "puppeteer-alternative",
+    "chromium-free",
+    "serverless-pdf",
+    "lambda-pdf",
+    "server-side-pdf",
+    "invoice-pdf",
+    "invoice-generator",
+    "report-pdf",
+    "backend-pdf",
+    "emoji-pdf",
+    "color-emoji",
+    "pdf-buffer",
+    "pdf-generator",
+    "html-renderer",
+    "html-to-pdf-node",
+    "lightweight-pdf",
+    "fast-pdf",
+    "renderer",
+    "invoice",
+    "report"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "src/",
+    "index.d.ts",
+    "index.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "bench": "node bench/run.js"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "css": "^3.0.0",
+    "jsdom": "^20.0.0",
+    "pdfkit": "^0.17.2"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.40.0"
+  }
+}

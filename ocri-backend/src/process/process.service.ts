@@ -15,6 +15,8 @@ import {
 } from '../common/process.constants';
 import { UploadedFileLike, DOC_TYPE_EXTENSIONS } from '../common/uploads.config';
 import { PdfMergerService } from '../common/pdf-merger.service';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 interface ActorEventOptions {
   actorUserId?: number;
@@ -632,6 +634,239 @@ export class ProcessService {
     );
 
     return { message: 'Solicitud de opinión eliminada correctamente' };
+  }
+
+  // ─── E1 · Generar y adjuntar oficio de solicitud de opinión ────────────────
+
+  /**
+   * Construye el documento editable completo del oficio de solicitud de
+   * opinión (membrete, epígrafe, fecha, número, destinatario, asunto, cuerpo,
+   * despedida, firma y pie) precargado con los datos del trámite y de la
+   * solicitud. Todo es editable en el frontend. Devuelve además el CSS de la
+   * plantilla para que la vista previa sea idéntica al PDF que se genera.
+   */
+  async getOficioOpinionTemplate(opinionRequestId: number) {
+    const request = await this.prisma.opinion_requests.findUnique({
+      where: { id: BigInt(opinionRequestId) },
+      include: {
+        dependencias: { select: { name: true, code: true } },
+        agreements: { select: { title: true, tramite_code: true } },
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundException(
+        `Solicitud de opinión #${opinionRequestId} no encontrada`,
+      );
+    }
+
+    const depName = request.dependencias?.name ?? 'Dependencia';
+    const title =
+      request.agreements?.title ?? 'convenio de cooperación interinstitucional';
+    const tramite = request.agreements?.tramite_code ?? '';
+    const destinatario =
+      request.directed_to ?? `Responsable de ${depName}`;
+    const oficio = request.oficio_number
+      ? request.oficio_number
+      : '000-2026-OCRI-UNCP';
+
+    const fecha = new Date().toLocaleDateString('es-PE', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const asunto = `OPINI&Oacute;N SOBRE EL PROYECTO DE ACUERDO DE COOPERACI&Oacute;N "${title}"`;
+
+    const img = (uri: string, alt: string) =>
+      uri ? `<img src="${uri}" alt="${alt}"/>` : '';
+
+    const [assets, css, firmaSello] = await Promise.all([
+      this.pdfMerger.getOficioOpinionAssets(),
+      this.pdfMerger.getOficioOpinionTemplateCss(),
+      this.pdfMerger.getOficioSignatureStamp(),
+    ]);
+
+    const html = `
+      <div class="header-table">
+        <div class="header-logo-left">${img(assets.logoIzq, 'Logo UNCP')}</div>
+        <div class="header-text">
+          <p class="univ-name">UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU</p>
+          <p class="office-name">OFICINA DE COOPERACION Y RELACIONES INTERNACIONALES</p>
+        </div>
+        <div class="header-logo-right">${img(assets.logoDer, 'Logo OCRI')}</div>
+      </div>
+      <div class="epigraph">
+        "A&ntilde;o de la Recuperaci&oacute;n y Consolidaci&oacute;n de la Econom&iacute;a Peruana"
+      </div>
+      <div class="doc-date">Huancayo, ${fecha}</div>
+      <div class="doc-number">OFICIO N&deg;${oficio}</div>
+      <div class="addressee">
+        <p><strong>${destinatario}</strong></p>
+        <p class="role">${depName}</p>
+        <p><br><u>Presente</u>.</p>
+      </div>
+      <div class="subject-table">
+        <div class="subject-label">ASUNTO:</div>
+        <div class="subject-content">${asunto}</div>
+        <div class="subject-label"><br>Referencia:</div>
+        <div class="subject-content"></div>
+      </div>
+      <div class="body-text">
+        <p>De nuestra consideraci&oacute;n:</p>
+        <p>Me dirijo a usted para comunicarle que se ha recibido de Rectorado el
+        <strong>${title}</strong>${tramite ? ` (tr&aacute;mite N&deg; ${tramite})` : ''},
+        y habiendo tomado conocimiento y revisado el proyecto, remito a su despacho para que
+        se sirva emitir su opini&oacute;n sobre la conveniencia y factibilidad de la firma del
+        mencionado convenio.</p>
+      </div>
+      <div class="closing">
+        Sin otro en particular, propicio la ocasi&oacute;n para expresarle las muestras de mi consideraci&oacute;n y estima personal.
+      </div>
+      <div class="signature-section">
+        <div class="signature-atentamente">Atentamente,</div>
+        <div class="signature-box">
+          ${firmaSello ? `<div class="signature-img">${img(firmaSello, 'Firma y sello')}</div>` : ''}
+          <div class="signature-line">
+            <p class="signature-name">ANA MARIA HUACAYCHUCO RUIZ</p>
+            <p class="signature-title">Jefe de Cooperaci&oacute;n y Relaciones Internacionales</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        c.c. Archivo
+      </div>
+    `;
+
+    return { html, css };
+  }
+
+  /**
+   * Genera el oficio de solicitud de opinión a partir del cuerpo editable
+   * recibido, lo adjunta automáticamente como documento del proceso y marca la
+   * solicitud como enviada. Todo en una sola transacción.
+   */
+  async generateOficioOpinion(
+    opinionRequestId: number,
+    dto: {
+      bodyHtml: string;
+      sent_via?: string;
+      adesa_number?: string;
+      oficio_number?: string;
+      directed_to?: string;
+    },
+    userId?: number,
+  ) {
+    const request = await this.prisma.opinion_requests.findUnique({
+      where: { id: BigInt(opinionRequestId) },
+      include: { agreements: true, dependencias: { select: { name: true } } },
+    });
+
+    if (!request) {
+      throw new NotFoundException(
+        `Solicitud de opinión #${opinionRequestId} no encontrada`,
+      );
+    }
+
+    if (request.status !== 'GENERADA') {
+      throw new BadRequestException(
+        `La solicitud debe estar GENERADA para generar su oficio. Estado actual: ${request.status}`,
+      );
+    }
+
+    if (!dto.bodyHtml || !dto.bodyHtml.trim()) {
+      throw new BadRequestException(
+        'El cuerpo del oficio no puede estar vacío.',
+      );
+    }
+
+    const filename = await this.pdfMerger.renderOficioOpinionPdf(dto.bodyHtml);
+
+    const docType = await this.prisma.document_types.findUnique({
+      where: { code: 'OFICIO_SOLICITUD_OPINION' },
+    });
+
+    const agreementId = request.agreement_id;
+
+    try {
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          await tx.documents.create({
+          data: {
+            agreements: { connect: { id: BigInt(agreementId) } },
+            opinion_requests: { connect: { id: BigInt(opinionRequestId) } },
+            name:
+              'Oficio de Solicitud de Opinión - ' +
+              (request.dependencias?.name ?? 'Dependencia'),
+            file_path: filename,
+            original_name: filename,
+            extension: 'pdf',
+            document_types: docType
+              ? { connect: { id: docType.id } }
+              : undefined,
+            direction: 'SALIDA',
+            stage: 'ETAPA_1_PROPUESTA',
+            uploaded_by:
+              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+
+        const updated = await tx.opinion_requests.update({
+          where: { id: BigInt(opinionRequestId) },
+          data: {
+            status: 'ENVIADA',
+            sent_via: dto.sent_via ?? request.sent_via ?? null,
+            adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
+            oficio_number: dto.oficio_number ?? request.oficio_number,
+            directed_to: dto.directed_to ?? request.directed_to,
+            sent_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+
+        await this.logEvent(
+          BigInt(agreementId),
+          'SOLICITUD_ENVIADA',
+          'Oficio de solicitud de opinión generado y adjuntado automáticamente.',
+          {
+            actorUserId: userId,
+            fromValue: 'GENERADA',
+            toValue: 'ENVIADA',
+            opinionRequestId: BigInt(opinionRequestId),
+            metadata: { sent_via: dto.sent_via ?? null },
+          },
+          'ETAPA_1_PROPUESTA',
+          tx,
+        );
+
+        if (request.agreements.process_status === 'RECEPCIONADA') {
+          await this.applyTransition(
+            tx,
+            BigInt(agreementId),
+            'OPINIONES_EN_CURSO',
+            'OPINIONES_EN_CURSO',
+            'El proceso pasó a opiniones en curso tras el primer envío.',
+            { actorUserId: userId },
+          );
+        }
+
+        return updated;
+        },
+        { maxWait: 10000, timeout: 30000 },
+      );
+
+      return serializeBigInt(result);
+    } catch (err) {
+      // Si falla la transacción, elimina el PDF generado para no dejar archivos huérfanos.
+      try {
+        await fs.unlink(path.resolve('uploads', filename));
+      } catch {
+        // el archivo ya no existe o no se pudo borrar: se ignora.
+      }
+      throw err as Error;
+    }
   }
 
   // ─── Documentos tipados del expediente ──────────────────────────────────────

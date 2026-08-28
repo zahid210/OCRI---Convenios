@@ -19,10 +19,19 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
         headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers,
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${API_URL}${endpoint}`, {
+            ...options,
+            headers,
+        });
+    } catch {
+        // TypeError de red: backend no alcanzable, CORS bloqueado o aborted.
+        // Se envuelve en un mensaje claro en lugar del genérico "Failed to fetch".
+        throw new Error(
+            'No se pudo conectar con el backend. Verifique que esté activo y que NEXT_PUBLIC_API_URL apunte al puerto correcto.',
+        );
+    }
 
     // Intercepta tokens caducados o no autorizados (401)
     if (response.status === 401) {
@@ -170,22 +179,6 @@ export async function generateOpinionRequests(
     });
 }
 
-/** Envía una solicitud de opinión a la dependencia */
-export async function sendOpinionRequest(
-    requestId: number,
-    data: {
-        sent_via?: string;
-        adesa_number?: string;
-        oficio_number?: string;
-        directed_to?: string;
-    },
-) {
-    return fetchApi(`/process/opinion-requests/${requestId}/send`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
-}
-
 /** Registra la respuesta de una dependencia (con archivo opcional) */
 export async function respondOpinionRequest(
     requestId: number,
@@ -218,6 +211,28 @@ export async function validateOpinionRequest(
 export async function deleteOpinionRequest(requestId: number) {
     return fetchApi(`/process/opinion-requests/${requestId}`, {
         method: 'DELETE',
+    });
+}
+
+/** Devuelve el cascarón fijo (membrete/pie) y el cuerpo editable del oficio de solicitud de opinión */
+export async function getOficioOpinionTemplate(requestId: number) {
+    return fetchApi(`/process/opinion-requests/${requestId}/oficio/template`);
+}
+
+/** Genera el oficio, lo adjunta automáticamente y marca la solicitud como enviada */
+export async function generateOficioOpinion(
+    requestId: number,
+    data: {
+        bodyHtml: string;
+        sent_via?: string;
+        adesa_number?: string;
+        oficio_number?: string;
+        directed_to?: string;
+    },
+) {
+    return fetchApi(`/process/opinion-requests/${requestId}/oficio/generate`, {
+        method: 'POST',
+        body: JSON.stringify(data),
     });
 }
 
@@ -260,37 +275,9 @@ export async function sendToRectorado(agreementId: number) {
     });
 }
 
-/** Obtiene el historial de eventos del proceso */
-export async function getProcessEvents(agreementId: number) {
-    return fetchApi(`/process/${agreementId}/events`);
-}
-
-/** Obtiene los documentos clasificados del proceso */
-export async function getProcessDocuments(agreementId: number) {
-    return fetchApi(`/process/${agreementId}/documents`);
-}
-
-/** Obtiene todas las dependencias activas */
-export async function getDependencias(params?: {
-    kind?: string;
-    is_active?: string;
-    search?: string;
-}) {
-    const qs = params
-        ? '?' + new URLSearchParams(params as Record<string, string>).toString()
-        : '';
-    return fetchApi(`/dependencias${qs}`);
-}
-
 /** Obtiene las dependencias que son targets por defecto de opiniones */
 export async function getDefaultOpinionTargets() {
     return fetchApi('/dependencias/default-opinions');
-}
-
-/** Obtiene todos los tipos de documento */
-export async function getDocumentTypes(direction?: string) {
-    const qs = direction ? `?direction=${direction}` : '';
-    return fetchApi(`/document-types${qs}`);
 }
 
 // ─── Etapa 2: Publicación y Registro de Convenio ───────────────────────
