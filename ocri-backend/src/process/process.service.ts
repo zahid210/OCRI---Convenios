@@ -518,14 +518,20 @@ export class ProcessService {
           where: { agreement_id: request.agreement_id },
         });
 
-        const allResponded = allRequests.every(
-          (r) =>
-            r.status === 'RESPONDIDA' ||
-            r.status === 'VALIDADA' ||
-            r.status === 'CANCELADA',
+        // Las opiniones se consideran completas solo cuando todas fueron
+        // finalmente validadas (o canceladas), no cuando están simplemente
+        // respondidas. Así el expediente para Rectorado recién se habilita
+        // al validar la última opinión.
+        const allValidated = allRequests.every(
+          (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
         );
 
-        if (allResponded) {
+        const currentStatus = await tx.agreements.findUnique({
+          where: { id: request.agreement_id },
+          select: { process_status: true },
+        });
+
+        if (allValidated && currentStatus?.process_status !== 'OPINIONES_COMPLETAS') {
           await this.applyTransition(
             tx,
             request.agreement_id,
@@ -610,6 +616,32 @@ export class ProcessService {
           undefined,
           tx,
         );
+
+        // Al validar la última opinión pendiente, el proceso pasa a
+        // OPINIONES_COMPLETAS y se habilita el Expediente para Rectorado.
+        if (dto.valid) {
+          const allRequests = await tx.opinion_requests.findMany({
+            where: { agreement_id: request.agreement_id },
+            select: { status: true },
+          });
+          const allValidated = allRequests.every(
+            (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
+          );
+          const currentStatus = await tx.agreements.findUnique({
+            where: { id: request.agreement_id },
+            select: { process_status: true },
+          });
+          if (allValidated && currentStatus?.process_status !== 'OPINIONES_COMPLETAS') {
+            await this.applyTransition(
+              tx,
+              request.agreement_id,
+              'OPINIONES_COMPLETAS',
+              'OPINIONES_COMPLETAS',
+              'Todas las opiniones fueron validadas. OCRI coordina la elaboración del expediente técnico.',
+              { actorUserId: userId },
+            );
+          }
+        }
 
         return result;
       },

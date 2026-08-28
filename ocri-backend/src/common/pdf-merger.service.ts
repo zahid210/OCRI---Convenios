@@ -232,10 +232,16 @@ export class PdfMergerService {
   }
 
   /**
-   * Fusiona todos los archivos PDF del convenio en un solo PDF (Expediente Técnico),
-   * ordenados cronológicamente (del más antiguo al más reciente) según su fecha de
-   * creación/emisión. Incluye los documentos de origen, dictamen, oficios, respuestas
-   * de opinión de dependencias y cualquier otro documento del proceso.
+   * Fusiona todos los archivos PDF del convenio en un solo PDF (Expediente
+   * Técnico) con todos los documentos procesados hasta ese punto del trámite.
+   * Las opiniones se agrupan en parejas: cada pareja está formada por el
+   * Oficio de Solicitud de Opinión y el Oficio de Respuesta de Opinión de una
+   * misma dependencia (unidos por `opinion_request_id`); dentro de cada pareja
+   * va primero la Respuesta (la última en registrarse) y después su Solicitud,
+   * y las parejas se ordenan de la más reciente a la más antigua (descendente,
+   * por la fecha de la Respuesta). El PDF abre con estas parejas y cierra con
+   * los documentos que no son de opinión (Dictamen, Documentos de Origen y
+   * demás), en orden cronológico ascendente.
    * Retorna la ruta relativa del archivo generado.
    */
   async mergeOpinionResponses(agreementId: number): Promise<string> {
@@ -248,7 +254,7 @@ export class PdfMergerService {
     });
 
     const pdfDocs = documents
-      .filter((d) => d.extension === 'pdf')
+      .filter((d) => (d.extension ?? '').replace(/^\./, '').toLowerCase() === 'pdf')
       .filter((d) => d.document_types?.code !== 'EXPEDIENTE_TECNICO');
 
     if (pdfDocs.length === 0) {
@@ -257,19 +263,68 @@ export class PdfMergerService {
       );
     }
 
-    pdfDocs.sort((a, b) => {
-      const dateA = a.opinion_requests?.response_date
-        ? new Date(a.opinion_requests.response_date).getTime()
-        : a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.opinion_requests?.response_date
-        ? new Date(b.opinion_requests.response_date).getTime()
-        : b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateA - dateB;
+    const timeOf = (d?: (typeof documents)[number] | null) =>
+      d?.created_at ? new Date(d.created_at).getTime() : 0;
+
+    // Separamos los documentos de opinión (solicitudes y respuestas, que
+    // comparten opinion_request_id) de los que no pertenecen a una opinión.
+    const opinionDocs = pdfDocs.filter(
+      (d) =>
+        d.opinion_request_id != null &&
+        (d.document_types?.code === 'OFICIO_SOLICITUD_OPINION' ||
+          d.document_types?.code === 'OFICIO_RESPUESTA_OPINION'),
+    );
+    const nonOpinionDocs = pdfDocs.filter((d) => !opinionDocs.includes(d));
+
+    // Agrupamos en parejas por opinion_request_id.
+    const pairs = new Map<bigint, { respuesta?: typeof opinionDocs[number]; solicitud?: typeof opinionDocs[number] }>();
+    for (const doc of opinionDocs) {
+      const id = doc.opinion_request_id;
+      if (id == null) continue;
+      const pair = pairs.get(id) ?? {};
+      if (doc.document_types?.code === 'OFICIO_RESPUESTA_OPINION') {
+        pair.respuesta = doc;
+      } else {
+        pair.solicitud = doc;
+      }
+      pairs.set(id, pair);
+    }
+
+    // Ordenamos las parejas de la más reciente a la más antigua según la fecha
+    // de la Respuesta (la última en registrarse); si no hay respuesta, se usa
+    // la Solicitud y, en caso de empate, el created_at más reciente de la pareja.
+    const orderedPairs: Array<typeof opinionDocs[number]> = [];
+    const sortedPairs = [...pairs.values()].sort((pairA, pairB) => {
+      const dateA = timeOf(pairA.respuesta) || timeOf(pairA.solicitud);
+      const dateB = timeOf(pairB.respuesta) || timeOf(pairB.solicitud);
+      if (dateA !== dateB) return dateB - dateA;
+      return (
+        Math.max(timeOf(pairA.respuesta), timeOf(pairA.solicitud)) -
+        Math.max(timeOf(pairB.respuesta), timeOf(pairB.solicitud))
+      );
     });
+    for (const pair of sortedPairs) {
+      if (pair.respuesta) orderedPairs.push(pair.respuesta);
+      if (pair.solicitud) orderedPairs.push(pair.solicitud);
+    }
+
+    // Los documentos sin opinión (Dictamen, Documentos de Origen y demás
+    // documentos del trámite) van al final, en orden cronológico ascendente
+    // (aunque se suban primero en el sistema, se colocan al cierre del
+    // expediente). El Dictamen se crea antes que los Documentos de Origen.
+    nonOpinionDocs.sort((a, b) => {
+      const diff = timeOf(a) - timeOf(b);
+      if (diff !== 0) return diff;
+      return Number(a.id) - Number(b.id);
+    });
+
+    // El PDF abre con las parejas de opinión (las más recientes primero) y
+    // cierra con el Dictamen y los Documentos de Origen.
+    const orderedDocs = [...orderedPairs, ...nonOpinionDocs];
 
     const mergedPdf = await PDFDocument.create();
 
-    for (const doc of pdfDocs) {
+    for (const doc of orderedDocs) {
       const filePath = path.resolve('uploads', doc.file_path);
       try {
         const pdfBytes = await fs.readFile(filePath);
@@ -294,7 +349,7 @@ export class PdfMergerService {
     await fs.writeFile(outputPath, mergedBytes);
 
     this.logger.log(
-      `Expediente técnico generado: ${filename} (${pdfDocs.length} documentos PDF fusionados, ordenados cronológicamente)`,
+      `Expediente técnico generado: ${filename} (${orderedDocs.length} documentos PDF fusionados, en parejas por opinión)`,
     );
 
     return filename;
