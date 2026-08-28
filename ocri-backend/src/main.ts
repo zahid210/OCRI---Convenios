@@ -45,7 +45,11 @@ async function bootstrap() {
   }
 
   const allowedOrigins = new Set<string>();
-  for (const raw of ['http://localhost:3001', 'http://127.0.0.1:3001', ...configuredFrontendOrigins]) {
+  for (const raw of [
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    ...configuredFrontendOrigins,
+  ]) {
     let origin: URL;
     try {
       origin = new URL(raw);
@@ -55,7 +59,8 @@ async function bootstrap() {
     allowedOrigins.add(origin.origin);
     if (origin.hostname === 'localhost' || origin.hostname === '127.0.0.1') {
       const variant = new URL(raw);
-      variant.hostname = origin.hostname === 'localhost' ? '127.0.0.1' : 'localhost';
+      variant.hostname =
+        origin.hostname === 'localhost' ? '127.0.0.1' : 'localhost';
       allowedOrigins.add(variant.origin);
     }
   }

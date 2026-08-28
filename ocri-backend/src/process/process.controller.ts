@@ -130,9 +130,7 @@ export class ProcessController {
   /** Devuelve el cuerpo editable precargado del oficio de solicitud de opinión */
   @Roles('admin', 'editor')
   @Get('opinion-requests/:id/oficio/template')
-  getOficioOpinionTemplate(
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  getOficioOpinionTemplate(@Param('id', ParseIntPipe) id: number) {
     return this.processService.getOficioOpinionTemplate(id);
   }
 

@@ -9,7 +9,10 @@ import {
   serializeBigInt,
   validateTransition,
 } from '../common/process.constants';
-import { UploadedFileLike, normalizeUploadName } from '../common/uploads.config';
+import {
+  UploadedFileLike,
+  normalizeUploadName,
+} from '../common/uploads.config';
 
 const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
   PLAN_DE_TRABAJO: 'PLAN_DE_TRABAJO',
@@ -180,10 +183,16 @@ export class DeliverablesService {
         if (period && pending.period !== period) {
           await this.prisma.deliverables.update({
             where: { id: pending.id },
-            data: { period, title: `Informe Semestral (${period})`, updated_at: new Date() },
+            data: {
+              period,
+              title: `Informe Semestral (${period})`,
+              updated_at: new Date(),
+            },
           });
         }
-        const updated = await this.prisma.deliverables.findUnique({ where: { id: pending.id } });
+        const updated = await this.prisma.deliverables.findUnique({
+          where: { id: pending.id },
+        });
         return serializeBigInt(updated!);
       }
     }

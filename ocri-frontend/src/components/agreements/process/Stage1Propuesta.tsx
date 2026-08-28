@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
     deleteOpinionRequest,
     downloadFile,
@@ -69,11 +69,13 @@ export default function Stage1Propuesta({
     status,
     canManage,
     onRefresh,
+    afterRectoradoDocuments,
 }: {
     agreementId: number;
     status: ProcessDetail;
     canManage: boolean;
     onRefresh: () => Promise<void>;
+    afterRectoradoDocuments?: ReactNode;
 }) {
     const toast = useToast();
     const confirm = useConfirm();
@@ -533,6 +535,8 @@ export default function Stage1Propuesta({
                         </div>
                     </SectionCard>
                 )}
+
+            {afterRectoradoDocuments}
 
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {[

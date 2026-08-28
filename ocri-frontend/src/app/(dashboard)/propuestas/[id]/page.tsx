@@ -125,22 +125,22 @@ export default function PropuestaDetailPage({
                 status={status}
                 canManage={manage}
                 onRefresh={loadData}
+                afterRectoradoDocuments={
+                    ETAPA2_STATUSES.includes(agreement.process_status) ? (
+                        <Stage2Registro
+                            agreementId={agreementId}
+                            processStatus={agreement.process_status}
+                            decision={agreement.rectorate_decision}
+                            decidedAt={agreement.rectorate_decision_at}
+                            publishedAt={agreement.published_at}
+                            registeredAt={agreement.registered_at}
+                            validityStatus={agreement.validity_status ?? null}
+                            canManage={manage}
+                            onRefresh={loadData}
+                        />
+                    ) : undefined
+                }
             />
-
-            {/* Etapa 2: Rectorado, Publicación, Registro (cuando el proceso avanza) */}
-            {ETAPA2_STATUSES.includes(agreement.process_status) && (
-                <Stage2Registro
-                    agreementId={agreementId}
-                    processStatus={agreement.process_status}
-                    decision={agreement.rectorate_decision}
-                    decidedAt={agreement.rectorate_decision_at}
-                    publishedAt={agreement.published_at}
-                    registeredAt={agreement.registered_at}
-                    validityStatus={agreement.validity_status ?? null}
-                    canManage={manage}
-                    onRefresh={loadData}
-                />
-            )}
         </div>
     );
 }

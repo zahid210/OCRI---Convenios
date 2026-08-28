@@ -66,7 +66,10 @@ function resizePng(png: PNG, maxWidth: number): PNG {
     const fy = py - y0;
     const i = (yy: number, xx: number) => (yy * sw + xx) * 4;
 
-    let r = 0, g = 0, b = 0, a = 0;
+    let r = 0,
+      g = 0,
+      b = 0,
+      a = 0;
     const add = (idx: number, w: number) => {
       const al = src[idx + 3];
       r += src[idx] * al * w;
@@ -124,20 +127,31 @@ export class PdfMergerService {
     let y = 720;
 
     page.drawText('UNIVERSIDAD NACIONAL DEL CALLAO', {
-      x: width / 2 - fontBold.widthOfTextAtSize('UNIVERSIDAD NACIONAL DEL CALLAO', 14) / 2,
+      x:
+        width / 2 -
+        fontBold.widthOfTextAtSize('UNIVERSIDAD NACIONAL DEL CALLAO', 14) / 2,
       y,
       size: 14,
       font: fontBold,
       color: rgb(0.11, 0.35, 0.25),
     });
     y -= 20;
-    page.drawText('Oficina de Coordinación de Relaciones Interinstitucionales - OCRI', {
-      x: width / 2 - font.widthOfTextAtSize('Oficina de Coordinación de Relaciones Interinstitucionales - OCRI', 10) / 2,
-      y,
-      size: 10,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-    });
+    page.drawText(
+      'Oficina de Coordinación de Relaciones Interinstitucionales - OCRI',
+      {
+        x:
+          width / 2 -
+          font.widthOfTextAtSize(
+            'Oficina de Coordinación de Relaciones Interinstitucionales - OCRI',
+            10,
+          ) /
+            2,
+        y,
+        size: 10,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      },
+    );
     y -= 10;
     page.drawText('─'.repeat(70), {
       x: 60,
@@ -156,13 +170,16 @@ export class PdfMergerService {
       color: rgb(0, 0, 0),
     });
     y -= 18;
-    page.drawText(`Lima, ${new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })}`, {
-      x: 60,
-      y,
-      size: 10,
-      font,
-      color: rgb(0.2, 0.2, 0.2),
-    });
+    page.drawText(
+      `Lima, ${new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      {
+        x: 60,
+        y,
+        size: 10,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      },
+    );
     y -= 30;
 
     const destLine = directedTo
@@ -254,7 +271,9 @@ export class PdfMergerService {
     });
 
     const pdfDocs = documents
-      .filter((d) => (d.extension ?? '').replace(/^\./, '').toLowerCase() === 'pdf')
+      .filter(
+        (d) => (d.extension ?? '').replace(/^\./, '').toLowerCase() === 'pdf',
+      )
       .filter((d) => d.document_types?.code !== 'EXPEDIENTE_TECNICO');
 
     if (pdfDocs.length === 0) {
@@ -277,7 +296,13 @@ export class PdfMergerService {
     const nonOpinionDocs = pdfDocs.filter((d) => !opinionDocs.includes(d));
 
     // Agrupamos en parejas por opinion_request_id.
-    const pairs = new Map<bigint, { respuesta?: typeof opinionDocs[number]; solicitud?: typeof opinionDocs[number] }>();
+    const pairs = new Map<
+      bigint,
+      {
+        respuesta?: (typeof opinionDocs)[number];
+        solicitud?: (typeof opinionDocs)[number];
+      }
+    >();
     for (const doc of opinionDocs) {
       const id = doc.opinion_request_id;
       if (id == null) continue;
@@ -293,7 +318,7 @@ export class PdfMergerService {
     // Ordenamos las parejas de la más reciente a la más antigua según la fecha
     // de la Respuesta (la última en registrarse); si no hay respuesta, se usa
     // la Solicitud y, en caso de empate, el created_at más reciente de la pareja.
-    const orderedPairs: Array<typeof opinionDocs[number]> = [];
+    const orderedPairs: Array<(typeof opinionDocs)[number]> = [];
     const sortedPairs = [...pairs.values()].sort((pairA, pairB) => {
       const dateA = timeOf(pairA.respuesta) || timeOf(pairA.solicitud);
       const dateB = timeOf(pairB.respuesta) || timeOf(pairB.solicitud);
@@ -492,7 +517,10 @@ export class PdfMergerService {
    * Usa `html-pdf-lite` (sin Chromium) y escribe el archivo en `uploads/`.
    * Retorna el nombre de archivo generado.
    */
-  async renderOficioOpinionPdf(bodyHtml: string, oficioNumber?: string): Promise<string> {
+  async renderOficioOpinionPdf(
+    bodyHtml: string,
+    oficioNumber?: string,
+  ): Promise<string> {
     const template = await this.readOficioOpinionTemplate();
     const fullHtml = template.replace('{{CUERPO}}', bodyHtml);
 

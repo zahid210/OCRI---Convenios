@@ -326,7 +326,9 @@ export class ProcessService {
           },
         });
       } catch (err) {
-        this.logger.warn(`No se pudo generar oficio de solicitud para dependencia ${depId}: ${err}`);
+        this.logger.warn(
+          `No se pudo generar oficio de solicitud para dependencia ${depId}: ${err}`,
+        );
       }
     }
 
@@ -531,7 +533,10 @@ export class ProcessService {
           select: { process_status: true },
         });
 
-        if (allValidated && currentStatus?.process_status !== 'OPINIONES_COMPLETAS') {
+        if (
+          allValidated &&
+          currentStatus?.process_status !== 'OPINIONES_COMPLETAS'
+        ) {
           await this.applyTransition(
             tx,
             request.agreement_id,
@@ -631,7 +636,10 @@ export class ProcessService {
             where: { id: request.agreement_id },
             select: { process_status: true },
           });
-          if (allValidated && currentStatus?.process_status !== 'OPINIONES_COMPLETAS') {
+          if (
+            allValidated &&
+            currentStatus?.process_status !== 'OPINIONES_COMPLETAS'
+          ) {
             await this.applyTransition(
               tx,
               request.agreement_id,
@@ -712,8 +720,7 @@ export class ProcessService {
     const title =
       request.agreements?.title ?? 'convenio de cooperación interinstitucional';
     const tramite = request.agreements?.tramite_code ?? '';
-    const destinatario =
-      request.directed_to ?? `Responsable de ${depName}`;
+    const destinatario = request.directed_to ?? `Responsable de ${depName}`;
     const oficio = normalizeOficioNumber(request.oficio_number ?? undefined);
 
     const fecha = new Date().toLocaleDateString('es-PE', {
@@ -850,67 +857,69 @@ export class ProcessService {
       const result = await this.prisma.$transaction(
         async (tx) => {
           await tx.documents.create({
-          data: {
-            agreements: { connect: { id: BigInt(agreementId) } },
-            opinion_requests: { connect: { id: BigInt(opinionRequestId) } },
-            name:
-              'Oficio de Solicitud de Opinión - ' +
-              (request.dependencias?.name ?? 'Dependencia'),
-            file_path: filename,
-            original_name: filename,
-            extension: 'pdf',
-            document_types: docType
-              ? { connect: { id: docType.id } }
-              : undefined,
-            direction: 'SALIDA',
-            stage: 'ETAPA_1_PROPUESTA',
-            uploaded_by:
-              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
-            created_at: new Date(),
-            updated_at: new Date(),
-          },
-        });
+            data: {
+              agreements: { connect: { id: BigInt(agreementId) } },
+              opinion_requests: { connect: { id: BigInt(opinionRequestId) } },
+              name:
+                'Oficio de Solicitud de Opinión - ' +
+                (request.dependencias?.name ?? 'Dependencia'),
+              file_path: filename,
+              original_name: filename,
+              extension: 'pdf',
+              document_types: docType
+                ? { connect: { id: docType.id } }
+                : undefined,
+              direction: 'SALIDA',
+              stage: 'ETAPA_1_PROPUESTA',
+              uploaded_by:
+                userId != null
+                  ? { connect: { id: BigInt(userId) } }
+                  : undefined,
+              created_at: new Date(),
+              updated_at: new Date(),
+            },
+          });
 
-        const updated = await tx.opinion_requests.update({
-          where: { id: BigInt(opinionRequestId) },
-          data: {
-            status: 'ENVIADA',
-            sent_via: dto.sent_via ?? request.sent_via ?? null,
-            adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
-            oficio_number: dto.oficio_number ?? request.oficio_number,
-            directed_to: dto.directed_to ?? request.directed_to,
-            sent_at: new Date(),
-            updated_at: new Date(),
-          },
-        });
+          const updated = await tx.opinion_requests.update({
+            where: { id: BigInt(opinionRequestId) },
+            data: {
+              status: 'ENVIADA',
+              sent_via: dto.sent_via ?? request.sent_via ?? null,
+              adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
+              oficio_number: dto.oficio_number ?? request.oficio_number,
+              directed_to: dto.directed_to ?? request.directed_to,
+              sent_at: new Date(),
+              updated_at: new Date(),
+            },
+          });
 
-        await this.logEvent(
-          BigInt(agreementId),
-          'SOLICITUD_ENVIADA',
-          'Oficio de solicitud de opinión generado y adjuntado automáticamente.',
-          {
-            actorUserId: userId,
-            fromValue: 'GENERADA',
-            toValue: 'ENVIADA',
-            opinionRequestId: BigInt(opinionRequestId),
-            metadata: { sent_via: dto.sent_via ?? null },
-          },
-          'ETAPA_1_PROPUESTA',
-          tx,
-        );
-
-        if (request.agreements.process_status === 'RECEPCIONADA') {
-          await this.applyTransition(
-            tx,
+          await this.logEvent(
             BigInt(agreementId),
-            'OPINIONES_EN_CURSO',
-            'OPINIONES_EN_CURSO',
-            'El proceso pasó a opiniones en curso tras el primer envío.',
-            { actorUserId: userId },
+            'SOLICITUD_ENVIADA',
+            'Oficio de solicitud de opinión generado y adjuntado automáticamente.',
+            {
+              actorUserId: userId,
+              fromValue: 'GENERADA',
+              toValue: 'ENVIADA',
+              opinionRequestId: BigInt(opinionRequestId),
+              metadata: { sent_via: dto.sent_via ?? null },
+            },
+            'ETAPA_1_PROPUESTA',
+            tx,
           );
-        }
 
-        return updated;
+          if (request.agreements.process_status === 'RECEPCIONADA') {
+            await this.applyTransition(
+              tx,
+              BigInt(agreementId),
+              'OPINIONES_EN_CURSO',
+              'OPINIONES_EN_CURSO',
+              'El proceso pasó a opiniones en curso tras el primer envío.',
+              { actorUserId: userId },
+            );
+          }
+
+          return updated;
         },
         { maxWait: 10000, timeout: 30000 },
       );
@@ -967,8 +976,7 @@ export class ProcessService {
             name: docType.name,
             file_path: file.filename ?? originalName,
             original_name: originalName,
-            extension:
-              originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: { connect: { id: docType.id } },
             direction: (dto.direction as never) ?? docType.direction,
             stage: agreement.stage,
@@ -1140,7 +1148,8 @@ export class ProcessService {
       });
 
       if (!existDoc) {
-        const filename = await this.pdfMerger.mergeOpinionResponses(agreementId);
+        const filename =
+          await this.pdfMerger.mergeOpinionResponses(agreementId);
         const docType = await this.prisma.document_types.findFirst({
           where: { code: 'EXPEDIENTE_TECNICO' },
         });
@@ -1401,8 +1410,7 @@ export class ProcessService {
               name: docType?.name ?? code,
               file_path: file.filename ?? originalName,
               original_name: originalName,
-              extension:
-                originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+              extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
                 ? { connect: { id: docType.id } }
                 : undefined,
@@ -1477,8 +1485,7 @@ export class ProcessService {
               name: docType?.name ?? 'Publicación del Convenio',
               file_path: file.filename ?? originalName,
               original_name: originalName,
-              extension:
-                originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+              extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
                 ? { connect: { id: docType.id } }
                 : undefined,
@@ -1638,8 +1645,7 @@ export class ProcessService {
             name: 'Convenio Firmado Escaneado',
             file_path: file.filename ?? originalName,
             original_name: originalName,
-            extension:
-              originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: docType
               ? { connect: { id: docType.id } }
               : undefined,
@@ -1656,7 +1662,8 @@ export class ProcessService {
         // Fórmula: Informes Semestrales = Duración en Años * 2 + 1 Informe Final obligatorio al cierre.
         const start = new Date(data.start_date);
         const end = new Date(data.end_date);
-        const durationYears = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+        const durationYears =
+          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
         const numSemestrales = Math.max(0, Math.round(durationYears * 2));
 
         // 1. Plan de Trabajo (obligatorio al inicio)
@@ -1696,7 +1703,6 @@ export class ProcessService {
             requested_at: now,
           },
         });
-
       },
       { maxWait: 10000, timeout: 30000 },
     );

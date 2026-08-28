@@ -92,9 +92,7 @@ export const safeDiskStorage = () =>
       }
       let filename = base;
       let counter = 1;
-      while (
-        existsSync(join(process.cwd(), 'uploads', filename))
-      ) {
+      while (existsSync(join(process.cwd(), 'uploads', filename))) {
         const dot = base.lastIndexOf('.');
         filename =
           dot > 0
