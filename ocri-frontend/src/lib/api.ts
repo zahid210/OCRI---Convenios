@@ -81,10 +81,12 @@ export const fetcher = <T = unknown>(endpoint: string, options?: RequestInit): P
     fetchApi<T>(endpoint, options);
 
 /**
- * Genera la URL completa para previsualizar o descargar archivos (PDFs, etc.)
- * Apunta al controlador protegido /resoluciones del backend NestJS. Como los
- * visores embebidos no pueden enviar cabeceras, se adjunta el token JWT por
- * query string; el backend lo valida antes de servir el archivo.
+ * Genera la URL del archivo en el backend (sin exponer el token en la URL).
+ * Apunta al controlador protegido /resoluciones. No se adjunta el JWT por
+ * query string: la autenticación se hace con el header `Authorization`, por lo
+ * que esta URL por sí sola NO sirve el archivo (requiere header) y solo debe
+ * usarse cuando el consumidor adjunta credenciales (ver `fetchFileBlob` /
+ * `openFilePreview`).
  */
 export function getFileUrl(filePath: string | null | undefined): string {
     if (!filePath) return '';
@@ -98,10 +100,50 @@ export function getFileUrl(filePath: string | null | undefined): string {
     const fileName = filePath.split('/').pop()?.split('\\').pop() || filePath;
 
     const storageBaseUrl = process.env.NEXT_PUBLIC_STORAGE_URL || API_URL;
-    const token = Cookies.get('access_token');
-    const qs = token ? `?token=${encodeURIComponent(token)}` : '';
 
-    return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}${qs}`;
+    return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}`;
+}
+
+/**
+ * Descarga los bytes de un archivo del repositorio protegido (/resoluciones)
+ * adjuntando el JWT por header (nunca en la URL). Devuelve un Blob o lanza error.
+ */
+export async function fetchFileBlob(filePath: string): Promise<Blob> {
+    const url = getFileUrl(filePath);
+    if (!url) throw new Error('Ruta de archivo vacía.');
+
+    const token = Cookies.get('access_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(url, { headers });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            Cookies.remove('access_token', { path: '/' });
+            Cookies.remove('user', { path: '/' });
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                window.location.assign(`${window.location.origin}/login`);
+            }
+            throw new Error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+        }
+        throw new Error(`No se pudo obtener el archivo (HTTP ${response.status}).`);
+    }
+
+    return response.blob();
+}
+
+/**
+ * Abre un archivo del repositorio en una pestaña nueva como vista previa,
+ * autenticado con el header Bearer (sin exponer el token en la URL).
+ */
+export async function openFilePreview(filePath: string | null | undefined): Promise<void> {
+    if (!filePath) return;
+    const blob = await fetchFileBlob(filePath);
+    if (typeof window === 'undefined') return;
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 /**

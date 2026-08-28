@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
     fetchApi,
     updateAgreement,
-    getFileUrl,
+    openFilePreview,
 } from '@/lib/api';
 import { Agreement, ProcessStatus } from '@/types/agreements';
 import { PROCESS_STATUS_LABELS } from '@/components/agreements/process/shared';
@@ -319,16 +319,15 @@ export default function AgreementDetailPage({
                                 <ul className="space-y-1">
                                     {agreement.documents.map((doc) => (
                                         <li key={doc.id}>
-                                            <a
-                                                href={getFileUrl(doc.file_path)}
-                                                target="_blank"
-                                                rel="noreferrer"
+                                            <button
+                                                type="button"
+                                                onClick={() => openFilePreview(doc.file_path)}
                                                 className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline"
                                             >
                                                 <FileText className="h-3.5 w-3.5" />
                                                 <span>{doc.name}</span>
                                                 <ExternalLink className="h-3 w-3" />
-                                            </a>
+                                            </button>
                                         </li>
                                     ))}
                                 </ul>

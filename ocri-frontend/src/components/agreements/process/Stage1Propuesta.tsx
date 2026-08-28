@@ -9,8 +9,8 @@ import {
     generateOficioOpinion,
     generateOpinionRequests,
     getDefaultOpinionTargets,
-    getFileUrl,
     getOficioOpinionTemplate,
+    openFilePreview,
     respondOpinionRequest,
     sendToRectorado,
     uploadProcessDocument,
@@ -942,15 +942,15 @@ export default function Stage1Propuesta({
                                         </td>
                                         <td className="px-6 py-3 text-right">
                                             <div className="flex items-center justify-end gap-3">
-                                                <a
-                                                    href={getFileUrl(doc.file_path)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openFilePreview(doc.file_path)}
                                                     className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline"
+                                                    title="Ver documento"
                                                 >
                                                     Ver
                                                     <ExternalLink className="h-3.5 w-3.5" />
-                                                </a>
+                                                </button>
                                             </div>
                                         </td>
                                         <td className="px-6 py-3 text-right">
@@ -1122,7 +1122,7 @@ export default function Stage1Propuesta({
                                         value={adesaNumber}
                                         onChange={(e) => setAdesaNumber(e.target.value)}
                                         className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
-                                        placeholder="Ej: 00123-2026"
+                                        placeholder="Ej: 355431"
                                     />
                                 </div>
                             )}

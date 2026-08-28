@@ -780,7 +780,10 @@ export class ProcessService {
       );
     }
 
-    const filename = await this.pdfMerger.renderOficioOpinionPdf(dto.bodyHtml);
+    const filename = await this.pdfMerger.renderOficioOpinionPdf(
+      dto.bodyHtml,
+      dto.oficio_number,
+    );
 
     const docType = await this.prisma.document_types.findUnique({
       where: { code: 'OFICIO_SOLICITUD_OPINION' },

@@ -405,7 +405,7 @@ export class PdfMergerService {
    * Usa `html-pdf-lite` (sin Chromium) y escribe el archivo en `uploads/`.
    * Retorna el nombre de archivo generado.
    */
-  async renderOficioOpinionPdf(bodyHtml: string): Promise<string> {
+  async renderOficioOpinionPdf(bodyHtml: string, oficioNumber?: string): Promise<string> {
     const template = await this.readOficioOpinionTemplate();
     const fullHtml = template.replace('{{CUERPO}}', bodyHtml);
 
@@ -413,12 +413,20 @@ export class PdfMergerService {
       margins: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
-    const filename =
-      'oficio-solicitud-' +
-      Date.now() +
-      '-' +
-      Math.round(Math.random() * 1e9) +
-      '.pdf';
+    // Normaliza el número de oficio para que el nombre siempre sea:
+    //   OFICIO Nº<num>-OCRI-UNCP.pdf
+    const raw = (oficioNumber ?? '').trim();
+    const noPrefix = raw
+      .replace(/^OFICIO\s+/i, '')
+      .replace(/^[Nn]\s*[º°]?\s*[-.:]?\s*/, '')
+      .trim();
+    const noSuffix = noPrefix
+      .replace(/-OCRI-UNCP$/i, '')
+      .replace(/-OCRI$/i, '')
+      .replace(/-UNCP$/i, '')
+      .replace(/[^\w.-]/g, '_');
+    const number = noSuffix || '000-2026';
+    const filename = `OFICIO Nº${number}-OCRI-UNCP.pdf`;
     const outputPath = path.resolve('uploads', filename);
     await fs.writeFile(outputPath, pdfBuffer);
 

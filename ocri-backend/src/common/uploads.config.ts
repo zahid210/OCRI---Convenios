@@ -1,5 +1,6 @@
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { basename, extname, join } from 'path';
+import { existsSync } from 'fs';
 import { BadRequestException } from '@nestjs/common';
 
 export const UPLOADS_DIR = join(process.cwd(), 'uploads');
@@ -34,8 +35,12 @@ export interface UploadedFileLike {
 
 /**
  * Almacenamiento seguro para documentos del expediente:
- * - Nombre único (timestamp + aleatorio) evita sobrescrituras y path traversal.
- * - Se conserva la extensión original validada contra una lista blanca.
+ * - Conserva el nombre original del archivo (sin rutas) para cumplir el requisito
+ *   de que lo adjuntado se guarde en `uploads/` con el mismo nombre.
+ * - Se sanitiza el nombre (evita path traversal / caracteres no deseados).
+ * - Si ya existe un archivo con ese nombre, se añade un sufijo numérico para no
+ *   sobrescribir.
+ * - La extensión se valida contra una lista blanca.
  */
 export const safeDiskStorage = () =>
   diskStorage({
@@ -54,8 +59,32 @@ export const safeDiskStorage = () =>
           '',
         );
       }
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      callback(null, `${uniqueSuffix}${ext}`);
+      let base = basename(file.originalname).replace(
+        /[^A-Za-z0-9._\-() ]/g,
+        '_',
+      );
+      if (!base) {
+        return callback(
+          new BadRequestException('Nombre de archivo inválido'),
+          '',
+        );
+      }
+      if (!extname(base)) {
+        base += ext;
+      }
+      let filename = base;
+      let counter = 1;
+      while (
+        existsSync(join(process.cwd(), 'uploads', filename))
+      ) {
+        const dot = base.lastIndexOf('.');
+        filename =
+          dot > 0
+            ? `${base.slice(0, dot)}(${counter})${base.slice(dot)}`
+            : `${base}(${counter})`;
+        counter += 1;
+      }
+      callback(null, filename);
     },
   });
 
@@ -77,7 +106,7 @@ export function sanitizeRequestedFileName(raw: string): string {
   if (!base || base.includes('..') || base !== decoded.trim()) {
     throw new BadRequestException('Nombre de archivo inválido');
   }
-  if (!/^[\w.\-() ]+$/.test(base)) {
+  if (!/^[\w.\-() º\u00A0-\u017F]+$/.test(base)) {
     throw new BadRequestException('Nombre de archivo inválido');
   }
   return base;

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
     completeMonitoring,
     evaluateDeliverable,
-    getFileUrl,
+    openFilePreview,
     requestReport,
     submitDeliverable,
     submitWorkPlan,
@@ -97,15 +97,15 @@ function DeliverableCard({
                                     <span className="truncate flex-1 min-w-0">
                                         {doc.original_name || doc.name}
                                     </span>
-                                    <a
-                                        href={getFileUrl(doc.file_path)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <button
+                                        type="button"
+                                        onClick={() => openFilePreview(doc.file_path)}
                                         className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline shrink-0"
+                                        title="Ver documento"
                                     >
                                         Ver
                                         <ExternalLink className="h-3.5 w-3.5" />
-                                    </a>
+                                    </button>
                                 </div>
                             ))}
                         </div>

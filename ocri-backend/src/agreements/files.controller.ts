@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Param,
-  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -21,13 +20,12 @@ import {
 /**
  * Repositorio institucional de documentos (protegido).
  *
- * Autenticación:
- *  - Header `Authorization: Bearer <jwt>` (uso general), o
- *  - Query param `?token=<jwt>` para visores que no pueden enviar cabeceras
- *    (iframe/embed). El token nunca se almacena; solo se valida.
+ * Autenticación: únicamente mediante el header `Authorization: Bearer <jwt>`.
+ * Se sirve con `root` fijo en /uploads y el nombre se valida estrictamente
+ * (sin rutas ni separadores) para impedir path traversal.
  *
- * El nombre de archivo se valida estrictamente (sin rutas ni separadores) y la
- * respuesta se sirve con `root` fijo en /uploads para impedir path traversal.
+ * NOTA: no se admite el token por query string para evitar exponer el JWT
+ * en la URL (logs, referrer, sharing). Los clientes deben adjuntar el header.
  */
 @Controller('resoluciones')
 export class FilesController {
@@ -37,7 +35,6 @@ export class FilesController {
   @Get(':filename')
   async serveFile(
     @Param('filename') filename: string,
-    @Query('token') queryToken: string | undefined,
     @Req() req: Request,
     @Res() res: Response,
   ) {
@@ -46,13 +43,12 @@ export class FilesController {
       ? authHeader.slice(7)
       : undefined;
 
-    const token = bearerToken ?? queryToken;
-    if (!token) {
+    if (!bearerToken) {
       throw new UnauthorizedException('Token de acceso requerido.');
     }
 
     try {
-      await this.jwtService.verifyAsync(token);
+      await this.jwtService.verifyAsync(bearerToken);
     } catch {
       throw new UnauthorizedException('Token inválido o expirado.');
     }
