@@ -713,10 +713,8 @@ export class ProcessService {
         <div class="subject-content"></div>
       </div>
       <div class="body-text">
-        <p>De nuestra consideraci&oacute;n:</p>
-        <p>Me dirijo a usted para comunicarle que se ha recibido de Rectorado el
-        <strong>${title}</strong>${tramite ? ` (tr&aacute;mite N&deg; ${tramite})` : ''},
-        y habiendo tomado conocimiento y revisado el proyecto, remito a su despacho para que
+        <p>Luego de un atento y cordial saludo me dirijo a usted para comunicarle que se ha recibido de Rectorado el
+        <strong>${title}</strong> y habiendo tomado conocimiento y revisado el proyecto, remito a su despacho para que
         se sirva emitir su opini&oacute;n sobre la conveniencia y factibilidad de la firma del
         mencionado convenio.</p>
       </div>
