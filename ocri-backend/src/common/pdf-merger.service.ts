@@ -7,6 +7,38 @@ import { renderPdfFromHtml } from 'html-pdf-lite';
 import { PNG } from 'pngjs';
 
 /**
+ * Normaliza el número de oficio al formato estándar `045-2026-OCRI-UNCP`.
+ * - Elimina prefijos comunes ("OFICIO ", "Nº", "N°", "N.").
+ * - Elimina sufijos institucionales ya presentes ("-OCRI-UNCP", "-OCRI", "-UNCP")
+ *   para evitar duplicados.
+ * - Agrega el año actual (ej. "-2026") si el número no lo incluye.
+ * - Garantiza el sufijo "-OCRI-UNCP" al final.
+ * Retorna el número normalizado completo (sin "OFICIO Nº" ni ".pdf").
+ */
+export function normalizeOficioNumber(raw?: string): string {
+  const noPrefix = (raw ?? '')
+    .trim()
+    .replace(/^OFICIO\s+/i, '')
+    .replace(/^[Nn]\s*[º°]?\s*[-.:]?\s*/, '')
+    .trim();
+  const noSuffix = noPrefix
+    .replace(/-OCRI-UNCP$/i, '')
+    .replace(/-OCRI$/i, '')
+    .replace(/-UNCP$/i, '')
+    .replace(/[^\w.-]/g, '_');
+
+  const year = new Date().getFullYear();
+  let number = noSuffix || '000';
+  if (!/-\d{4}$/.test(number)) {
+    number = `${number}-${year}`;
+  }
+  if (!/OCRI-UNCP$/i.test(number)) {
+    number = `${number}-OCRI-UNCP`;
+  }
+  return number;
+}
+
+/**
  * Redimensiona un PNG (RGBA) a un ancho máximo dado usando interpolación
  * bilineal con premultiplicación alfa (evita halos oscuros en bordes).
  * El documento muestra los logos a ~75px, así que 320px cubren impresión a
@@ -413,20 +445,7 @@ export class PdfMergerService {
       margins: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
-    // Normaliza el número de oficio para que el nombre siempre sea:
-    //   OFICIO Nº<num>-OCRI-UNCP.pdf
-    const raw = (oficioNumber ?? '').trim();
-    const noPrefix = raw
-      .replace(/^OFICIO\s+/i, '')
-      .replace(/^[Nn]\s*[º°]?\s*[-.:]?\s*/, '')
-      .trim();
-    const noSuffix = noPrefix
-      .replace(/-OCRI-UNCP$/i, '')
-      .replace(/-OCRI$/i, '')
-      .replace(/-UNCP$/i, '')
-      .replace(/[^\w.-]/g, '_');
-    const number = noSuffix || '000-2026';
-    const filename = `OFICIO Nº${number}-OCRI-UNCP.pdf`;
+    const filename = `OFICIO Nº${normalizeOficioNumber(oficioNumber)}.pdf`;
     const outputPath = path.resolve('uploads', filename);
     await fs.writeFile(outputPath, pdfBuffer);
 

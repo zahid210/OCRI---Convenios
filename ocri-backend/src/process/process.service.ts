@@ -14,7 +14,10 @@ import {
   validateTransition,
 } from '../common/process.constants';
 import { UploadedFileLike, DOC_TYPE_EXTENSIONS } from '../common/uploads.config';
-import { PdfMergerService } from '../common/pdf-merger.service';
+import {
+  PdfMergerService,
+  normalizeOficioNumber,
+} from '../common/pdf-merger.service';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -666,9 +669,7 @@ export class ProcessService {
     const tramite = request.agreements?.tramite_code ?? '';
     const destinatario =
       request.directed_to ?? `Responsable de ${depName}`;
-    const oficio = request.oficio_number
-      ? request.oficio_number
-      : '000-2026-OCRI-UNCP';
+    const oficio = normalizeOficioNumber(request.oficio_number ?? undefined);
 
     const fecha = new Date().toLocaleDateString('es-PE', {
       day: 'numeric',
@@ -778,8 +779,19 @@ export class ProcessService {
       );
     }
 
+    // Sobrescribe el número de oficio dentro del cuerpo con el valor digitado
+    // (normalizado), de modo que el PDF siempre muestre el número del input.
+    let renderedBody = dto.bodyHtml;
+    if (dto.oficio_number && dto.oficio_number.trim()) {
+      const normalized = normalizeOficioNumber(dto.oficio_number);
+      renderedBody = renderedBody.replace(
+        /(<div class="doc-number">)[\s\S]*?(<\/div>)/,
+        `$1OFICIO N&deg;${normalized}$2`,
+      );
+    }
+
     const filename = await this.pdfMerger.renderOficioOpinionPdf(
-      dto.bodyHtml,
+      renderedBody,
       dto.oficio_number,
     );
 
