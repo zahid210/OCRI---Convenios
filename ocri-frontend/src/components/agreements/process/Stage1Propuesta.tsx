@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     deleteOpinionRequest,
     downloadFile,
@@ -377,16 +377,20 @@ export default function Stage1Propuesta({
         }
     };
 
-    const [isAutoSending, setIsAutoSending] = useState(false);
+    // Ref para evitar el envío doble sin disparar re-renders: si se usara un
+    // estado como dependencia, al cambiarlo React re-ejecuta el effect y su
+    // cleanup (`cancelled = true`) cancelaría el onRefresh que sigue al envío,
+    // dejando la UI sin actualizar hasta recargar la página.
+    const autoSendingRef = useRef(false);
 
     useEffect(() => {
-        if (!allRectoradoReady || isAutoSending) return;
+        if (!allRectoradoReady || autoSendingRef.current) return;
         if (processStatus !== 'OPINIONES_COMPLETAS' && processStatus !== 'EXPEDIENTE_TECNICO_LISTO') return;
 
         let cancelled = false;
 
         const autoSend = async () => {
-            setIsAutoSending(true);
+            autoSendingRef.current = true;
             try {
                 if (processStatus === 'OPINIONES_COMPLETAS') {
                     await finalizeExpediente(agreementId);
@@ -402,14 +406,14 @@ export default function Stage1Propuesta({
                     toast.error(message);
                 }
             } finally {
-                if (!cancelled) setIsAutoSending(false);
+                if (!cancelled) autoSendingRef.current = false;
             }
         };
 
         autoSend();
 
         return () => { cancelled = true; };
-    }, [allRectoradoReady, processStatus, agreementId, onRefresh, isAutoSending]);
+    }, [allRectoradoReady, processStatus, agreementId, onRefresh]);
 
     const openRespondModal = (requestId: number) => {
         setRespondDate('');
@@ -424,7 +428,7 @@ export default function Stage1Propuesta({
             {canManage &&
                 (processStatus === 'OPINIONES_COMPLETAS' ||
                     processStatus === 'EXPEDIENTE_TECNICO_LISTO') && (
-                    <SectionCard title="Expediente para Rectorado" icon={FileCheck}>
+                    <SectionCard title="Documentos para Rectorado" icon={FileCheck}>
                         <p className="text-xs text-gray-500 mb-4">
                             Prepare los 3 documentos requeridos. Una vez completos, el sistema enviará el expediente a Rectorado automáticamente.
                         </p>

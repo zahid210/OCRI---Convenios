@@ -74,9 +74,6 @@ export default function ProcessPage({
         return () => clearTimeout(t);
     }, [loadData]);
 
-    const activeStage: ProcessStage =
-        selectedStage ?? status?.agreement.stage ?? 'ETAPA_1_PROPUESTA';
-
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -99,6 +96,16 @@ export default function ProcessPage({
 
     const { agreement } = status;
     const currentStageIdx = STAGE_ORDER.indexOf(agreement.stage);
+
+    // La etapa seleccionada manualmente solo se conserva si no quedó rezagada
+    // respecto al avance real del acuerdo: al enviarse el expediente a Rectorado
+    // el proceso pasa a ETAPA_2 y debe mostrarse la Decisión de Rectorado de
+    // inmediato, aunque antes se hubiera fijado la ETAPA_1.
+    const selectedIdx = selectedStage ? STAGE_ORDER.indexOf(selectedStage) : -1;
+    const activeStage: ProcessStage =
+        selectedStage && selectedIdx >= currentStageIdx
+            ? selectedStage
+            : (agreement.stage ?? 'ETAPA_1_PROPUESTA');
 
     const canAccessNextStage =
         agreement.process_status === 'REGISTRADO';
