@@ -9,7 +9,7 @@ import {
   serializeBigInt,
   validateTransition,
 } from '../common/process.constants';
-import { UploadedFileLike } from '../common/uploads.config';
+import { UploadedFileLike, normalizeUploadName } from '../common/uploads.config';
 
 const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
   PLAN_DE_TRABAJO: 'PLAN_DE_TRABAJO',
@@ -271,6 +271,8 @@ export class DeliverablesService {
 
     const isCorrection = deliverable.status === 'OBSERVADO';
 
+    const originalName = normalizeUploadName(file.originalname);
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const docTypeCode = DOC_TYPE_BY_DELIVERABLE[deliverable.type];
       const docType = docTypeCode
@@ -284,9 +286,9 @@ export class DeliverablesService {
           agreements: { connect: { id: deliverable.agreement_id } },
           deliverables: { connect: { id: deliverable.id } },
           name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
-          file_path: file.filename ?? file.originalname,
-          original_name: file.originalname,
-          extension: file.originalname.split('.').pop()?.slice(0, 10) ?? 'pdf',
+          file_path: file.filename ?? originalName,
+          original_name: originalName,
+          extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
           document_types: docType ? { connect: { id: docType.id } } : undefined,
           direction: 'ENTRADA',
           stage: 'ETAPA_3_SEGUIMIENTO',
@@ -317,7 +319,7 @@ export class DeliverablesService {
         userId,
         {
           deliverable_type: deliverable.type,
-          original_name: file.originalname,
+          original_name: originalName,
           version: isCorrection ? nextVersion : 1,
         },
       );

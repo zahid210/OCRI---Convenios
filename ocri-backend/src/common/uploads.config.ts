@@ -34,6 +34,23 @@ export interface UploadedFileLike {
 }
 
 /**
+ * Corrige el mojibake del `originalname` de archivos subidos.
+ * Multer/busboy decodifica el nombre del header Content-Disposition como
+ * latin1 (ISO-8859-1). Si el cliente lo envió en UTF-8 (p. ej. "Nº"), el
+ * resultado llega doble-codificado ("NÂº"). Esta función lo revierte
+ * (latin1 -> utf8) solo cuando la conversión es válida; si el nombre ya era
+ * UTF-8 correcto, la conversión seria inválida y se devuelve el original.
+ */
+export function normalizeUploadName(name: string): string {
+  try {
+    const fixed = Buffer.from(name, 'latin1').toString('utf8');
+    return fixed.includes('\uFFFD') ? name : fixed;
+  } catch {
+    return name;
+  }
+}
+
+/**
  * Almacenamiento seguro para documentos del expediente:
  * - Conserva el nombre original del archivo (sin rutas) para cumplir el requisito
  *   de que lo adjuntado se guarde en `uploads/` con el mismo nombre.
@@ -50,7 +67,8 @@ export const safeDiskStorage = () =>
       file: UploadedFileLike & { originalname: string },
       callback: (error: Error | null, filename: string) => void,
     ) => {
-      const ext = extname(file.originalname).toLowerCase();
+      const originalName = normalizeUploadName(file.originalname);
+      const ext = extname(originalName).toLowerCase();
       if (!ALLOWED_EXTENSIONS.has(ext)) {
         return callback(
           new BadRequestException(
@@ -59,8 +77,8 @@ export const safeDiskStorage = () =>
           '',
         );
       }
-      let base = basename(file.originalname).replace(
-        /[^A-Za-z0-9._\-() ]/g,
+      let base = basename(originalName).replace(
+        /[^A-Za-z0-9._\-()\u00BA\u00C0-\u017F ]/g,
         '_',
       );
       if (!base) {

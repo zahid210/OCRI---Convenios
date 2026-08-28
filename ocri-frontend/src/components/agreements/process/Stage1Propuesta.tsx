@@ -230,6 +230,10 @@ export default function Stage1Propuesta({
     };
 
     const handleRespond = async (requestId: number) => {
+        if (!respondFile) {
+            toast.error('Debe adjuntar el archivo de respuesta.');
+            return;
+        }
         if (!respondDate) {
             toast.error('Debe indicar la fecha de respuesta.');
             return;
@@ -612,7 +616,7 @@ export default function Stage1Propuesta({
                                                             className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                         >
                                                             <FileText className="h-4 w-4" />
-                                                            Responder
+                                                            Adjuntar Respuesta
                                                         </button>
                                                     )}
                                                     {actionsOpen && req.status === 'GENERADA' && (
@@ -1198,7 +1202,7 @@ export default function Stage1Propuesta({
                                 onClick={() =>
                                     showRespondModal !== null && handleRespond(showRespondModal)
                                 }
-                                disabled={isResponding || !respondDate}
+                                disabled={isResponding || !respondDate || !respondFile}
                                 className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
                             >
                                 {isResponding && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -1217,6 +1221,21 @@ export default function Stage1Propuesta({
                                 </span>
                             </p>
                         )}
+                        <div>
+                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                                Archivo de respuesta <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="file"
+                                onChange={(e) => setRespondFile(e.target.files?.[0] ?? null)}
+                                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-[#df9f1f]"
+                            />
+                            {respondFile && (
+                                <p className="mt-1 text-xs text-gray-500 truncate">
+                                    {respondFile.name}
+                                </p>
+                            )}
+                        </div>
                         <div>
                             <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
                                 Fecha de respuesta <span className="text-red-500">*</span>
@@ -1239,22 +1258,6 @@ export default function Stage1Propuesta({
                                 className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
                                 placeholder="Observaciones de la dependencia (opcional)..."
                             />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                Archivo de respuesta{' '}
-                                <span className="normal-case font-normal">(opcional)</span>
-                            </label>
-                            <input
-                                type="file"
-                                onChange={(e) => setRespondFile(e.target.files?.[0] ?? null)}
-                                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-[#df9f1f]"
-                            />
-                            {respondFile && (
-                                <p className="mt-1 text-xs text-gray-500 truncate">
-                                    {respondFile.name}
-                                </p>
-                            )}
                         </div>
                     </div>
                 </ModalShell>

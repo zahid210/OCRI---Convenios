@@ -13,7 +13,11 @@ import {
   STATUS_STAGE,
   validateTransition,
 } from '../common/process.constants';
-import { UploadedFileLike, DOC_TYPE_EXTENSIONS } from '../common/uploads.config';
+import {
+  UploadedFileLike,
+  DOC_TYPE_EXTENSIONS,
+  normalizeUploadName,
+} from '../common/uploads.config';
 import {
   PdfMergerService,
   normalizeOficioNumber,
@@ -440,6 +444,12 @@ export class ProcessService {
       );
     }
 
+    if (!file) {
+      throw new BadRequestException(
+        'Debe adjuntar el archivo de respuesta de la dependencia.',
+      );
+    }
+
     const updated = await this.prisma.$transaction(
       async (tx) => {
         const result = await tx.opinion_requests.update({
@@ -465,10 +475,13 @@ export class ProcessService {
               name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
               file_path:
                 (file as UploadedFileLike & { filename?: string }).filename ??
-                file.originalname,
-              original_name: file.originalname,
+                normalizeUploadName(file.originalname),
+              original_name: normalizeUploadName(file.originalname),
               extension:
-                file.originalname.split('.').pop()?.slice(0, 10) ?? 'pdf',
+                normalizeUploadName(file.originalname)
+                  .split('.')
+                  .pop()
+                  ?.slice(0, 10) ?? 'pdf',
               document_types: docType
                 ? { connect: { id: docType.id } }
                 : undefined,
@@ -905,7 +918,8 @@ export class ProcessService {
       );
     }
 
-    const ext = '.' + (file.originalname.split('.').pop()?.toLowerCase() ?? '');
+    const originalName = normalizeUploadName(file.originalname);
+    const ext = '.' + (originalName.split('.').pop()?.toLowerCase() ?? '');
     const requiredExts = DOC_TYPE_EXTENSIONS[dto.document_type_code];
     if (requiredExts && !requiredExts.has(ext)) {
       throw new BadRequestException(
@@ -919,10 +933,10 @@ export class ProcessService {
           data: {
             agreements: { connect: { id: BigInt(agreementId) } },
             name: docType.name,
-            file_path: file.filename ?? file.originalname,
-            original_name: file.originalname,
+            file_path: file.filename ?? originalName,
+            original_name: originalName,
             extension:
-              file.originalname.split('.').pop()?.slice(0, 10) ?? 'pdf',
+              originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: { connect: { id: docType.id } },
             direction: (dto.direction as never) ?? docType.direction,
             stage: agreement.stage,
@@ -1347,14 +1361,16 @@ export class ProcessService {
             where: { code },
           });
 
+          const originalName = normalizeUploadName(file.originalname);
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? code,
-              file_path: file.filename ?? file.originalname,
-              original_name: file.originalname,
+              file_path: file.filename ?? originalName,
+              original_name: originalName,
               extension:
-                file.originalname.split('.').pop()?.slice(0, 10) ?? 'pdf',
+                originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
                 ? { connect: { id: docType.id } }
                 : undefined,
@@ -1421,14 +1437,16 @@ export class ProcessService {
             where: { code: 'PUBLICACION' },
           });
 
+          const originalName = normalizeUploadName(file.originalname);
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? 'Publicación del Convenio',
-              file_path: file.filename ?? file.originalname,
-              original_name: file.originalname,
+              file_path: file.filename ?? originalName,
+              original_name: originalName,
               extension:
-                file.originalname.split('.').pop()?.slice(0, 10) ?? 'pdf',
+                originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
                 ? { connect: { id: docType.id } }
                 : undefined,
@@ -1580,14 +1598,16 @@ export class ProcessService {
           where: { code: 'CONVENIO_FIRMADO' },
         });
 
+        const originalName = normalizeUploadName(file.originalname);
+
         await tx.documents.create({
           data: {
             agreements: { connect: { id: BigInt(agreementId) } },
             name: 'Convenio Firmado Escaneado',
-            file_path: file.filename ?? file.originalname,
-            original_name: file.originalname,
+            file_path: file.filename ?? originalName,
+            original_name: originalName,
             extension:
-              file.originalname.split('.').pop()?.slice(0, 10) ?? 'pdf',
+              originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: docType
               ? { connect: { id: docType.id } }
               : undefined,

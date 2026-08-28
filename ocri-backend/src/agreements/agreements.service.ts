@@ -6,7 +6,11 @@ import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
-import { UPLOADS_DIR, UploadedFileLike } from '../common/uploads.config';
+import {
+  UPLOADS_DIR,
+  UploadedFileLike,
+  normalizeUploadName,
+} from '../common/uploads.config';
 import {
   deriveTemporalStatus,
   serializeBigInt,
@@ -158,12 +162,13 @@ export class AgreementsService {
       uploadedById?: number | null;
     },
   ): Prisma.documentsCreateInput {
-    const ext = path.extname(file.originalname).slice(0, 10) || undefined;
+    const originalName = normalizeUploadName(file.originalname);
+    const ext = path.extname(originalName).slice(0, 10) || undefined;
     return {
       agreements: { connect: { id: agreementId } },
       name: opts.name,
-      file_path: file.filename ?? file.originalname,
-      original_name: file.originalname,
+      file_path: file.filename ?? originalName,
+      original_name: originalName,
       extension: ext,
       document_types: opts.documentTypeId
         ? { connect: { id: opts.documentTypeId } }
