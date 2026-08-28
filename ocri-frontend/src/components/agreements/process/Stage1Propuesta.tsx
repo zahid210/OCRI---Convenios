@@ -90,7 +90,6 @@ export default function Stage1Propuesta({
     const [sendVia, setSendVia] = useState('ADESA');
     const [adesaNumber, setAdesaNumber] = useState('');
     const [oficioNumber, setOficioNumber] = useState('');
-    const [directedTo, setDirectedTo] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [oficioHtml, setOficioHtml] = useState('');
     const [oficioCss, setOficioCss] = useState('');
@@ -173,7 +172,6 @@ export default function Stage1Propuesta({
         setSendVia('ADESA');
         setAdesaNumber('');
         setOficioNumber('');
-        setDirectedTo('');
         setOficioHtml('');
         setOficioCss('');
         setShowOficioEditor(false);
@@ -199,6 +197,14 @@ export default function Stage1Propuesta({
             toast.error('El contenido del oficio no puede estar vacío.');
             return;
         }
+        if (sendVia === 'ADESA' && !adesaNumber.trim()) {
+            toast.error('Debe indicar el N° de Expediente ADESA.');
+            return;
+        }
+        if (!oficioNumber.trim()) {
+            toast.error('Debe indicar el N° de Oficio.');
+            return;
+        }
         setIsSending(true);
         try {
             await generateOficioOpinion(requestId, {
@@ -206,14 +212,12 @@ export default function Stage1Propuesta({
                 sent_via: sendVia,
                 adesa_number: adesaNumber || undefined,
                 oficio_number: oficioNumber || undefined,
-                directed_to: directedTo || undefined,
             });
             toast.success('Oficio generado y adjuntado correctamente.');
             setShowSendModal(null);
             setShowOficioEditor(false);
             setAdesaNumber('');
             setOficioNumber('');
-            setDirectedTo('');
             setOficioHtml('');
             setOficioCss('');
             await onRefresh();
@@ -1047,7 +1051,6 @@ export default function Stage1Propuesta({
                                     setShowOficioEditor(false);
                                     setAdesaNumber('');
                                     setOficioNumber('');
-                                    setDirectedTo('');
                                     setOficioHtml('');
                                     setOficioCss('');
                                 }}
@@ -1113,7 +1116,7 @@ export default function Stage1Propuesta({
                             {sendVia === 'ADESA' && (
                                 <div className="mt-4">
                                     <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                        N° Expediente ADESA
+                                        N° Expediente ADESA <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         value={adesaNumber}
@@ -1125,26 +1128,13 @@ export default function Stage1Propuesta({
                             )}
                             <div className="mt-4">
                                 <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                    N° de Oficio{' '}
-                                    <span className="normal-case font-normal">(opcional)</span>
+                                    N° de Oficio <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     value={oficioNumber}
                                     onChange={(e) => setOficioNumber(e.target.value)}
                                     className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
                                     placeholder="Ej: 045-2026-OCRI"
-                                />
-                            </div>
-                            <div className="mt-4">
-                                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                    Dirigido a{' '}
-                                    <span className="normal-case font-normal">(opcional)</span>
-                                </label>
-                                <input
-                                    value={directedTo}
-                                    onChange={(e) => setDirectedTo(e.target.value)}
-                                    className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
-                                    placeholder="Nombre del destinatario..."
                                 />
                             </div>
                         </div>
