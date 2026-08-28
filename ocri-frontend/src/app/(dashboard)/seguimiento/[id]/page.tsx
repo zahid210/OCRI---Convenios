@@ -45,7 +45,7 @@ export default function SeguimientoDetailPage({
 
             const needsDeliverables =
                 data.agreement.stage === 'ETAPA_3_SEGUIMIENTO' ||
-                ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO', 'REGISTRADO'].includes(data.agreement.process_status);
+                ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO', 'PUBLICADO'].includes(data.agreement.process_status);
             if (needsDeliverables) {
                 setIsLoadingDeliverables(true);
                 const list = (await getDeliverables(agreementId)) as Deliverable[];

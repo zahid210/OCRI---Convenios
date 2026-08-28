@@ -48,8 +48,8 @@ export const PROCESS_FLOW: ProcessStatus[] = [
     'EXPEDIENTE_TECNICO_LISTO',
     'ENVIADO_A_RECTORADO',
     'SUSCRITO',
-    'PUBLICADO',
     'REGISTRADO',
+    'PUBLICADO',
     'EN_SEGUIMIENTO',
     'SEGUIMIENTO_CONCLUIDO',
 ];

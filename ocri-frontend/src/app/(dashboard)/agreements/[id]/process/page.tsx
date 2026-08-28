@@ -25,7 +25,7 @@ import {
     VALIDITY_LABELS,
 } from '@/components/agreements/process/shared';
 
-const DELIVERABLE_STATUSES: string[] = ['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
+const DELIVERABLE_STATUSES: string[] = ['PUBLICADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
 
 export default function ProcessPage({
     params,
@@ -108,7 +108,7 @@ export default function ProcessPage({
             : (agreement.stage ?? 'ETAPA_1_PROPUESTA');
 
     const canAccessNextStage =
-        agreement.process_status === 'REGISTRADO';
+        agreement.process_status === 'PUBLICADO';
 
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">

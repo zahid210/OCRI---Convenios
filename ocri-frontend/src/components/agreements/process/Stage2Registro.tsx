@@ -248,6 +248,15 @@ export default function Stage2Registro({
                             )}
                             {processStatus === 'SUSCRITO' && (
                                 <button
+                                    onClick={() => setShowRegisterModal(true)}
+                                    className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors"
+                                >
+                                    <FileCheck className="h-4 w-4" />
+                                    Registrar Convenio
+                                </button>
+                            )}
+                            {processStatus === 'REGISTRADO' && (
+                                <button
                                     onClick={() => {
                                         setPublishFile(null);
                                         setShowPublishModal(true);
@@ -256,15 +265,6 @@ export default function Stage2Registro({
                                 >
                                     <FileCheck className="h-4 w-4" />
                                     Publicar Convenio
-                                </button>
-                            )}
-                            {processStatus === 'PUBLICADO' && (
-                                <button
-                                    onClick={() => setShowRegisterModal(true)}
-                                    className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors"
-                                >
-                                    <FileCheck className="h-4 w-4" />
-                                    Registrar Convenio
                                 </button>
                             )}
                         </>
@@ -314,23 +314,23 @@ export default function Stage2Registro({
                                     state: 'pending' as const,
                                 },
                         {
-                            label: 'Publicación del convenio',
-                            description: 'OCRI publica el convenio suscrito.',
-                            date: publishedAt ?? null,
-                            state: publishedAt
-                                ? ('done' as const)
-                                : decision === 'APPROVED'
-                                  ? ('pending' as const)
-                                  : ('idle' as const),
-                        },
-                        {
                             label: 'Registro formal',
                             description:
                                 'Resolución, vigencia, responsables y convenio escaneado.',
                             date: registeredAt ?? null,
                             state: registeredAt
                                 ? ('done' as const)
-                                : publishedAt
+                                : decision === 'APPROVED'
+                                  ? ('pending' as const)
+                                  : ('idle' as const),
+                        },
+                        {
+                            label: 'Publicación del convenio',
+                            description: 'OCRI publica el convenio suscrito.',
+                            date: publishedAt ?? null,
+                            state: publishedAt
+                                ? ('done' as const)
+                                : registeredAt
                                   ? ('pending' as const)
                                   : ('idle' as const),
                         },

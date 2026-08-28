@@ -212,9 +212,18 @@ export class AgreementsService {
 
     if (filters.scope === 'tramite') {
       where.process_status = { in: IN_FLIGHT_STATUSES };
+    } else if (filters.scope === 'en_registro') {
+      where.process_status = {
+        in: ['SUSCRITO', 'REGISTRADO', 'PUBLICADO'],
+      };
     } else if (filters.scope === 'registrados') {
       where.process_status = {
-        in: ['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'],
+        in: [
+          'REGISTRADO',
+          'PUBLICADO',
+          'EN_SEGUIMIENTO',
+          'SEGUIMIENTO_CONCLUIDO',
+        ],
       };
     } else if (filters.process_status) {
       where.process_status = filters.process_status as ProcessStatus;

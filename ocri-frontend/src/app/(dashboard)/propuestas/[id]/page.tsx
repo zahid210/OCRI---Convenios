@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import {
+    getDeliverables,
     getProcessStatus,
 } from '@/lib/api';
 import {
@@ -10,11 +11,12 @@ import {
     ArrowLeft,
     Loader2,
 } from 'lucide-react';
-import { ProcessStatusResponse } from '@/types/agreements';
+import { Deliverable, ProcessStatusResponse } from '@/types/agreements';
 import { useUser } from '@/components/user-provider';
 import { canManage } from '@/lib/auth';
 import Stage1Propuesta from '@/components/agreements/process/Stage1Propuesta';
 import Stage2Registro from '@/components/agreements/process/Stage2Registro';
+import Stage3Seguimiento from '@/components/agreements/process/Stage3Seguimiento';
 import {
     FlowTimeline,
     PROCESS_STATUS_LABELS,
@@ -25,8 +27,13 @@ const ETAPA2_STATUSES = [
     'ENVIADO_A_RECTORADO',
     'SUSCRITO',
     'NO_SUSCRITO',
+    'REGISTRADO',
     'PUBLICADO',
 ];
+
+const ETAPA3_STATUSES = ['PUBLICADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
+
+const REGISTRO_STATUSES = ['SUSCRITO', 'REGISTRADO', 'PUBLICADO'];
 
 export default function PropuestaDetailPage({
     params,
@@ -39,6 +46,8 @@ export default function PropuestaDetailPage({
     const manage = canManage(user);
 
     const [status, setStatus] = useState<ProcessDetail | null>(null);
+    const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
+    const [isLoadingDeliverables, setIsLoadingDeliverables] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -46,12 +55,20 @@ export default function PropuestaDetailPage({
         try {
             const data = (await getProcessStatus(agreementId)) as ProcessStatusResponse;
             setStatus(data as unknown as ProcessDetail);
+
+            const needsDeliverables = ETAPA3_STATUSES.includes(data.agreement.process_status);
+            if (needsDeliverables) {
+                setIsLoadingDeliverables(true);
+                const list = (await getDeliverables(agreementId)) as Deliverable[];
+                setDeliverables(list);
+            }
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : 'Error al cargar datos de la propuesta';
             setError(message);
         } finally {
             setIsLoading(false);
+            setIsLoadingDeliverables(false);
         }
     }, [agreementId]);
 
@@ -83,6 +100,9 @@ export default function PropuestaDetailPage({
     }
 
     const { agreement } = status;
+    const inRegistro = REGISTRO_STATUSES.includes(agreement.process_status);
+    const backHref = inRegistro ? '/registro' : '/propuestas';
+    const backLabel = inRegistro ? 'Bandeja de Registro' : 'Bandeja de Propuestas';
 
     return (
         <div className="space-y-6 pb-12 font-sans text-gray-700">
@@ -91,11 +111,11 @@ export default function PropuestaDetailPage({
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <Link
-                            href="/propuestas"
+                            href={backHref}
                             className="inline-flex items-center gap-1.5 text-sm text-[#0b6e4f] hover:underline shrink-0"
                         >
                             <ArrowLeft className="h-4 w-4" />
-                            Volver
+                            Volver a {backLabel}
                         </Link>
                         <div className="space-y-1">
                             <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2">
@@ -109,6 +129,10 @@ export default function PropuestaDetailPage({
                                 ) : (
                                     <>Expediente #{agreementId} · </>
                                 )}
+                                <span className="font-medium">
+                                    {PROCESS_STATUS_LABELS[agreement.process_status] ??
+                                        agreement.process_status}
+                                </span>
                             </p>
                         </div>
                     </div>
@@ -141,6 +165,18 @@ export default function PropuestaDetailPage({
                     ) : undefined
                 }
             />
+
+            {/* Etapa 3: Seguimiento (PUBLICADO → EN_SEGUIMIENTO → SEGUIMIENTO_CONCLUIDO) */}
+            {ETAPA3_STATUSES.includes(agreement.process_status) && (
+                <Stage3Seguimiento
+                    agreementId={agreementId}
+                    processStatus={agreement.process_status}
+                    deliverables={deliverables}
+                    isLoadingDeliverables={isLoadingDeliverables}
+                    canManage={manage}
+                    onRefresh={loadData}
+                />
+            )}
         </div>
     );
 }

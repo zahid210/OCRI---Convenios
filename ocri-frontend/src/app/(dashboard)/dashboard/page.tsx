@@ -36,7 +36,6 @@ const EN_TRAMITE_STATUSES = [
     'EXPEDIENTE_TECNICO_LISTO',
     'ENVIADO_A_RECTORADO',
     'SUSCRITO',
-    'PUBLICADO',
 ];
 
 interface AgreementsResponse {
@@ -180,7 +179,7 @@ export default function DashboardPage() {
                                 recentAgreements.map((agreement) => {
                                     const isExpired = agreement.end_date && new Date(agreement.end_date) < new Date();
                                     return (
-                                        <tr key={agreement.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={agreement.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/propuestas/${agreement.id}`}>
                                             <td className="py-3 px-4 text-sm text-gray-800">
                                                 {agreement.resolution_number || agreement.title || `Convenio #${agreement.id}`}
                                             </td>

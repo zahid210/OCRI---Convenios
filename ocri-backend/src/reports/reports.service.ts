@@ -78,7 +78,12 @@ export class ReportsService {
       now.setHours(0, 0, 0, 0);
 
       where.process_status = {
-        in: ['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'],
+        in: [
+          'REGISTRADO',
+          'PUBLICADO',
+          'EN_SEGUIMIENTO',
+          'SEGUIMIENTO_CONCLUIDO',
+        ],
       };
 
       if (filter.status === 'Vigente') {
@@ -122,9 +127,7 @@ export class ReportsService {
     if (a.process_status === 'NO_SUSCRITO') return 'No Suscrito';
 
     const inFlight =
-      IN_FLIGHT.includes(a.process_status) ||
-      a.process_status === 'SUSCRITO' ||
-      a.process_status === 'PUBLICADO';
+      IN_FLIGHT.includes(a.process_status) || a.process_status === 'SUSCRITO';
 
     if (inFlight) return 'En Trámite';
 

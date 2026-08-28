@@ -36,9 +36,9 @@ function getProcessStatusClass(status: ProcessStatus): string {
         case 'NO_SUSCRITO':
             return 'border-red-200 bg-red-50 text-red-700';
         case 'SUSCRITO':
-        case 'PUBLICADO':
             return 'border-indigo-200 bg-indigo-50 text-indigo-700';
         case 'REGISTRADO':
+        case 'PUBLICADO':
         case 'EN_SEGUIMIENTO':
             return 'border-emerald-200 bg-emerald-50 text-emerald-700';
         default:
@@ -112,6 +112,7 @@ export default function AgreementDetailPage({
 
     const isRegistered =
         agreement.process_status === 'REGISTRADO' ||
+        agreement.process_status === 'PUBLICADO' ||
         agreement.process_status === 'EN_SEGUIMIENTO' ||
         agreement.process_status === 'SEGUIMIENTO_CONCLUIDO';
 

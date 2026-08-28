@@ -4,7 +4,7 @@
 //   E1 Propuesta   : recepción → opiniones de dependencias → expediente técnico
 //                    → envío a Rectorado
 //   E2 Registro    : decisión de Rectorado (suscribe / no suscribe) → convenio
-//                    firmado → publicación → registro (semáforo activo)
+//                    firmado → registro formal (semáforo activo) → publicación
 //   E3 Seguimiento : plan de trabajo → informes semestrales/finales con loop
 //                    de correcciones → conclusión del seguimiento
 // ═══════════════════════════════════════════════════════════════════════════
@@ -27,8 +27,8 @@ enum process_status {
   ENVIADO_A_RECTORADO // E1 fin: expediente + propuesta + opinión remitidos
   NO_SUSCRITO // E2 terminal: Rectorado no suscribe; solicitante notificado
   SUSCRITO // E2: Rectorado suscribe y remite el convenio firmado
-  PUBLICADO // E2: OCRI publicó el convenio
-  REGISTRADO // E2 fin: registrado con resolución, vigencia y responsables
+  REGISTRADO // E2: registrado con resolución, vigencia y responsables (semáforo activo)
+  PUBLICADO // E2 fin: OCRI publicó el convenio
   EN_SEGUIMIENTO // E3: plan de trabajo solicitado a los responsables
   SEGUIMIENTO_CONCLUIDO // E3 terminal: todos los informes validados e inscritos
 }

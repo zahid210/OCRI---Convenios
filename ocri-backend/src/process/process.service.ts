@@ -1450,9 +1450,9 @@ export class ProcessService {
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
 
-    if (agreement.process_status !== 'SUSCRITO') {
+    if (agreement.process_status !== 'REGISTRADO') {
       throw new BadRequestException(
-        `La publicación exige estado SUSCRITO. Estado actual: ${agreement.process_status}`,
+        `La publicación exige estado REGISTRADO. Estado actual: ${agreement.process_status}`,
       );
     }
 
@@ -1534,9 +1534,9 @@ export class ProcessService {
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
 
-    if (agreement.process_status !== 'PUBLICADO') {
+    if (agreement.process_status !== 'SUSCRITO') {
       throw new BadRequestException(
-        `El registro exige estado PUBLICADO. Estado actual: ${agreement.process_status}`,
+        `El registro exige estado SUSCRITO. Estado actual: ${agreement.process_status}`,
       );
     }
 
@@ -1586,7 +1586,7 @@ export class ProcessService {
           BigInt(agreementId),
           'REGISTRADO',
           'CONVENIO_REGISTRADO',
-          'Convenio publicado y registrado: resolución, vigencia y responsables verificados. Documentación organizada en el repositorio institucional.',
+          'Convenio registrado formalmente: resolución, vigencia y responsables verificados. Documentación organizada en el repositorio institucional.',
           {
             actorUserId: userId,
             extraData: {
@@ -1726,9 +1726,12 @@ export class ProcessService {
     const agreement = await this.getAgreementOrThrow(agreementId);
 
     if (
-      !['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'].includes(
-        agreement.process_status,
-      )
+      ![
+        'REGISTRADO',
+        'PUBLICADO',
+        'EN_SEGUIMIENTO',
+        'SEGUIMIENTO_CONCLUIDO',
+      ].includes(agreement.process_status)
     ) {
       throw new BadRequestException(
         'La vigencia solo se administra sobre convenios registrados.',

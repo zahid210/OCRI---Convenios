@@ -351,8 +351,8 @@ export default function Stage3Seguimiento({
                 </div>
             ) : deliverables.length === 0 ? (
                 <div className="py-12 text-center text-sm text-gray-500">
-                    {processStatus === 'REGISTRADO'
-                        ? 'El convenio está registrado. Pulse "Iniciar Seguimiento" para formalizar la etapa.'
+                    {processStatus === 'PUBLICADO'
+                        ? 'El convenio está registrado y publicado. Pulse "Iniciar Seguimiento" para formalizar la etapa.'
                         : 'No hay entregables registrados.'}
                 </div>
             ) : (

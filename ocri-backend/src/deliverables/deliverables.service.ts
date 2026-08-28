@@ -35,9 +35,9 @@ export class DeliverablesService {
   }
 
   private assertInMonitoring(processStatus: string) {
-    if (processStatus !== 'REGISTRADO' && processStatus !== 'EN_SEGUIMIENTO') {
+    if (processStatus !== 'PUBLICADO' && processStatus !== 'EN_SEGUIMIENTO') {
       throw new BadRequestException(
-        `El seguimiento opera sobre convenios REGISTRADOS o EN_SEGUIMIENTO. Estado actual: ${processStatus}`,
+        `El seguimiento opera sobre convenios PUBLICADOS o EN_SEGUIMIENTO. Estado actual: ${processStatus}`,
       );
     }
   }
@@ -399,14 +399,14 @@ export class DeliverablesService {
           userId,
         );
 
-        // Auto-transition REGISTRADO -> EN_SEGUIMIENTO when PLAN_DE_TRABAJO is approved
+        // Auto-transition PUBLICADO -> EN_SEGUIMIENTO when PLAN_DE_TRABAJO is approved
         if (deliverable.type === 'PLAN_DE_TRABAJO') {
           const agreement = await tx.agreements.findUnique({
             where: { id: deliverable.agreement_id },
             select: { process_status: true },
           });
-          if (agreement && agreement.process_status === 'REGISTRADO') {
-            validateTransition('REGISTRADO', 'EN_SEGUIMIENTO');
+          if (agreement && agreement.process_status === 'PUBLICADO') {
+            validateTransition('PUBLICADO', 'EN_SEGUIMIENTO');
             await tx.agreements.update({
               where: { id: deliverable.agreement_id },
               data: {

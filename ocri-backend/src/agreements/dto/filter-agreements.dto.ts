@@ -18,10 +18,10 @@ export class FilterAgreementsDto {
   @IsString()
   search?: string;
 
-  /** Agrupado por ámbito del flujo: propuestas en trámite o registrados */
+  /** Ámbito del flujo: propuestas en trámite, en etapa de registro o registrados */
   @IsOptional()
-  @IsIn(['tramite', 'registrados'])
-  scope?: 'tramite' | 'registrados';
+  @IsIn(['tramite', 'en_registro', 'registrados'])
+  scope?: 'tramite' | 'en_registro' | 'registrados';
 
   /** Estado exacto del proceso (RECEPCIONADA, OPINIONES_EN_CURSO, ...) */
   @IsOptional()

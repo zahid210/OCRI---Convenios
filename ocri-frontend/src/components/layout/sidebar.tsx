@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    Home, FileText, FilePlus, Shield,
+    Home, FileText, FilePlus, Shield, FileCheck,
     BarChart3, Building2, Users, Network, Search, ClipboardCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ export function Sidebar() {
         {
             title: 'Convenios Oficiales',
             items: [
+                { title: 'Bandeja de Registro', href: '/registro', icon: FileCheck },
                 { title: 'Directorio de Convenios', href: '/convenios', icon: Shield },
             ],
         },

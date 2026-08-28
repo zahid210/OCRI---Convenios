@@ -23,7 +23,7 @@ import {
     VALIDITY_LABELS,
 } from '@/components/agreements/process/shared';
 
-const ETAPA3_STATUSES = ['REGISTRADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
+const ETAPA3_STATUSES = ['PUBLICADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
 
 export default function ConvenioDetailPage({
     params,
@@ -159,7 +159,7 @@ export default function ConvenioDetailPage({
                 onRefresh={loadData}
             />
 
-            {/* Etapa 3: Seguimiento (REGISTRADO → EN_SEGUIMIENTO → SEGUIMIENTO_CONCLUIDO) */}
+            {/* Etapa 3: Seguimiento (PUBLICADO → EN_SEGUIMIENTO → SEGUIMIENTO_CONCLUIDO) */}
             {ETAPA3_STATUSES.includes(agreement.process_status) && (
                 <Stage3Seguimiento
                     agreementId={agreementId}
