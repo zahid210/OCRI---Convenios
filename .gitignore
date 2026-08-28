@@ -18,3 +18,9 @@ coverage/
 # Archivos del sistema
 .DS_Store
 Thumbs.db
+
+# PDFs transaccionales subidos por los convenios (se generan por cada trámite)
+# Se ignoran los archivos sueltos de uploads/, pero se conservan versionados
+# los templates y sus assets (logos y plantilla del oficio).
+ocri-backend/uploads/*
+!ocri-backend/uploads/templates/
