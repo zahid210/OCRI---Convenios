@@ -54,6 +54,16 @@ import {
 const GENERATION_STATUSES = ['RECEPCIONADA', 'OPINIONES_EN_CURSO'];
 const ACTION_STATUSES = ['RECEPCIONADA', 'OPINIONES_EN_CURSO', 'OPINIONES_COMPLETAS'];
 
+function formatDateOnly(value?: string | null) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}`;
+}
+
 export default function Stage1Propuesta({
     agreementId,
     status,
@@ -71,6 +81,16 @@ export default function Stage1Propuesta({
     const { agreement, opinion_requests, counts, config } = status;
     const documents = status.documents ?? [];
     const processStatus = agreement.process_status;
+
+    const documentFecha = (doc: { opinion_request_id?: number | null; created_at?: string }) => {
+        const request = doc.opinion_request_id
+            ? opinion_requests.find((r) => r.id === doc.opinion_request_id)
+            : undefined;
+        if (request?.response_date) {
+            return formatDateOnly(request.response_date);
+        }
+        return doc.created_at ? formatDateOnly(doc.created_at) : '—';
+    };
 
     const [defaultTargets, setDefaultTargets] = useState<Dependencia[]>([]);
     const [expandedRequest, setExpandedRequest] = useState<number | null>(null);
@@ -735,9 +755,9 @@ export default function Stage1Propuesta({
                                                         {req.response_date && (
                                                             <span>
                                                                 F. Respuesta:{' '}
-                                                                {new Date(
+                                                                {formatDateOnly(
                                                                     req.response_date,
-                                                                ).toLocaleDateString('es-PE')}
+                                                                )}
                                                             </span>
                                                         )}
                                                         {req.oficio_number && (
@@ -835,9 +855,9 @@ export default function Stage1Propuesta({
                                                             </span>{' '}
                                                             <span className="text-gray-800">
                                                                 {req.response_date
-                                                                    ? new Date(
+                                                                    ? formatDateOnly(
                                                                           req.response_date,
-                                                                      ).toLocaleDateString('es-PE')
+                                                                      )
                                                                     : '—'}
                                                             </span>
                                                         </div>
@@ -938,11 +958,7 @@ export default function Stage1Propuesta({
                                             </span>
                                         </td>
                                         <td className="px-6 py-3 text-xs text-gray-500">
-                                            {doc.created_at
-                                                ? new Date(doc.created_at).toLocaleDateString(
-                                                      'es-PE',
-                                                  )
-                                                : '—'}
+                                            {documentFecha(doc)}
                                         </td>
                                         <td className="px-6 py-3 text-right">
                                             <div className="flex items-center justify-end gap-3">
