@@ -3,9 +3,9 @@ import mysql from 'mysql2/promise';
 const conn = await mysql.createConnection({
   host: '127.0.0.1',
   port: 3306,
-  user: 'root',
-  password: 'root',
-  database: 'ocri_db',
+  user: 'ocri',
+  password: 'OcriDB@Coop2025',
+  database: 'ocri',
 });
 
 try {

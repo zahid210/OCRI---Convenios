@@ -310,7 +310,7 @@ export function ModalShell({
                         {title}
                     </h2>
                 </div>
-                {children}
+                    {children}
                 <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa]">
                     {footer}
                 </div>
@@ -318,3 +318,17 @@ export function ModalShell({
         </div>
     );
 }
+
+/**
+ * Destinos de la navegación guiada: tras cruzar de ETAPA, la app lleva al
+ * apartado correspondiente del flujo (sin obligar a usar el sidebar).
+ *
+ *  - Fin de E1 (propuesta → Rectorado)      → /registro/:id   (E2, decisión)
+ *  - Inicio de E3 (publicado → seguimiento) → /seguimiento/:id (E3)
+ *  - Fin de E3 (seguimiento concluido)      → /convenios/:id   (ficha final)
+ */
+export const NEXT_STAGE_DESTINATION = (id: number) => ({
+    toRegistro: `/registro/${id}`,
+    toSeguimiento: `/seguimiento/${id}`,
+    toConvenio: `/convenios/${id}`,
+});

@@ -10,11 +10,6 @@ describe('AppController', () => {
       status: 'ok',
       database: 'connected',
       totalUsers: 1,
-      sampleUser: {
-        id: 1,
-        name: 'Administrador',
-        email: 'admin@uncp.edu.pe',
-      },
     }),
   };
 
@@ -38,11 +33,6 @@ describe('AppController', () => {
         status: 'ok',
         database: 'connected',
         totalUsers: 1,
-        sampleUser: {
-          id: 1,
-          name: 'Administrador',
-          email: 'admin@uncp.edu.pe',
-        },
       });
     });
   });

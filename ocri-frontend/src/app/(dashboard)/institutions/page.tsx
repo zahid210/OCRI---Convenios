@@ -172,9 +172,8 @@ export default function InstitutionsIndexPage() {
                         Directorio de Instituciones
                     </h1>
                     <div className="flex items-center gap-2 text-gray-500">
-                        <Building2 className="h-4 w-4" />
                         <span className="text-xs text-gray-500">
-                            Oficina de Cooperación y Relaciones Internacionales • UNCP
+                            Oficina de Cooperación y Relaciones Internacionales
                         </span>
                     </div>
                 </div>

@@ -719,7 +719,6 @@ export class ProcessService {
     const depName = request.dependencias?.name ?? 'Dependencia';
     const title =
       request.agreements?.title ?? 'convenio de cooperación interinstitucional';
-    const tramite = request.agreements?.tramite_code ?? '';
     const destinatario = request.directed_to ?? `Responsable de ${depName}`;
     const oficio = normalizeOficioNumber(request.oficio_number ?? undefined);
 
@@ -1317,7 +1316,9 @@ export class ProcessService {
 
     if (decision !== 'APPROVED' && decision !== 'REJECTED') {
       throw new BadRequestException(
-        `La decisión debe ser APPROVED o REJECTED. Valor recibido: ${decision ?? '(vacío)'}`,
+        `La decisión debe ser APPROVED o REJECTED. Valor recibido: ${String(
+          decision ?? '(vacío)',
+        )}`,
       );
     }
 

@@ -201,12 +201,13 @@ async function main() {
     lookups.json?.[0]?.id;
   check('tipo de convenio disponible', !!typeId);
 
-  // 2. Validación: crear sin archivos debe fallar con 400
-  const noFiles = await api('POST', '/agreements', {
-    json: { title: 'X', institution_id: institutionId, agreement_type_id: typeId },
+  // 2. Validación DTO: crear sin título debe fallar con 400
+  //    (los adjuntos dictamen/documentos_origen son opcionales en la API actual)
+  const noTitle = await api('POST', '/agreements', {
+    json: { institution_id: institutionId, agreement_type_id: typeId },
     expect: 400,
   });
-  check('crear sin archivos rechazado (400)', noFiles.status === 400);
+  check('crear sin título rechazado (400)', noTitle.status === 400);
 
   // 3. Crear trámite A (flujo feliz completo)
   let f1 = new FormData();
@@ -216,8 +217,9 @@ async function main() {
   f1.append('agreement_type_id', String(typeId));
   f1.append('applicant_unit', 'Facultad de Ingeniería');
   f1.append('rectorate_oficio_number', `OF-R-${Date.now()}`);
-  f1.append('oficio_solicitud', pdfBlob('oficio.pdf'));
-  f1.append('propuesta', pdfBlob('propuesta.pdf'));
+  f1.append('dictamen', pdfBlob('dictamen.pdf'));
+  f1.append('documentos_origen', pdfBlob('origen-1.pdf'));
+  f1.append('documentos_origen', pdfBlob('origen-2.pdf'));
   const created = await api('POST', '/agreements', { form: f1, expect: 201 });
   const agrA = created.json?.id ?? created.json?.agreement?.id;
   check('crear trámite A (201 RECEPCIONADA)', created.status === 201 && !!agrA, `id=${agrA} status=${created.json?.process_status}`);
@@ -256,12 +258,20 @@ async function main() {
   const reqIds = (statusAfterGen.json?.opinion_requests ?? []).map((r) => r.id);
   check('status expone 2 solicitudes', reqIds.length === 2, `${reqIds.length}`);
 
-  // 6. Enviar ambas
+  // 6. Enviar ambas solicitando el oficio: el humano abre el editor de oficio
+  //    (plantilla -> genera PDF y adjunta automáticamente). Es el flujo real de la UI.
   for (const rid of reqIds) {
-    const s = await api('POST', `/process/opinion-requests/${rid}/send`, {
-      json: { sent_via: 'EMAIL', adesa_number: `AD-${rid}` },
+    const tmpl = await api('GET', `/process/opinion-requests/${rid}/oficio/template`);
+    check(`plantilla oficio #${rid}`, tmpl.status === 200 && !!tmpl.json?.html, `status=${tmpl.status}`);
+    const s = await api('POST', `/process/opinion-requests/${rid}/oficio/generate`, {
+      json: {
+        bodyHtml: tmpl.json?.html ?? '<div class="doc-number"></div>',
+        oficio_number: `OF-${rid}`,
+        sent_via: 'ADESA',
+        adesa_number: `AD-${rid}`,
+      },
     });
-    check(`enviar solicitud #${rid}`, s.status < 300);
+    check(`generar oficio y enviar #${rid}`, s.status < 300, JSON.stringify(s.json).slice(0, 120));
   }
 
   // 7. Responder la última primero (la transición a OPINIONES_COMPLETAS solo al final)
@@ -279,8 +289,6 @@ async function main() {
 
   const rFirst = await respond(reqIds[0], 'opinion-a.pdf');
   check('registrar respuesta solicitud A', rFirst.status < 300);
-  const stDone = await api('GET', `/process/${agrA}/status`);
-  check('auto-transición a OPINIONES_COMPLETAS', stDone.json?.agreement?.process_status === 'OPINIONES_COMPLETAS', stDone.json?.agreement?.process_status);
 
   // 8. Validar opiniones (una observada y luego revalidada)
   const vBad = await api('POST', `/process/opinion-requests/${reqIds[0]}/validate`, {
@@ -299,6 +307,12 @@ async function main() {
     json: { valid: true },
   });
   check('revalidar opinión observada', vRe.status < 300);
+
+  // La auto-transición a OPINIONES_COMPLETAS ocurre al validar la última
+  // opinión (no al responderla), porque el expediente recién se habilita
+  // cuando todas quedan VALIDADA o CANCELADA.
+  const stDone = await api('GET', `/process/${agrA}/status`);
+  check('auto-transición a OPINIONES_COMPLETAS', stDone.json?.agreement?.process_status === 'OPINIONES_COMPLETAS', stDone.json?.agreement?.process_status);
 
   // 9. Generar expediente técnico (auto-merge de opiniones) y documentos para Rectorado
   const genExp = await api('POST', `/process/${agrA}/generate-expediente`, { expect: 201 });
@@ -332,6 +346,21 @@ async function main() {
     stRec.json?.agreement?.process_status,
   );
 
+  // Coherencia de bandejas por ciclo de vida: un convenio ENVIADO_A_RECTORADO
+  // pertenece a la Etapa 2 (Registro), no a la Etapa 1 (Propuestas).
+  const scopeReg = await api('GET', '/agreements?scope=en_registro&per_page=100');
+  const scopeTra = await api('GET', '/agreements?scope=tramite&per_page=100');
+  const regIds = (scopeReg.json?.data ?? []).map((a) => a.id);
+  const traIds = (scopeTra.json?.data ?? []).map((a) => a.id);
+  check(
+    'ENVIADO_A_RECTORADO se lista en Bandeja de Registro (Etapa 2)',
+    regIds.includes(agrA),
+  );
+  check(
+    'ENVIADO_A_RECTORADO NO se lista en Bandeja de Propuestas (Etapa 1)',
+    !traIds.includes(agrA),
+  );
+
   // 10. Decisión de Rectorado: SUSCRITO
   const dec = async (extra) => {
     const f = new FormData();
@@ -350,17 +379,7 @@ async function main() {
     JSON.stringify(decOk.json).slice(0, 160),
   );
 
-  // 11. Publicación y registro
-  const pub = await api('POST', `/process/${agrA}/publish`, {
-    form: (() => {
-      const f = new FormData();
-      f.append('file', pdfBlob('publicacion.pdf'));
-      return f;
-    })(),
-  });
-  const stPub = await api('GET', `/process/${agrA}/status`);
-  check('publicación -> PUBLICADO', pub.status < 300 && stPub.json?.agreement?.process_status === 'PUBLICADO');
-
+  // 11. Registro institucional (SUSCRITO -> REGISTRADO) y publicación (-> PUBLICADO)
   const regNoFile = await api('POST', `/process/${agrA}/register-agreement`, {
     form: (() => {
       const f = new FormData();
@@ -398,12 +417,25 @@ async function main() {
   const respCount = detailA.json?.responsables?.length ?? detailA.json?.agreement?.responsables?.length ?? -1;
   check('responsables registrados (2)', respCount === 2, `${respCount} -> ${JSON.stringify(detailA.json).slice(0, 200)}`);
 
+  // 11.2 Publicación (REGISTRADO -> PUBLICADO) y después E3
+  const pub = await api('POST', `/process/${agrA}/publish`, {
+    form: (() => {
+      const f = new FormData();
+      f.append('file', pdfBlob('publicacion.pdf'));
+      return f;
+    })(),
+  });
+  const stPub = await api('GET', `/process/${agrA}/status`);
+  check('publicación -> PUBLICADO', pub.status < 300 && stPub.json?.agreement?.process_status === 'PUBLICADO', stPub.json?.agreement?.process_status);
+
   // 12. E3: seguimiento con ciclo de correcciones
+  // "Iniciar Seguimiento" = request-workplan: PUBLICADO (fin E2) -> EN_SEGUIMIENTO
   const wpReq = await api('POST', `/agreements/${agrA}/request-workplan`);
   const stSeg = await api('GET', `/process/${agrA}/status`);
+  console.log('DBG wpReq', wpReq.status, JSON.stringify(wpReq.json ?? wpReq.error).slice(0, 200));
   check(
-    'solicitar plan de trabajo (plan ya auto-creado, sigue REGISTRADO)',
-    wpReq.status < 300 && stSeg.json?.agreement?.process_status === 'REGISTRADO',
+    'solicitar plan de trabajo inicia E3 (PUBLICADO -> EN_SEGUIMIENTO)',
+    wpReq.status < 300 && stSeg.json?.agreement?.process_status === 'EN_SEGUIMIENTO',
     stSeg.json?.agreement?.process_status,
   );
 
@@ -445,7 +477,7 @@ async function main() {
   });
   const stAfterPlan = await api('GET', `/process/${agrA}/status`);
   check(
-    'plan aprobado -> EN_SEGUIMIENTO automatico',
+    'plan aprobado (ya EN_SEGUIMIENTO desde el inicio)',
     apprWp.status < 300 && stAfterPlan.json?.agreement?.process_status === 'EN_SEGUIMIENTO',
     stAfterPlan.json?.agreement?.process_status,
   );
@@ -498,8 +530,8 @@ async function main() {
   fB.append('institution_id', String(institutionId));
   fB.append('agreement_type_id', String(typeId));
   fB.append('rectorate_oficio_number', `OF-R-B-${Date.now()}`);
-  fB.append('oficio_solicitud', pdfBlob('b-oficio.pdf'));
-  fB.append('propuesta', pdfBlob('b-propuesta.pdf'));
+  fB.append('dictamen', pdfBlob('b-dictamen.pdf'));
+  fB.append('documentos_origen', pdfBlob('b-origen.pdf'));
   const createdB = await api('POST', '/agreements', { form: fB });
   const agrB = createdB.json?.id ?? createdB.json?.agreement?.id;
   check('crear trámite B', createdB.status === 201 && !!agrB, `id=${agrB}`);
@@ -508,7 +540,14 @@ async function main() {
   await api('POST', `/process/${agrB}/opinion-requests`, { json: { dependencia_ids: [depB[0]] } });
   const stB = await api('GET', `/process/${agrB}/status`);
   const ridB = stB.json?.opinion_requests?.[0]?.id;
-  await api('POST', `/process/opinion-requests/${ridB}/send`, { json: { sent_via: 'EMAIL' } });
+  const tmplB = await api('GET', `/process/opinion-requests/${ridB}/oficio/template`);
+  await api('POST', `/process/opinion-requests/${ridB}/oficio/generate`, {
+    json: {
+      bodyHtml: tmplB.json?.html ?? '<div class="doc-number"></div>',
+      oficio_number: `OF-B-${ridB}`,
+      sent_via: 'EMAIL',
+    },
+  });
   await respond(ridB, 'b-opinion.pdf');
   await api('POST', `/process/opinion-requests/${ridB}/validate`, { json: { valid: true } });
 
@@ -572,15 +611,115 @@ async function main() {
     `estado=${stBEnd.json?.agreement?.process_status} http=${dupRes.status}`,
   );
 
-  // 15. Paneles y descarga protegida
+  // 15. Paneles y descarga protegida (la bandeja de seguimiento es la cola
+  //     de la Etapa 3: solo convenios EN_SEGUIMIENTO o CONCLUIDO, jamás
+  //     PUBLICADO, que es el cierre de la Etapa 2 · Registro)
   const seg = await api('GET', '/seguimiento');
-  check('panel seguimiento', seg.status === 200);
+  const segList = seg.json?.data ?? seg.json ?? [];
+  check('panel seguimiento (Etapa 3, sin PUBLICADO)', seg.status === 200 &&
+    segList.every((r) => ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'].includes(r.process_status)));
+  check('panel seguimiento incluye agrA EN_SEGUIMIENTO', (segList.some((r) => r.id === agrA)));
   const rep = await api('GET', '/reports/summary');
   check('reportes summary', rep.status === 200);
   const notif = await api('GET', '/notifications');
   check('notificaciones', notif.status === 200);
   const exp = await api('GET', '/agreements/expiration-tracking');
   check('expiración tracking', exp.status === 200);
+
+  // 15.1 Auditoría "primer uso": catálogos y consultas que un humano real
+  //     ejecuta al navegar el sistema por primera vez.
+  const docTypes = await api('GET', '/document-types');
+  check(
+    'catálogo tipos de documento sembrado (>10)',
+    (Array.isArray(docTypes.json) ? docTypes.json : docTypes.json?.data ?? []).length > 10,
+  );
+
+  const defOp = await api('GET', '/dependencias/default-opinions');
+  const defOpList = defOp.json ?? [];
+  check('dependencias con opinión por defecto (lookup UI)', defOp.status === 200 && defOpList.length >= 2, `${defOpList.length}`);
+
+  const sDeps = await api('GET', '/dependencias');
+  check('catálogo de dependencias sembrado (>=9)', (sDeps.json?.data ?? sDeps.json ?? []).length >= 9);
+
+  const cfg = await api('GET', '/config');
+  const cfgList = Array.isArray(cfg.json) ? cfg.json : cfg.json?.data ?? [];
+  check('config app (días de opinión/aviso)', cfg.status === 200 && cfgList.some((e) => e.key === 'opinion_deadline_days'), JSON.stringify(cfgList.slice(0, 2)).slice(0, 80));
+
+  const countries = await api('GET', '/institutions/countries');
+  check('catálogo de países', countries.status === 200 && Array.isArray(countries.json));
+
+  const lkInst = await api('GET', '/agreements/lookups/institutions');
+  check('lookup instituciones (formulario nueva propuesta)', lkInst.status === 200);
+
+  const lkTypes = await api('GET', '/agreements/lookups/types');
+  check('lookup tipos de convenio (formulario)', lkTypes.status === 200 && (lkTypes.json?.length ?? lkTypes.json?.data?.length ?? 0) >= 4);
+
+    // Paneles con filtros (las bandejas envían scope + búsqueda real)
+  for (const scope of ['tramite', 'en_registro', 'registrados']) {
+    const q = await api('GET', `/agreements?scope=${scope}`);
+    check(`bandeja scope=${scope}`, q.status === 200 && q.json?.data !== undefined);
+  }
+
+
+  const searchAgr = await api('GET', `/agreements?search=ECONVENIO`);
+  check('búsqueda full-text convenios', searchAgr.status === 200 && Array.isArray(searchAgr.json?.data));
+
+  const instList = await api('GET', '/institutions');
+  check('panel instituciones', instList.status === 200 && Array.isArray(instList.json?.data ?? instList.json));
+
+  const usersList = await api('GET', '/users');
+  check('panel usuarios (admin)', usersList.status === 200 && (usersList.json?.data ?? usersList.json ?? []).length >= 1);
+
+  const reports = await Promise.all([
+    api('GET', '/reports/by-status'),
+    api('GET', '/reports/by-country'),
+    api('GET', '/reports/by-type'),
+    api('GET', '/reports/by-institution'),
+    api('GET', '/reports/top-institutions'),
+    api('GET', '/reports/expiring'),
+    api('GET', '/reports/expired'),
+  ]);
+  check('reportes: 7 gráficas responden 200', reports.every((r) => r.status === 200), reports.map((r) => r.status).join(','));
+
+  const repExp = await api('GET', '/reports/export');
+  check('exportación Excel reportes', repExp.status === 200 && repExp.ms < 5000, `status=${repExp.status}`);
+
+  const authMe = await api('GET', '/auth/me');
+  check('sesión /auth/me (header del dashboard)', authMe.status === 200 && authMe.json?.email, authMe.json?.email);
+
+  // 15.2 Consultas del detalle universal (lo que carga /convenios/:id)
+  const detailB = await api('GET', `/agreements/${agrA}`);
+  check('detalle universal: agreements/:id', detailB.status === 200);
+  const statusA2 = await api('GET', `/process/${agrA}/status`);
+  check('detalle universal: process/:id/status', statusA2.status === 200 && statusA2.json?.agreement, statusA2.json?.seguimiento ? 'con seguimiento' : 'ok');
+  const delivA = await api('GET', `/agreements/${agrA}/deliverables`);
+  check('detalle universal: deliverables E3', delivA.status === 200 && Array.isArray(delivA.json ?? delivA.json?.data));
+
+  // 15.3 Mantenimiento de vigencia (semáforo manual) y complete-monitoring
+  const val = await api('POST', `/process/${agrA}/validity`, {
+    json: { validity: 'SUSPENDIDO', reason: 'Auditoría de prueba.' },
+  });
+  const val2 = await api('POST', `/process/${agrA}/validity`, {
+    json: { validity: 'VIGENTE' },
+  });
+  const stVal = await api('GET', `/process/${agrA}/status`);
+  check(
+    'vigencia manual SUSPENDIDO->VIGENTE',
+    val.status < 300 && val2.status < 300 && stVal.json?.agreement?.validity_status === 'VIGENTE',
+    `http=${val.status}/${val2.status} estado=${stVal.json?.agreement?.validity_status}`,
+  );
+
+  const completeMon = await api('POST', `/agreements/${agrA}/complete-monitoring`, {});
+  const stCm = await api('GET', `/process/${agrA}/status`);
+  check(
+    'complete-monitoring idempotente (ya concluido)',
+    completeMon.status === 200 || completeMon.status === 201 || (completeMon.status === 400 && /conclui|finaliz|Seguimiento/i.test(String(completeMon.json?.message ?? ''))),
+    `http=${completeMon.status} estado=${stCm.json?.agreement?.process_status}`,
+  );
+
+  // 15.4 Historial de evento de un trámite en etapa temprana (rama B)
+  const eventsB = await api('GET', `/process/${agrB}/events`);
+  check('historial de eventos rama B poblado', (Array.isArray(eventsB.json) ? eventsB.json.length : eventsB.json?.data?.length ?? 0) > 8);
 
   const detailForFile = await api('GET', `/agreements/${agrA}`);
   const docsA = await api('GET', `/process/${agrA}/documents`);

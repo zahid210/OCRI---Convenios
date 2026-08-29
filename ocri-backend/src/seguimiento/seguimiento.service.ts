@@ -4,15 +4,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FilterSeguimientoDto } from './dto/filter-seguimiento.dto';
 import { serializeBigInt } from '../common/process.constants';
 
-interface DependenciaRow {
-  dependencia_name: string;
+interface EntregableRow {
+  id: number;
+  type: string;
   status: string;
-  opinion_validada: boolean;
-  sent_via?: string | null;
-  adesa_number?: string | null;
-  response_date?: string | null;
-  due_at?: string | null;
-  vencida: boolean;
+  title: string;
+  period: string | null;
+  version: number;
+  submitted_at: string | null;
+  registered_at: string | null;
 }
 
 export interface TrackingRow {
@@ -23,24 +23,21 @@ export interface TrackingRow {
   institucion: string;
   pais: string;
   process_status: string;
-  total_areas: number;
-  areas_completadas: number;
-  areas_pendientes: number;
-  docs_faltantes: number;
-  envios_registrados: number;
-  sin_hoja_ruta: boolean;
+  total_entregables: number;
+  entregables_registrados: number;
+  plan_trabajo: EntregableRow | null;
+  informes: EntregableRow[];
+  sin_entregables: boolean;
   pendiente_completar: boolean;
   progreso: number;
-  areas: DependenciaRow[];
 }
 
-const TRACKED_STATUSES = [
-  'RECEPCIONADA',
-  'OPINIONES_EN_CURSO',
-  'OPINIONES_COMPLETAS',
-  'EXPEDIENTE_TECNICO_LISTO',
-  'ENVIADO_A_RECTORADO',
-] as const;
+/**
+ * Etapa 3 · Seguimiento: solo convenios cuyo seguimiento está en gestión
+ * (EN_SEGUIMIENTO) o ya concluido. PUBLICADO es el cierre de la Etapa 2
+ * (Registro) y NO pertenece a esta bandeja.
+ */
+const TRACKED_STATUSES = ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'] as const;
 
 @Injectable()
 export class SeguimientoService {
@@ -78,34 +75,29 @@ export class SeguimientoService {
     return where;
   }
 
-  private buildDependenciaRow(r: {
+  private buildEntregable(d: {
+    id: bigint;
+    type: string;
     status: string;
-    sent_via: string | null;
-    adesa_number: string | null;
-    due_at: Date | null;
-    response_date: Date | null;
-    dependencias: { name: string } | null;
-  }): DependenciaRow {
-    const isClosed = r.status === 'VALIDADA' || r.status === 'CANCELADA';
-
-    let vencida = false;
-    if (!isClosed && r.due_at) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      vencida = new Date(r.due_at) < today;
-    }
-
+    title: string;
+    period: string | null;
+    version: number;
+    submitted_at: Date | null;
+    registered_at: Date | null;
+  }): EntregableRow {
     return {
-      dependencia_name: r.dependencias?.name ?? 'Dependencia',
-      status: r.status,
-      opinion_validada: r.status === 'VALIDADA',
-      sent_via: r.sent_via,
-      adesa_number: r.adesa_number,
-      response_date: r.response_date
-        ? r.response_date.toISOString().slice(0, 10)
+      id: Number(d.id),
+      type: d.type,
+      status: d.status,
+      title: d.title,
+      period: d.period,
+      version: d.version,
+      submitted_at: d.submitted_at
+        ? d.submitted_at.toISOString().slice(0, 10)
         : null,
-      due_at: r.due_at ? r.due_at.toISOString().slice(0, 10) : null,
-      vencida,
+      registered_at: d.registered_at
+        ? d.registered_at.toISOString().slice(0, 10)
+        : null,
     };
   }
 
@@ -113,17 +105,19 @@ export class SeguimientoService {
     a: Prisma.agreementsGetPayload<{
       include: {
         institutions: { select: { name: true; country: true } };
-        opinion_requests: {
-          include: { dependencias: { select: { name: true } } };
-        };
+        deliverables: true;
       };
     }>,
   ): TrackingRow {
-    const requests = a.opinion_requests ?? [];
-    const areas = requests.map((r) => this.buildDependenciaRow(r));
+    const deliverables = a.deliverables ?? [];
+    const planTrabajo =
+      deliverables.find((d) => d.type === 'PLAN_DE_TRABAJO') ?? null;
+    const informes = deliverables.filter((d) => d.type !== 'PLAN_DE_TRABAJO');
 
-    const areasCompletadas = areas.filter((d) => d.opinion_validada).length;
-    const areasPendientes = areas.length - areasCompletadas;
+    const registrados = deliverables.filter(
+      (d) => d.status === 'REGISTRADO',
+    ).length;
+    const total = deliverables.length;
 
     return {
       id: Number(a.id),
@@ -133,19 +127,17 @@ export class SeguimientoService {
       institucion: a.institutions?.name || 'No especificada',
       pais: a.institutions?.country || 'PERÚ',
       process_status: a.process_status,
-      total_areas: areas.length,
-      areas_completadas: areasCompletadas,
-      areas_pendientes: areasPendientes,
-      docs_faltantes: areas.filter(
-        (d) => d.status !== 'VALIDADA' && d.status !== 'CANCELADA',
-      ).length,
-      envios_registrados: areas.filter((d) => Boolean(d.sent_via)).length,
-      sin_hoja_ruta: areas.length === 0,
-      pendiente_completar: areas.length > 0 && areasPendientes > 0,
-      progreso: areas.length
-        ? Math.round((areasCompletadas / areas.length) * 100)
-        : 0,
-      areas,
+      total_entregables: total,
+      entregables_registrados: registrados,
+      plan_trabajo: planTrabajo ? this.buildEntregable(planTrabajo) : null,
+      informes: informes.map((d) => this.buildEntregable(d)),
+      sin_entregables: total === 0,
+      pendiente_completar: total > 0 && registrados < total,
+      progreso: total
+        ? Math.round((registrados / total) * 100)
+        : a.process_status === 'SEGUIMIENTO_CONCLUIDO'
+          ? 100
+          : 0,
     };
   }
 
@@ -159,9 +151,8 @@ export class SeguimientoService {
       where,
       include: {
         institutions: { select: { name: true, country: true } },
-        opinion_requests: {
-          include: { dependencias: { select: { name: true } } },
-          orderBy: [{ response_date: 'asc' }, { created_at: 'asc' }],
+        deliverables: {
+          orderBy: [{ type: 'asc' }, { created_at: 'asc' }],
         },
       },
       orderBy: { id: 'desc' },
@@ -170,7 +161,7 @@ export class SeguimientoService {
     let rows = agreements.map((a) => this.buildRow(a));
 
     if (filter.pendientes === 'true') {
-      rows = rows.filter((r) => r.pendiente_completar || r.sin_hoja_ruta);
+      rows = rows.filter((r) => r.pendiente_completar || r.sin_entregables);
     }
 
     const total = rows.length;
@@ -194,70 +185,41 @@ export class SeguimientoService {
     const agreements = await this.prisma.agreements.findMany({
       where,
       include: {
-        opinion_requests: {
+        deliverables: {
           select: {
+            type: true,
             status: true,
-            sent_via: true,
-            due_at: true,
           },
         },
       },
     });
 
-    const rows = agreements.map((a) => {
-      const requests = a.opinion_requests;
-      const completadas = requests.filter(
-        (r) => r.status === 'VALIDADA',
-      ).length;
-      const pendientesOpiniones = requests.filter(
-        (r) => r.status !== 'VALIDADA' && r.status !== 'CANCELADA',
-      );
-
-      let vencidas = 0;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      for (const r of pendientesOpiniones) {
-        if (r.due_at && new Date(r.due_at) < today) vencidas += 1;
-      }
-
-      return {
-        process_status: a.process_status,
-        total_areas: requests.length,
-        areas_completadas: completadas,
-        con_pendientes: requests.length > 0 && pendientesOpiniones.length > 0,
-        sin_hoja_ruta: requests.length === 0,
-        envios_registrados: requests.filter((r) => Boolean(r.sent_via)).length,
-        vencidas,
-      };
-    });
-
-    const porEstado: Record<string, number> = {};
+    let totalEntregables = 0;
+    let registrados = 0;
     let conPendientes = 0;
-    let sinHojaRuta = 0;
-    let enviosRegistrados = 0;
-    let opinionesVencidas = 0;
-    let totalAreas = 0;
-    let areasCompletadas = 0;
+    let sinEntregables = 0;
+    const porEstado: Record<string, number> = {};
 
-    for (const r of rows) {
-      porEstado[r.process_status] = (porEstado[r.process_status] ?? 0) + 1;
-      if (r.con_pendientes) conPendientes += 1;
-      if (r.sin_hoja_ruta) sinHojaRuta += 1;
-      enviosRegistrados += r.envios_registrados;
-      opinionesVencidas += r.vencidas;
-      totalAreas += r.total_areas;
-      areasCompletadas += r.areas_completadas;
+    for (const a of agreements) {
+      porEstado[a.process_status] = (porEstado[a.process_status] ?? 0) + 1;
+      const delivs = a.deliverables ?? [];
+      const regPorAgreement = delivs.filter(
+        (d) => d.status === 'REGISTRADO',
+      ).length;
+      totalEntregables += delivs.length;
+      registrados += regPorAgreement;
+      if (delivs.length > 0 && regPorAgreement < delivs.length)
+        conPendientes += 1;
+      if (delivs.length === 0) sinEntregables += 1;
     }
 
     return serializeBigInt({
-      total: rows.length,
+      total: agreements.length,
       por_estado: porEstado,
       con_pendientes: conPendientes,
-      sin_hoja_ruta: sinHojaRuta,
-      envios_registrados: enviosRegistrados,
-      opiniones_vencidas: opinionesVencidas,
-      total_areas: totalAreas,
-      areas_completadas: areasCompletadas,
+      sin_entregables: sinEntregables,
+      total_entregables: totalEntregables,
+      entregables_registrados: registrados,
     });
   }
 }

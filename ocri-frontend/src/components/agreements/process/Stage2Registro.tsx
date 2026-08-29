@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     publishConvenio,
-    rectorateDecision,
     registerConvenio,
+    rectorateDecision,
+    requestWorkPlan,
 } from '@/lib/api';
 import { ProcessStatus } from '@/types/agreements';
 import { useToast } from '@/components/ui/toast';
@@ -17,12 +19,14 @@ import {
     ChevronDown,
     FileCheck,
     Loader2,
+    PlayCircle,
     Plus,
     Trash2,
     XCircle,
 } from 'lucide-react';
 import {
     ModalShell,
+    NEXT_STAGE_DESTINATION,
     SectionCard,
 } from './shared';
 
@@ -49,7 +53,6 @@ export default function Stage2Registro({
     decidedAt,
     publishedAt,
     registeredAt,
-    validityStatus: _validityStatus,
     canManage,
     onRefresh,
 }: {
@@ -59,12 +62,12 @@ export default function Stage2Registro({
     decidedAt?: string | null;
     publishedAt?: string | null;
     registeredAt?: string | null;
-    validityStatus?: unknown;
     canManage: boolean;
     onRefresh: () => Promise<void>;
 }) {
     const toast = useToast();
     const confirm = useConfirm();
+    const router = useRouter();
 
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectMessage, setRejectMessage] = useState('');
@@ -85,6 +88,8 @@ export default function Stage2Registro({
     const [regResponsables, setRegResponsables] = useState<ResponsableRow[]>([
         { ...EMPTY_RESPONSABLE },
     ]);
+
+    const [isStartingSeguimiento, setIsStartingSeguimiento] = useState(false);
 
     const formatDate = (value?: string | null) =>
         value ? new Date(value).toLocaleDateString('es-PE') : null;
@@ -215,6 +220,27 @@ export default function Stage2Registro({
         }
     };
 
+    const handleStartSeguimiento = async () => {
+        const confirmed = await confirm({
+            title: 'Iniciar Seguimiento',
+            description:
+                '¿Iniciar la Etapa 3 (Seguimiento)? Se formalizará el convenio publicado y se solicitará el Plan de Trabajo a los responsables.',
+        });
+        if (!confirmed) return;
+        setIsStartingSeguimiento(true);
+        try {
+            await requestWorkPlan(agreementId);
+            toast.success('Seguimiento iniciado. Se solicitó el Plan de Trabajo.');
+            await onRefresh();
+            router.replace(NEXT_STAGE_DESTINATION(agreementId).toSeguimiento);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Error al iniciar seguimiento';
+            toast.error(message);
+        } finally {
+            setIsStartingSeguimiento(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <SectionCard
@@ -267,6 +293,20 @@ export default function Stage2Registro({
                                     Publicar Convenio
                                 </button>
                             )}
+                            {processStatus === 'PUBLICADO' && (
+                                <button
+                                    onClick={handleStartSeguimiento}
+                                    disabled={isStartingSeguimiento}
+                                    className="inline-flex items-center gap-1.5 bg-[#0b6e4f] hover:bg-[#095a41] text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+                                >
+                                    {isStartingSeguimiento ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <PlayCircle className="h-4 w-4" />
+                                    )}
+                                    Iniciar Seguimiento
+                                </button>
+                            )}
                         </>
                     )
                 }
@@ -278,6 +318,35 @@ export default function Stage2Registro({
                             <p className="font-semibold">Propuesta no suscrita</p>
                             <p className="mt-1 text-xs text-red-600">
                                 Trámite finalizado. Se notificó a la Entidad Solicitante.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {decision === 'APPROVED' && processStatus === 'SUSCRITO' && (
+                    <div className="mb-6 bg-[#eefaf4] border border-[#b5e3d0] p-4 text-sm text-[#0b6e4f] flex items-start gap-2">
+                        <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-semibold">
+                                ✓ Rectorado aprobó · es ahora un Convenio oficial
+                            </p>
+                            <p className="mt-1 text-xs">
+                                Esta propuesta fue aprobada por Rectorado y a partir de este
+                                momento se gestiona como Convenio. Complete el registro formal
+                                para darle vigencia.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {processStatus === 'PUBLICADO' && (
+                    <div className="mb-6 bg-[#f0fbf6] border border-[#b5e3d0] p-4 text-sm text-[#0b6e4f] flex items-start gap-2">
+                        <PlayCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-semibold">Convenio publicado · Etapa 2 completada</p>
+                            <p className="mt-1 text-xs">
+                                El registro ha concluido. Inicie la Etapa 3 (Seguimiento) para
+                                solicitar el Plan de Trabajo a los responsables.
                             </p>
                         </div>
                     </div>
@@ -301,8 +370,9 @@ export default function Stage2Registro({
                               }
                             : decision === 'APPROVED'
                               ? {
-                                    label: 'Convenio suscrito',
-                                    description: 'Rectorado aprobó la propuesta.',
+                                    label: 'Convenio suscrito · la propuesta es ahora un Convenio',
+                                    description:
+                                        'Rectorado aprobó la propuesta. A partir de aquí el trámite pasa a ser un Convenio oficial.',
                                     date: decidedAt ?? null,
                                     state: 'done' as const,
                                 }

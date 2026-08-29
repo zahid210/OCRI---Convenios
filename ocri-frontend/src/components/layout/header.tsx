@@ -1,7 +1,6 @@
 'use client';
 
 import { Menu, LogOut } from 'lucide-react';
-import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -19,15 +18,16 @@ import { cn } from '@/lib/utils';
 import { useUser } from '@/components/user-provider';
 import { HeaderSearch } from '@/components/layout/header-search';
 import { HeaderNotifications } from '@/components/layout/header-notifications';
-import { ROLE_LABELS, canManage, isAdmin } from '@/lib/auth';
+import { NavTree } from '@/components/layout/nav-tree';
+import { ROLE_LABELS } from '@/lib/auth';
 
 export function Header() {
     const router = useRouter();
     const currentUser = useUser();
 
     const handleLogout = () => {
-        Cookies.remove('access_token');
-        Cookies.remove('user');
+        Cookies.remove('access_token', { path: '/' });
+        Cookies.remove('user', { path: '/' });
         router.push('/login');
         router.refresh();
     };
@@ -53,22 +53,8 @@ export function Header() {
                             </span>
                         </div>
                     </div>
-                    <div className="flex-1 overflow-auto py-6 space-y-1">
-                        <div className="px-6 mb-3 text-[10px] font-bold uppercase tracking-wider text-[#82b8a2]">
-                            Módulos Principales
-                        </div>
-                        <Link href="/dashboard" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Dashboard</Link>
-                        <Link href="/propuestas" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Bandeja de Propuestas</Link>
-                        {canManage(currentUser) && (
-                            <Link href="/propuestas/create" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Nueva Propuesta</Link>
-                        )}
-                        <Link href="/convenios" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Convenios Oficiales</Link>
-                        <Link href="/seguimiento" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Bandeja de Seguimiento</Link>
-                        <Link href="/institutions" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Instituciones Aliadas</Link>
-                        <Link href="/reports" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Reportes</Link>
-                        {isAdmin(currentUser) && (
-                            <Link href="/users" className="block px-6 py-3 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all">Usuarios</Link>
-                        )}
+                    <div className="flex-1 overflow-auto py-6">
+                        <NavTree />
                     </div>
                 </SheetContent>
             </Sheet>

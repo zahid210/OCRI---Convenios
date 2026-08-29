@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { getExpirationTracking } from '@/lib/api';
 import { ExpirationTrackingItem } from '@/types/agreements';
 import {
@@ -11,7 +12,6 @@ import {
     Loader2,
     ChevronLeft,
     ChevronRight,
-    Building2,
     Activity,
     ChevronDown,
 } from 'lucide-react';
@@ -49,6 +49,7 @@ const VIGENCIA_CONFIG: Record<
 type FilterKey = 'ALL' | 'VIGENTE' | 'POR_VENCER' | 'VENCIDO';
 
 export default function ConveniosPage() {
+    const router = useRouter();
     const [items, setItems] = useState<ExpirationTrackingItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -117,7 +118,6 @@ export default function ConveniosPage() {
             <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="space-y-1">
                     <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-[#df9f1f]" />
                         Directorio de Convenios
                     </h1>
                     <p className="text-xs text-gray-500">
@@ -223,7 +223,7 @@ export default function ConveniosPage() {
                                     <tr
                                         key={item.id}
                                         className="group hover:bg-gray-50 transition-colors cursor-pointer"
-                                        onClick={() => window.location.href = `/convenios/${item.id}`}
+                                        onClick={() => router.push(`/convenios/${item.id}`)}
                                     >
                                         <td className="py-5">
                                             <div className="flex items-center gap-4 ml-10">

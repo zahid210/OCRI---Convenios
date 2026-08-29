@@ -131,33 +131,47 @@ export class DeliverablesService {
       where: { agreement_id: BigInt(agreementId), type: 'PLAN_DE_TRABAJO' },
     });
 
-    if (existing) {
-      return serializeBigInt(existing);
-    }
-
-    const deliverable = await this.prisma.$transaction(async (tx) => {
-      const d = await tx.deliverables.create({
-        data: {
-          agreement_id: BigInt(agreementId),
-          type: 'PLAN_DE_TRABAJO',
-          title: 'Plan de Trabajo',
-          status: 'SOLICITADO',
-          requested_at: new Date(),
-        },
-      });
+    const result = await this.prisma.$transaction(async (tx) => {
+      const d = existing
+        ? existing
+        : await tx.deliverables.create({
+            data: {
+              agreement_id: BigInt(agreementId),
+              type: 'PLAN_DE_TRABAJO',
+              title: 'Plan de Trabajo',
+              status: 'SOLICITADO',
+              requested_at: new Date(),
+            },
+          });
 
       await this.logEvent(
         tx,
         BigInt(agreementId),
         'PLAN_TRABAJO_SOLICITADO',
-        'OCRI solicitó a los responsables la elaboración y remisión del Plan de Trabajo.',
+        'OCRI solicitó a los responsables la elaboración y remisión del Plan de Trabajo. Se inicia la Etapa 3 (Seguimiento).',
         userId,
       );
+
+      // Inicio de la Etapa 3: PUBLICADO (fin de E2) -> EN_SEGUIMIENTO
+      if (agreement.process_status === 'PUBLICADO') {
+        validateTransition('PUBLICADO', 'EN_SEGUIMIENTO');
+        await tx.agreements.update({
+          where: { id: BigInt(agreementId) },
+          data: { process_status: 'EN_SEGUIMIENTO' },
+        });
+        await this.logEvent(
+          tx,
+          BigInt(agreementId),
+          'SEGUIMIENTO_INICIADO',
+          'El convenio pasó a EN_SEGUIMIENTO (Etapa 3 · Seguimiento).',
+          userId,
+        );
+      }
 
       return d;
     });
 
-    return serializeBigInt(deliverable);
+    return serializeBigInt(result);
   }
 
   // ─── E3 · Solicitar informe (semestral o final) ────────────────────────────
@@ -424,8 +438,6 @@ export class DeliverablesService {
             );
           }
         }
-
-        await this.concludeIfComplete(tx, deliverable.agreement_id, userId);
       } else {
         await tx.deliverables.update({
           where: { id: deliverable.id },

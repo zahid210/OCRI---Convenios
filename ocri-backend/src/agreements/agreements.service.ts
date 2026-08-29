@@ -12,7 +12,7 @@ import {
   deriveTemporalStatus,
   serializeBigInt,
   ProcessStatus,
-  IN_FLIGHT_STATUSES,
+  PROPOSAL_STATUSES,
 } from '../common/process.constants';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
@@ -211,19 +211,17 @@ export class AgreementsService {
     }
 
     if (filters.scope === 'tramite') {
-      where.process_status = { in: IN_FLIGHT_STATUSES };
+      // Etapa 1 · Propuesta: solo evaluación y armado de expediente
+      where.process_status = { in: PROPOSAL_STATUSES };
     } else if (filters.scope === 'en_registro') {
+      // Etapa 2 · Registro: decisión de Rectorado, registro y publicación
       where.process_status = {
-        in: ['SUSCRITO', 'REGISTRADO', 'PUBLICADO'],
+        in: ['ENVIADO_A_RECTORADO', 'NO_SUSCRITO', 'SUSCRITO', 'REGISTRADO', 'PUBLICADO'],
       };
     } else if (filters.scope === 'registrados') {
+      // Etapa 3 · Seguimiento: convenios publicados ya en gestión de entregables
       where.process_status = {
-        in: [
-          'REGISTRADO',
-          'PUBLICADO',
-          'EN_SEGUIMIENTO',
-          'SEGUIMIENTO_CONCLUIDO',
-        ],
+        in: ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'],
       };
     } else if (filters.process_status) {
       where.process_status = filters.process_status as ProcessStatus;

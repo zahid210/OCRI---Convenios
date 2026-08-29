@@ -47,8 +47,9 @@ export function validateTransition(current: string, next: string): void {
 }
 
 /**
- * Estados en los que el trámite aún está "En Trámite" (propuesta en evaluación).
- * A partir de SUSCRITO el convenio pasa al ámbito de registro/vigencia.
+ * Estados en los que el trámite aún está "En Trámite" (propuesta en evaluación,
+ * Etapa 1). A partir de SUSCRITO el convenio pasa al ámbito de registro/vigencia.
+ * Se incluye ENVIADO_A_RECTORADO para la semántica de reportes ("no suscrito").
  */
 export const IN_FLIGHT_STATUSES: ProcessStatus[] = [
   'RECEPCIONADA',
@@ -56,6 +57,17 @@ export const IN_FLIGHT_STATUSES: ProcessStatus[] = [
   'OPINIONES_COMPLETAS',
   'EXPEDIENTE_TECNICO_LISTO',
   'ENVIADO_A_RECTORADO',
+];
+
+/**
+ * Etapa 1 · Propuesta: estados donde OCRI aún arma y evalúa el expediente
+ * (la decisión de Rectorado ya pertenece a la Etapa 2 · Registro).
+ */
+export const PROPOSAL_STATUSES: ProcessStatus[] = [
+  'RECEPCIONADA',
+  'OPINIONES_EN_CURSO',
+  'OPINIONES_COMPLETAS',
+  'EXPEDIENTE_TECNICO_LISTO',
 ];
 
 /** Documentos exigidos para remitir el expediente a Rectorado (fin de E1). */

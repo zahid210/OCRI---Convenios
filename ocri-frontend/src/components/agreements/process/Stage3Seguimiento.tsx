@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     completeMonitoring,
     evaluateDeliverable,
@@ -30,6 +31,7 @@ import {
     DELIVERABLE_STATUS_COLORS,
     DELIVERABLE_STATUS_LABELS,
     ModalShell,
+    NEXT_STAGE_DESTINATION,
     SectionCard,
 } from './shared';
 
@@ -227,6 +229,7 @@ export default function Stage3Seguimiento({
 }) {
     const toast = useToast();
     const confirm = useConfirm();
+    const router = useRouter();
 
     const [reportType, setReportType] = useState<'INFORME_SEMESTRAL' | 'INFORME_FINAL'>(
         'INFORME_SEMESTRAL',
@@ -324,6 +327,7 @@ export default function Stage3Seguimiento({
             await completeMonitoring(agreementId);
             toast.success('Seguimiento concluido exitosamente.');
             await onRefresh();
+            router.replace(NEXT_STAGE_DESTINATION(agreementId).toConvenio);
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : 'Error al finalizar seguimiento';
@@ -340,7 +344,6 @@ export default function Stage3Seguimiento({
         >
             {processStatus === 'SEGUIMIENTO_CONCLUIDO' && (
                 <div className="mb-6 bg-green-50 border border-green-200 p-4 text-sm text-green-800 flex items-start gap-2">
-                    <CheckSquare className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
                     El seguimiento de este convenio ha concluido.
                 </div>
             )}
@@ -351,9 +354,7 @@ export default function Stage3Seguimiento({
                 </div>
             ) : deliverables.length === 0 ? (
                 <div className="py-12 text-center text-sm text-gray-500">
-                    {processStatus === 'PUBLICADO'
-                        ? 'El convenio está registrado y publicado. Pulse "Iniciar Seguimiento" para formalizar la etapa.'
-                        : 'No hay entregables registrados.'}
+                    No hay entregables registrados.
                 </div>
             ) : (
                 <div className="space-y-6">

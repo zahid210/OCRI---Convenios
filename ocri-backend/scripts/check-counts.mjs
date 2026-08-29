@@ -1,7 +1,13 @@
 import mysql from 'mysql2/promise';
+import 'dotenv/config';
 
+const url = new URL(process.env.DATABASE_URL ?? '');
 const conn = await mysql.createConnection({
-  host: '127.0.0.1', port: 3306, user: 'root', password: 'root', database: 'ocri_db',
+  host: url.hostname || '127.0.0.1',
+  port: Number(url.port || 3306),
+  user: decodeURIComponent(url.username) || 'ocri',
+  password: decodeURIComponent(url.password) || '',
+  database: url.pathname.slice(1) || 'ocri',
 });
 
 const tables = [

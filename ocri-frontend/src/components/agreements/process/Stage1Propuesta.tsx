@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     deleteOpinionRequest,
     downloadFile,
@@ -43,6 +44,7 @@ import {
     DOCUMENT_TYPE_LABELS,
     DOC_TYPE_ACCEPT,
     ModalShell,
+    NEXT_STAGE_DESTINATION,
     OPINION_STATUS_COLORS,
     OPINION_STATUS_LABELS,
     ProcessDetail,
@@ -69,16 +71,15 @@ export default function Stage1Propuesta({
     status,
     canManage,
     onRefresh,
-    afterRectoradoDocuments,
 }: {
     agreementId: number;
     status: ProcessDetail;
     canManage: boolean;
     onRefresh: () => Promise<void>;
-    afterRectoradoDocuments?: ReactNode;
 }) {
     const toast = useToast();
     const confirm = useConfirm();
+    const router = useRouter();
 
     const { agreement, opinion_requests, counts, config } = status;
     const documents = status.documents ?? [];
@@ -401,6 +402,7 @@ export default function Stage1Propuesta({
                 if (!cancelled) {
                     toast.success('Expediente enviado a Rectorado correctamente.');
                     await onRefresh();
+                    router.replace(NEXT_STAGE_DESTINATION(agreementId).toRegistro);
                 }
             } catch (err: unknown) {
                 if (!cancelled) {
@@ -415,7 +417,7 @@ export default function Stage1Propuesta({
         autoSend();
 
         return () => { cancelled = true; };
-    }, [allRectoradoReady, processStatus, agreementId, onRefresh]);
+    }, [allRectoradoReady, processStatus, agreementId, onRefresh, toast]);
 
     const openRespondModal = (requestId: number) => {
         setRespondDate('');
@@ -535,9 +537,6 @@ export default function Stage1Propuesta({
                         </div>
                     </SectionCard>
                 )}
-
-            {afterRectoradoDocuments}
-
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {[
                     { label: 'Total', value: counts.total, color: 'text-gray-900' },

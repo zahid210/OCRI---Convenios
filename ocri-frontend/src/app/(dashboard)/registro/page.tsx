@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Agreement, PaginatedResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
 import {
@@ -19,6 +20,16 @@ const REGISTRO_STATUS: Record<
     string,
     { label: string; hint: string; badge: string }
 > = {
+    ENVIADO_A_RECTORADO: {
+        label: 'Enviado a Rectorado',
+        hint: 'Aún es propuesta · esperando decisión',
+        badge: 'bg-purple-50 text-purple-700 border-purple-200',
+    },
+    NO_SUSCRITO: {
+        label: 'No Suscrito',
+        hint: 'Decisión desfavorable de Rectorado',
+        badge: 'bg-red-50 text-red-700 border-red-200',
+    },
     SUSCRITO: {
         label: 'Suscrito',
         hint: 'Pendiente de registro formal',
@@ -37,6 +48,7 @@ const REGISTRO_STATUS: Record<
 };
 
 export default function RegistroPage() {
+    const router = useRouter();
     const [data, setData] = useState<PaginatedResponse<Agreement> | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -99,9 +111,8 @@ export default function RegistroPage() {
                         Bandeja de Registro de Convenios
                     </h1>
                     <div className="flex items-center gap-2 text-gray-500">
-                        <Building2 className="h-4 w-4" />
                         <span className="text-xs text-gray-500">
-                            Convenios suscritos, en registro formal o en publicación
+                            Aprobación de Rectorado, registro formal y publicación
                         </span>
                     </div>
                 </div>
@@ -177,7 +188,7 @@ export default function RegistroPage() {
                                     <tr
                                         key={agreement.id}
                                         className="group hover:bg-gray-50 transition-colors cursor-pointer"
-                                        onClick={() => window.location.href = `/propuestas/${agreement.id}`}
+                                        onClick={() => router.push(`/registro/${agreement.id}`)}
                                     >
                                         <td className="py-5">
                                             <div className="flex items-center gap-4 ml-10">
@@ -226,7 +237,7 @@ export default function RegistroPage() {
                                         <td className="py-5 pr-12">
                                             <div className="flex items-center justify-end gap-2">
                                                 <Link
-                                                    href={`/propuestas/${agreement.id}`}
+                                                    href={`/registro/${agreement.id}`}
                                                     className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >

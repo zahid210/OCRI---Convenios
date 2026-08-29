@@ -7,15 +7,11 @@ export class AppService {
 
   async getHealth() {
     const userCount = await this.prisma.users.count();
-    const firstUser = await this.prisma.users.findFirst({
-      select: { id: true, name: true, email: true },
-    });
 
     return {
       status: 'ok',
       database: 'connected',
       totalUsers: userCount,
-      sampleUser: firstUser,
     };
   }
 }

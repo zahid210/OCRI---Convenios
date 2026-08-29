@@ -192,7 +192,6 @@ export default function UsersPage() {
                 <div className="space-y-1">
                     <h1 className="text-xl font-normal text-gray-800">Gestión de Usuarios</h1>
                     <div className="flex items-center gap-2 text-gray-500">
-                        <Shield className="h-4 w-4" />
                         <span className="text-xs text-gray-500">
                             Administración de cuentas y roles del sistema
                         </span>

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Institution, AgreementType } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 
 export default function CreatePropuestaPage() {
@@ -205,6 +206,11 @@ export default function CreatePropuestaPage() {
             return;
         }
 
+        if (!dictamenFile) {
+            toast.warning('Debe adjuntar el Dictamen de Rectorado para registrar la propuesta.');
+            return;
+        }
+
         setSaving(true);
 
         try {
@@ -307,11 +313,16 @@ export default function CreatePropuestaPage() {
                                     <button
                                         type="button"
                                         onClick={() => dictamenInputRef.current?.click()}
-                                        title="Adjuntar dictamen"
-                                        className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-[#df9f1f] text-[#a97b12] hover:bg-amber-50 transition-colors shrink-0 cursor-pointer"
+                                        title="Adjuntar dictamen (obligatorio)"
+                                        className={cn(
+                                            "inline-flex items-center gap-1.5 px-3 py-2 text-sm border transition-colors shrink-0 cursor-pointer",
+                                            dictamenFile
+                                                ? "border-[#0b6e4f] text-[#0b6e4f] bg-[#0b6e4f]/5 hover:bg-[#0b6e4f]/10"
+                                                : "border-red-300 text-red-600 bg-red-50 hover:bg-red-100"
+                                        )}
                                     >
                                         <Gavel className="h-4 w-4" />
-                                        {dictamenFile ? 'Dictamen adjunto' : 'Adjuntar dictamen'}
+                                        {dictamenFile ? 'Dictamen adjunto ✓' : 'Adjuntar dictamen'}
                                     </button>
                                 </div>
                             </div>

@@ -216,7 +216,6 @@ export default function ReportsPage() {
                 <div className="space-y-1">
                     <h1 className="text-xl font-normal text-gray-800">Reportes</h1>
                     <div className="flex items-center gap-2 text-gray-500">
-                        <BarChart3 className="h-4 w-4" />
                         <span className="text-xs text-gray-500">
                             Estadísticas de convenios por estado, país, tipo e institución
                         </span>

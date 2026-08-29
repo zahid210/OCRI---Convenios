@@ -188,17 +188,17 @@ export interface ReportExpiringRow {
     dias_restantes: number | null;
 }
 
-// ─── Seguimiento de propuestas en trámite (hoja de ruta E1) ─────────────────
+// ─── E3: Bandeja de Seguimiento (entregables) ────────────────────────────────
 
-export interface SeguimientoArea {
-    dependencia_name: string;
+export interface SeguimientoEntregable {
+    id: number;
+    type: string;
     status: string;
-    opinion_validada?: boolean;
-    sent_via?: string | null;
-    adesa_number?: string | null;
-    response_date?: string | null;
-    due_at?: string | null;
-    vencida: boolean;
+    title: string;
+    period: string | null;
+    version: number;
+    submitted_at: string | null;
+    registered_at: string | null;
 }
 
 export interface SeguimientoRow {
@@ -209,26 +209,22 @@ export interface SeguimientoRow {
     institucion: string;
     pais: string;
     process_status: ProcessStatus;
-    total_areas: number;
-    areas_completadas: number;
-    areas_pendientes: number;
-    docs_faltantes: number;
-    envios_registrados: number;
-    sin_hoja_ruta: boolean;
+    total_entregables: number;
+    entregables_registrados: number;
+    plan_trabajo: SeguimientoEntregable | null;
+    informes: SeguimientoEntregable[];
+    sin_entregables: boolean;
     pendiente_completar: boolean;
     progreso: number;
-    areas: SeguimientoArea[];
 }
 
 export interface SeguimientoSummary {
     total: number;
     por_estado: Record<string, number>;
     con_pendientes: number;
-    sin_hoja_ruta: number;
-    envios_registrados: number;
-    opiniones_vencidas: number;
-    total_areas: number;
-    areas_completadas: number;
+    sin_entregables: number;
+    total_entregables: number;
+    entregables_registrados: number;
 }
 
 // ─── Usuarios ────────────────────────────────────────────────────────────────

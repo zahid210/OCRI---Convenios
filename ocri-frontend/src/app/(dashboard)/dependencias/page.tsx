@@ -170,7 +170,6 @@ export default function DependenciasPage() {
             <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="space-y-1">
                     <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2">
-                        <Network className="h-5 w-5 text-[#df9f1f]" />
                         Dependencias
                     </h1>
                     <p className="text-xs text-gray-500">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Agreement, PaginatedResponse } from '@/types/agreements';
 import { fetcher } from '@/lib/api';
 import { useUser } from '@/components/user-provider';
@@ -17,24 +18,17 @@ import {
     Building2,
     ChevronDown,
 } from 'lucide-react';
-
-const EN_TRAMITE_LABELS: Record<string, string> = {
-    RECEPCIONADA: 'Solicitud recibida',
-    OPINIONES_EN_CURSO: 'Opiniones en curso',
-    OPINIONES_COMPLETAS: 'Opiniones completas',
-    EXPEDIENTE_TECNICO_LISTO: 'Expediente técnico listo',
-    ENVIADO_A_RECTORADO: 'Enviado a Rectorado',
-};
+import { PROCESS_STATUS_LABELS } from '@/components/agreements/process/shared';
 
 const TRAMITE_BADGES: Record<string, string> = {
-    'Solicitud recibida': 'bg-gray-100 text-gray-700 border-gray-200',
-    'Opiniones en curso': 'bg-blue-50 text-blue-700 border-blue-200',
-    'Opiniones completas': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    'Expediente técnico listo': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'Enviado a Rectorado': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    RECEPCIONADA: 'bg-gray-100 text-gray-700 border-gray-200',
+    OPINIONES_EN_CURSO: 'bg-blue-50 text-blue-700 border-blue-200',
+    OPINIONES_COMPLETAS: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    EXPEDIENTE_TECNICO_LISTO: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
 export default function PropuestasPage() {
+    const router = useRouter();
     const [data, setData] = useState<PaginatedResponse<Agreement> | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -98,7 +92,6 @@ export default function PropuestasPage() {
                         Bandeja de Propuestas
                     </h1>
                     <div className="flex items-center gap-2 text-gray-500">
-                        <Building2 className="h-4 w-4" />
                         <span className="text-xs text-gray-500">
                             Propuestas en fase de evaluación técnica y expediente
                         </span>
@@ -177,15 +170,15 @@ export default function PropuestasPage() {
                             </tr>
                         ) : (
                             rows.map((agreement) => {
-                                const label = EN_TRAMITE_LABELS[agreement.process_status] || agreement.process_status;
-                                const badgeClasses = TRAMITE_BADGES[label] || 'bg-gray-100 text-gray-700 border-gray-200';
+                                const label = PROCESS_STATUS_LABELS[agreement.process_status] || agreement.process_status;
+                                const badgeClasses = TRAMITE_BADGES[agreement.process_status] || 'bg-gray-100 text-gray-700 border-gray-200';
                                 const inst = agreement.institutions;
 
                                 return (
                                     <tr
                                         key={agreement.id}
                                         className="group hover:bg-gray-50 transition-colors cursor-pointer"
-                                        onClick={() => window.location.href = `/propuestas/${agreement.id}`}
+                                        onClick={() => router.push(`/propuestas/${agreement.id}`)}
                                     >
                                         <td className="py-5">
                                             <div className="flex items-center gap-4 ml-10">

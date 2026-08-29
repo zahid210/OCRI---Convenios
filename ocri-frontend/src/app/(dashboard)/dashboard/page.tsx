@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { fetchApi } from '@/lib/api';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { PROCESS_STATUS_LABELS } from '@/components/agreements/process/shared';
 import {
     FileCheck,
     Clock,
@@ -29,13 +31,13 @@ interface Agreement {
     end_date?: string;
 }
 
-const EN_TRAMITE_STATUSES = [
+// Estados en los que el expediente aún es PROPUESTA (pre-aprobación de Rectorado).
+const PROPOSAL_STATUSES = [
     'RECEPCIONADA',
     'OPINIONES_EN_CURSO',
     'OPINIONES_COMPLETAS',
     'EXPEDIENTE_TECNICO_LISTO',
     'ENVIADO_A_RECTORADO',
-    'SUSCRITO',
 ];
 
 interface AgreementsResponse {
@@ -53,6 +55,7 @@ interface ReportsSummaryResponse {
 }
 
 export default function DashboardPage() {
+    const router = useRouter();
     const [stats, setStats] = useState({
         vigentes: 0,
         por_vencer: 0,
@@ -136,10 +139,10 @@ export default function DashboardPage() {
             {/* Grid Principal */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                {/* Tabla de Convenios Recientes */}
+                {/* Tabla de Expedientes Recientes */}
                 <div className="lg:col-span-3 flex flex-col border border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
-                        <h2 className="text-lg font-normal text-gray-700">Listado de Convenios Recientes</h2>
+                        <h2 className="text-lg font-normal text-gray-700">Expedientes Recientes</h2>
                         <Link
                             href="/convenios"
                             className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
@@ -153,7 +156,8 @@ export default function DashboardPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                             <tr className="bg-[#f8f9fa] border-y border-gray-200">
-                                <th className="py-3 px-4 text-sm font-medium text-gray-600">N° de Convenio</th>
+                                <th className="py-3 px-4 text-sm font-medium text-gray-600">Expediente</th>
+                                <th className="py-3 px-4 text-sm font-medium text-gray-600">Tipo</th>
                                 <th className="py-3 px-4 text-sm font-medium text-gray-600 hidden sm:table-cell">Institución</th>
                                 <th className="py-3 px-4 text-sm font-medium text-gray-600 hidden md:table-cell">País</th>
                                 <th className="py-3 px-4 text-sm font-medium text-gray-600">Estado</th>
@@ -162,7 +166,7 @@ export default function DashboardPage() {
                             <tbody className="divide-y divide-gray-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4} className="py-8 text-center text-gray-500">
+                                    <td colSpan={5} className="py-8 text-center text-gray-500">
                                         <div className="flex justify-center items-center gap-2">
                                             <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
                                             <span className="text-sm">Cargando registros...</span>
@@ -171,17 +175,42 @@ export default function DashboardPage() {
                                 </tr>
                             ) : recentAgreements.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="py-8 text-center text-sm text-gray-500">
+                                    <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
                                         No se encontraron registros recientes.
                                     </td>
                                 </tr>
                             ) : (
                                 recentAgreements.map((agreement) => {
+                                    const isProposal = PROPOSAL_STATUSES.includes(agreement.process_status ?? '');
                                     const isExpired = agreement.end_date && new Date(agreement.end_date) < new Date();
+                                    const rawStatus = agreement.process_status ?? '';
+                                    const stateLabel = isProposal
+                                        ? (PROCESS_STATUS_LABELS[rawStatus as keyof typeof PROCESS_STATUS_LABELS] ?? 'En trámite')
+                                        : isExpired
+                                          ? 'Vencido'
+                                          : 'Vigente';
+                                    const stateBadge = isProposal
+                                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                        : isExpired
+                                          ? 'bg-red-50 text-red-700 border-red-200'
+                                          : 'bg-green-50 text-green-700 border-green-200';
                                     return (
-                                        <tr key={agreement.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/propuestas/${agreement.id}`}>
+                                        <tr
+                                            key={agreement.id}
+                                            className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                            onClick={() => router.push(isProposal ? `/propuestas/${agreement.id}` : `/convenios/${agreement.id}`)}
+                                        >
                                             <td className="py-3 px-4 text-sm text-gray-800">
-                                                {agreement.resolution_number || agreement.title || `Convenio #${agreement.id}`}
+                                                {agreement.resolution_number || agreement.title || `Expediente #${agreement.id}`}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className={`inline-block px-2 py-1 text-xs border font-medium ${
+                                                    isProposal
+                                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                        : 'bg-[#0b6e4f] text-white border-[#0b6e4f]'
+                                                }`}>
+                                                    {isProposal ? 'Propuesta' : 'Convenio'}
+                                                </span>
                                             </td>
                                             <td className="py-3 px-4 text-sm text-gray-600 hidden sm:table-cell">
                                                 {agreement.institutions?.name || 'No especificada'}
@@ -190,19 +219,9 @@ export default function DashboardPage() {
                                                 {agreement.institutions?.country || 'N/D'}
                                             </td>
                                             <td className="py-3 px-4">
-                                                {EN_TRAMITE_STATUSES.includes(agreement.process_status ?? '') ? (
-                                                    <span className="inline-block px-2 py-1 text-xs text-gray-700 bg-gray-100 border border-gray-200">
-                                                        En Trámite
-                                                    </span>
-                                                ) : isExpired ? (
-                                                    <span className="inline-block px-2 py-1 text-xs text-red-700 bg-red-50 border border-red-200">
-                                                        Vencido
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-block px-2 py-1 text-xs text-green-700 bg-green-50 border border-green-200">
-                                                        Vigente
-                                                    </span>
-                                                )}
+                                                <span className={`inline-block px-2 py-1 text-xs border ${stateBadge}`}>
+                                                    {stateLabel}
+                                                </span>
                                             </td>
                                         </tr>
                                     );
