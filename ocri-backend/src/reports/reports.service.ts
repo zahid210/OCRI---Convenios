@@ -69,6 +69,17 @@ export class ReportsService {
       where.process_status = { in: IN_FLIGHT };
     } else if (filter.status === 'No Suscrito') {
       where.process_status = 'NO_SUSCRITO';
+    } else if (filter.status === 'Sin Fecha') {
+      where.process_status = {
+        in: [
+          'SUSCRITO',
+          'REGISTRADO',
+          'PUBLICADO',
+          'EN_SEGUIMIENTO',
+          'SEGUIMIENTO_CONCLUIDO',
+        ],
+      };
+      where.end_date = null;
     } else if (
       filter.status === 'Vigente' ||
       filter.status === 'Por Vencer' ||
@@ -79,6 +90,7 @@ export class ReportsService {
 
       where.process_status = {
         in: [
+          'SUSCRITO',
           'REGISTRADO',
           'PUBLICADO',
           'EN_SEGUIMIENTO',
@@ -86,24 +98,17 @@ export class ReportsService {
         ],
       };
 
+      // Coherente con deriveTemporalStatus/deriveStatus (clasificación por fecha):
       if (filter.status === 'Vigente') {
         const warningDate = new Date(now);
         warningDate.setDate(warningDate.getDate() + EXPIRATION_WARNING_DAYS);
         where.end_date = { gte: warningDate };
-        where.validity_status = { in: ['VIGENTE', 'SUSPENDIDO'] };
       } else if (filter.status === 'Por Vencer') {
         const warningDate = new Date(now);
         warningDate.setDate(warningDate.getDate() + EXPIRATION_WARNING_DAYS);
         where.end_date = { gte: now, lte: warningDate };
-        where.validity_status = { in: ['VIGENTE', 'SUSPENDIDO'] };
       } else {
-        where.OR = [
-          { validity_status: 'VENCIDO' },
-          {
-            validity_status: { in: ['VIGENTE', 'SUSPENDIDO'] },
-            end_date: { lt: now },
-          },
-        ];
+        where.end_date = { lt: now };
       }
     }
 
@@ -126,10 +131,7 @@ export class ReportsService {
   private deriveStatus(a: AgreementWithRelations): string {
     if (a.process_status === 'NO_SUSCRITO') return 'No Suscrito';
 
-    const inFlight =
-      IN_FLIGHT.includes(a.process_status) || a.process_status === 'SUSCRITO';
-
-    if (inFlight) return 'En Trámite';
+    if (IN_FLIGHT.includes(a.process_status)) return 'En Trámite';
 
     const ts = deriveTemporalStatus(a.end_date).temporal_status;
     return TEMPORAL_STATUS_LABEL[ts] ?? ts;
@@ -316,9 +318,9 @@ export class ReportsService {
     wsResumen.getRow(2).eachCell((cell) => (cell.style = headerStyle));
     wsResumen.addRows([
       ['Total de trámites/convenios', summary.total],
-      ['En Trámite (propuesta/registro)', summary.en_tramite],
+      ['En Trámite (propuestas)', summary.en_tramite],
       ['Vigentes', summary.vigentes],
-      ['Próximos a vencer (90 días)', summary.proximos_a_vencer],
+      ['Próximos a vencer (${EXPIRATION_WARNING_DAYS} días)', summary.proximos_a_vencer],
       ['Vencidos', summary.vencidos],
       ['No suscritos', summary.no_suscritos],
     ]);

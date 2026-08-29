@@ -266,6 +266,7 @@ export default function ReportsPage() {
                                 <option value="Por Vencer">Por Vencer</option>
                                 <option value="Vencido">Vencido</option>
                                 <option value="No Suscrito">No Suscrito</option>
+                                <option value="Sin Fecha">Sin Fecha</option>
                             </select>
                             <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
                         </div>
@@ -405,12 +406,13 @@ export default function ReportsPage() {
                                 ) : (
                                     topInstitutions.map((row) => (
                                         <div key={row.institucion} className="flex items-center gap-3">
-                                            <div className="w-1/2 truncate">
-                                                <span className="text-sm text-gray-700">{row.institucion}</span>
-                                            </div>
-                                            <div className="flex-1 bg-gray-100 h-6">
+                                            <Landmark className="h-4 w-4 text-gray-400 shrink-0" />
+                                            <span className="w-40 truncate text-sm text-gray-700" title={row.institucion}>
+                                                {row.institucion}
+                                            </span>
+                                            <div className="flex-1 bg-gray-100 h-5">
                                                 <div
-                                                    className="h-6 bg-[#df9f1f]"
+                                                    className="h-5 bg-[#df9f1f]"
                                                     style={{
                                                         width: `${(row.cantidad / maxInstitutionCount) * 100}%`,
                                                     }}

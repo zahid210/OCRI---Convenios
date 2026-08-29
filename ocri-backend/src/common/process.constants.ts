@@ -78,7 +78,7 @@ export const REQUIRED_DOCS_TO_SEND_TO_RECTORADO = [
 ] as const;
 
 /** Días por defecto para vencimiento de vigencia tras registro (semáforo). */
-export const EXPIRATION_WARNING_DAYS = 120;
+export const EXPIRATION_WARNING_DAYS = 90;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Serialización BigInt → number segura para JSON
