@@ -131,7 +131,6 @@ export default function SeguimientoDetailPage({
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="space-y-1">
                         <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-[#df9f1f]" />
                             {agreement.title}
                         </h1>
                         <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">

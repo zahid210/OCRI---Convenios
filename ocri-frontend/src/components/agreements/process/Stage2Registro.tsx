@@ -224,7 +224,7 @@ export default function Stage2Registro({
         const confirmed = await confirm({
             title: 'Iniciar Seguimiento',
             description:
-                '¿Iniciar la Etapa 3 (Seguimiento)? Se formalizará el convenio publicado y se solicitará el Plan de Trabajo a los responsables.',
+                'Se formalizará el convenio publicado y se solicitará el Plan de Trabajo a los responsables.',
         });
         if (!confirmed) return;
         setIsStartingSeguimiento(true);
@@ -341,11 +341,10 @@ export default function Stage2Registro({
 
                 {processStatus === 'PUBLICADO' && (
                     <div className="mb-6 bg-[#f0fbf6] border border-[#b5e3d0] p-4 text-sm text-[#0b6e4f] flex items-start gap-2">
-                        <PlayCircle className="h-5 w-5 shrink-0 mt-0.5" />
                         <div>
-                            <p className="font-semibold">Convenio publicado · Etapa 2 completada</p>
+                            <p className="font-semibold">Convenio publicado</p>
                             <p className="mt-1 text-xs">
-                                El registro ha concluido. Inicie la Etapa 3 (Seguimiento) para
+                                El registro ha concluido. Inicie el seguimiento para
                                 solicitar el Plan de Trabajo a los responsables.
                             </p>
                         </div>
