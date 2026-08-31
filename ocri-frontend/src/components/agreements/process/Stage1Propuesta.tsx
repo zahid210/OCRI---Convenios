@@ -26,6 +26,8 @@ import {
     CheckCircle2,
     ChevronDown,
     ChevronUp,
+    ClipboardList,
+    Clock,
     Download,
     ExternalLink,
     FileCheck,
@@ -34,6 +36,7 @@ import {
     Loader2,
     MessageSquare,
     Plus,
+    Send,
     ShieldCheck,
     Trash2,
     Upload,
@@ -536,26 +539,43 @@ export default function Stage1Propuesta({
                         </div>
                     </SectionCard>
                 )}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                {[
-                    { label: 'Total', value: counts.total, color: 'text-gray-900' },
-                    { label: 'Pendientes', value: counts.pendientes, color: 'text-gray-500' },
-                    { label: 'Enviadas', value: counts.enviadas, color: 'text-blue-600' },
-                    { label: 'Respondidas', value: counts.respondidas, color: 'text-yellow-600' },
-                    { label: 'Validadas', value: counts.validadas, color: 'text-green-600' },
-                    { label: 'Observadas', value: counts.observadas, color: 'text-red-600' },
-                ].map((card) => (
-                    <div
-                        key={card.label}
-                        className="border border-gray-200 bg-white shadow-sm p-4 text-center"
-                    >
-                        <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
-                        <div className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mt-1">
-                            {card.label}
-                        </div>
-                    </div>
-                ))}
-            </div>
+            <SectionCard
+                title="Resumen de Solicitudes de Opinión"
+                icon={MessageSquare}
+            >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    {[
+                        { label: 'Total', value: counts.total, color: 'text-gray-900', bg: 'bg-gray-100 text-gray-700', icon: ClipboardList },
+                        { label: 'Pendientes', value: counts.pendientes, color: 'text-gray-700', bg: 'bg-gray-100 text-gray-600', icon: Clock },
+                        { label: 'Enviadas', value: counts.enviadas, color: 'text-blue-700', bg: 'bg-blue-100 text-blue-600', icon: Send },
+                        { label: 'Respondidas', value: counts.respondidas, color: 'text-amber-700', bg: 'bg-amber-100 text-amber-600', icon: MessageSquare },
+                        { label: 'Validadas', value: counts.validadas, color: 'text-green-700', bg: 'bg-green-100 text-green-600', icon: ShieldCheck },
+                        { label: 'Observadas', value: counts.observadas, color: 'text-red-700', bg: 'bg-red-100 text-red-600', icon: AlertTriangle },
+                    ].map((card) => {
+                        const Icon = card.icon;
+                        return (
+                            <div
+                                key={card.label}
+                                className="relative overflow-hidden border border-gray-200 bg-white p-4 shadow-sm"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className={`text-2xl font-bold leading-none ${card.color}`}>
+                                            {card.value}
+                                        </div>
+                                        <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                                            {card.label}
+                                        </div>
+                                    </div>
+                                    <div className={`flex h-10 w-10 items-center justify-center ${card.bg}`}>
+                                        <Icon className="h-5 w-5" />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </SectionCard>
 
             <SectionCard
                 title={`Solicitud de Opiniones (${counts.total})`}
