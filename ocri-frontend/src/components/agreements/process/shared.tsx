@@ -302,16 +302,16 @@ export function ModalShell({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div
-                className={`bg-white border border-gray-200 shadow-xl ${width} w-full mx-4 overflow-auto`}
+                className={`bg-white border border-gray-200 shadow-xl ${width} w-full mx-4 flex flex-col`}
             >
-                <div className={`${headerCls} border-b px-6 py-4 flex items-center gap-2`}>
+                <div className={`${headerCls} border-b px-6 py-4 flex items-center gap-2 shrink-0`}>
                     {Icon && <Icon className={iconCls} />}
                     <h2 className={`text-sm font-semibold uppercase tracking-wider ${titleCls}`}>
                         {title}
                     </h2>
                 </div>
-                    {children}
-                <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa]">
+                <div className="overflow-y-auto flex-1">{children}</div>
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa] shrink-0">
                     {footer}
                 </div>
             </div>
