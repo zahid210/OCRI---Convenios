@@ -930,7 +930,14 @@ export default function Stage1Propuesta({
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {documents.map((doc) => (
-                                    <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr
+                                        key={doc.id}
+                                        className={
+                                            doc.document_types?.code === 'EXPEDIENTE_TECNICO'
+                                                ? 'bg-amber-50 hover:bg-amber-100 transition-colors'
+                                                : 'hover:bg-gray-50 transition-colors'
+                                        }
+                                    >
                                         <td className="px-6 py-3 text-gray-800">
                                             {doc.original_name || doc.name}
                                         </td>
