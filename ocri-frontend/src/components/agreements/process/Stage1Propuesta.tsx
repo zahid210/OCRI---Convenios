@@ -18,7 +18,7 @@ import {
     validateOpinionRequest,
 } from '@/lib/api';
 import OficioEditor from './OficioEditor';
-import { Dependencia } from '@/types/agreements';
+import { AgreementDocument, Dependencia } from '@/types/agreements';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
@@ -96,6 +96,28 @@ export default function Stage1Propuesta({
             return formatDateOnly(request.response_date);
         }
         return doc.created_at ? formatDateOnly(doc.created_at) : '—';
+    };
+
+    const documentTipoLabel = (doc: AgreementDocument) => {
+        const code = doc.document_types?.code;
+        const depCode =
+            doc.opinion_requests?.dependencias?.code ||
+            opinion_requests.find((r) => r.id === doc.opinion_request_id)
+                ?.dependencias?.code;
+        if (code === 'OFICIO_SOLICITUD_OPINION') {
+            return depCode
+                ? `Oficio de Solicitud a ${depCode}`
+                : DOCUMENT_TYPE_LABELS[code];
+        }
+        if (code === 'OFICIO_RESPUESTA_OPINION') {
+            return depCode
+                ? `Oficio de Respuesta de ${depCode}`
+                : DOCUMENT_TYPE_LABELS[code];
+        }
+        return (
+            (code && (DOCUMENT_TYPE_LABELS[code] || doc.document_types?.name)) ||
+            'Documento'
+        );
     };
 
     const [defaultTargets, setDefaultTargets] = useState<Dependencia[]>([]);
@@ -943,12 +965,7 @@ export default function Stage1Propuesta({
                                         </td>
                                         <td className="px-6 py-3">
                                             <span className="inline-flex items-center px-2 py-0.5 text-xs border bg-gray-50 text-gray-600 border-gray-200">
-                                                {(doc.document_types?.code &&
-                                                    (DOCUMENT_TYPE_LABELS[
-                                                        doc.document_types.code
-                                                    ] ||
-                                                        doc.document_types.name)) ||
-                                                    'Documento'}
+                                                {documentTipoLabel(doc)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-3 text-xs text-gray-500">

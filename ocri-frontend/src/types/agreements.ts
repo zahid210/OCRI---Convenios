@@ -47,6 +47,9 @@ export interface AgreementDocument {
     deliverable_id?: number | null;
     created_at?: string;
     document_types?: DocumentTypeRef | null;
+    opinion_requests?: {
+        dependencias?: { code: string; name: string } | null;
+    } | null;
 }
 
 export type ProcessStatus =

@@ -180,6 +180,11 @@ export class ProcessService {
         where: { agreement_id: agreementIdBig },
         include: {
           document_types: { select: { code: true, name: true } },
+          opinion_requests: {
+            select: {
+              dependencias: { select: { code: true, name: true } },
+            },
+          },
         },
         orderBy: { created_at: 'desc' },
       }),
@@ -298,9 +303,11 @@ export class ProcessService {
 
     const oficioNumber = options?.oficioNumber ?? `OF. OCRI-SOL-${Date.now()}`;
 
-    for (const depId of dependenciaIds) {
+    for (let i = 0; i < dependenciaIds.length; i++) {
+      const depId = dependenciaIds[i];
       try {
         const depName = depMap.get(depId) ?? 'Dependencia';
+        const requestId = created[i]?.id;
         const filename = await this.pdfMerger.generateOficioSolicitud(
           agreementId,
           depName,
@@ -320,6 +327,7 @@ export class ProcessService {
             original_name: filename,
             extension: 'pdf',
             document_type_id: docType?.id ?? null,
+            opinion_request_id: requestId ? BigInt(requestId) : undefined,
             direction: 'SALIDA',
             stage: 'ETAPA_1_PROPUESTA',
             uploaded_by_id: userId != null ? BigInt(userId) : undefined,
@@ -1284,6 +1292,11 @@ export class ProcessService {
       where: { agreement_id: BigInt(agreementId) },
       include: {
         document_types: { select: { code: true, name: true, direction: true } },
+        opinion_requests: {
+          select: {
+            dependencias: { select: { code: true, name: true } },
+          },
+        },
       },
       orderBy: { created_at: 'desc' },
     });
