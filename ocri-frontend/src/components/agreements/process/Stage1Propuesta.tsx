@@ -720,16 +720,6 @@ export default function Stage1Propuesta({
                                                             </span>
                                                         </div>
                                                         <div>
-                                                            <span className="text-xs font-semibold uppercase text-gray-500">
-                                                                Fecha límite:
-                                                            </span>{' '}
-                                                            <span className="text-gray-800">
-                                                                {req.due_at
-                                                                    ? new Date(
-                                                                          req.due_at,
-                                                                      ).toLocaleDateString('es-PE')
-                                                                    : '—'}
-                                                            </span>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs font-semibold uppercase text-gray-500">
@@ -868,18 +858,6 @@ export default function Stage1Propuesta({
                                                         </div>
                                                         <div>
                                                             <span className="text-xs font-semibold uppercase text-gray-500">
-                                                                Fecha límite:
-                                                            </span>{' '}
-                                                            <span className="text-gray-800">
-                                                                {req.due_at
-                                                                    ? new Date(
-                                                                          req.due_at,
-                                                                      ).toLocaleDateString('es-PE')
-                                                                    : '—'}
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-xs font-semibold uppercase text-gray-500">
                                                                 Fecha respuesta:
                                                             </span>{' '}
                                                             <span className="text-gray-800">
@@ -923,26 +901,6 @@ export default function Stage1Propuesta({
             <SectionCard
                 title={`Documentos del Proceso (${documents.length})`}
                 icon={FolderOpen}
-                action={
-                    canManage ? (
-                        <div className="flex items-center gap-2">
-                            {processStatus === 'OPINIONES_COMPLETAS' && !uploadedTypeCodes.has('EXPEDIENTE_TECNICO') && (
-                                <button
-                                    onClick={handleGenerateExpediente}
-                                    disabled={isGeneratingExpediente}
-                                    className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-                                >
-                                    {isGeneratingExpediente ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <FileText className="h-4 w-4" />
-                                    )}
-                                    Generar Expediente
-                                </button>
-                            )}
-                        </div>
-                    ) : undefined
-                }
             >
                 {documents.length === 0 ? (
                     <div className="py-12 text-center text-sm text-gray-500">
