@@ -135,11 +135,10 @@ export default function Stage1Propuesta({
 
     useEffect(() => {
         let cancelled = false;
-        getDefaultOpinionTargets()
+            getDefaultOpinionTargets()
             .then((targets) => {
                 if (!cancelled) {
                     setDefaultTargets(targets as Dependencia[]);
-                    setSelectedDeps((targets as Dependencia[]).map((t) => t.id));
                 }
             })
             .catch(() => {});
