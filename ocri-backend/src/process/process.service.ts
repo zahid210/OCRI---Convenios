@@ -273,14 +273,16 @@ export class ProcessService {
           requests.push({ id: r.id });
         }
 
-        await this.applyTransition(
-          tx,
-          BigInt(agreementId),
-          'OPINIONES_EN_CURSO',
-          'SOLICITUDES_GENERADAS',
-          `OCRI generó ${dependenciaIds.length} solicitud(es) de opinión para las dependencias involucradas.`,
-          { actorUserId: userId },
-        );
+        if (agreement.process_status === 'RECEPCIONADA') {
+          await this.applyTransition(
+            tx,
+            BigInt(agreementId),
+            'OPINIONES_EN_CURSO',
+            'SOLICITUDES_GENERADAS',
+            `OCRI generó ${dependenciaIds.length} solicitud(es) de opinión para las dependencias involucradas.`,
+            { actorUserId: userId },
+          );
+        }
 
         return requests;
       },
