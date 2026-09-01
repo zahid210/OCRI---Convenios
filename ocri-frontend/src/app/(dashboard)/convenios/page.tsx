@@ -175,7 +175,7 @@ export default function ConveniosPage() {
                         <thead>
                         <tr className="bg-[#f8f9fa] border-b border-gray-200">
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
-                                <span className="ml-10">Resolución / Título</span>
+                                <span className="ml-10">Título / Código</span>
                             </th>
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                                 Institución
@@ -232,7 +232,7 @@ export default function ConveniosPage() {
                                                 </div>
                                                 <div>
                                                     <div className="font-medium text-gray-800 text-sm">
-                                                        {item.resolution_number || item.title || `Convenio #${item.id}`}
+                                                        {item.title || `Convenio #${item.id}`}
                                                     </div>
                                                     {item.tramite_code && (
                                                         <div className="text-[11px] font-mono text-[#0b5a41] font-semibold">

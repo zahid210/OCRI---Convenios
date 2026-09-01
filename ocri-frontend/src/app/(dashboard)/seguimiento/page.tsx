@@ -145,7 +145,7 @@ export default function SeguimientoPage() {
             <thead>
               <tr className="bg-[#f8f9fa] border-b border-gray-200">
                 <th className="py-4 pl-10 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
-                  Código / Institución
+                  Título / Código
                 </th>
                 <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
                   Estado
@@ -238,17 +238,13 @@ export default function SeguimientoPage() {
                             </button>
                             <div>
                               <div className="font-medium text-gray-800 text-sm">
-                                {row.expediente}
+                                {row.titulo}
                               </div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="text-xs text-gray-600">
-                                  {row.institucion}
-                                </span>
-                                <span className="inline-block h-1 w-1 rounded-full bg-blue-500" />
-                                <span className="text-[10px] uppercase font-semibold text-gray-400">
-                                  {row.pais}
-                                </span>
-                              </div>
+                              {row.tramite_code && (
+                                <div className="text-[11px] font-mono text-[#0b5a41] font-semibold">
+                                  {row.tramite_code}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>

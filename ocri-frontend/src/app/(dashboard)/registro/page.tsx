@@ -138,7 +138,7 @@ export default function RegistroPage() {
                         <thead>
                         <tr className="bg-[#f8f9fa] border-b border-gray-200">
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
-                                <span className="ml-10">Código</span>
+                                <span className="ml-10">Título / Código</span>
                             </th>
                             <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                                 Institución
