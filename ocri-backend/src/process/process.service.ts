@@ -1556,7 +1556,14 @@ export class ProcessService {
       );
     }
 
-    if (!data.resolution_number?.trim()) {
+    // Código único: en OCRI el "código" del convenio (que ya se registró al
+    // ingresar la propuesta en E1) es el mismo número de resolución en E2.
+    // Si no se ingresa uno aquí, se asume el código del trámite.
+    const effectiveResolution = data.resolution_number?.trim()
+      ? data.resolution_number.trim().toUpperCase()
+      : agreement.tramite_code?.trim() || '';
+
+    if (!effectiveResolution) {
       throw new BadRequestException(
         'El número de resolución es obligatorio para registrar el convenio.',
       );
@@ -1587,13 +1594,13 @@ export class ProcessService {
         // Resolución única
         const duplicated = await tx.agreements.findFirst({
           where: {
-            resolution_number: data.resolution_number.trim().toUpperCase(),
+            resolution_number: effectiveResolution,
             NOT: { id: BigInt(agreementId) },
           },
         });
         if (duplicated) {
           throw new BadRequestException(
-            `La resolución ${data.resolution_number} ya está asociada al trámite #${Number(duplicated.id)}.`,
+            `La resolución ${effectiveResolution} ya está asociada al trámite #${Number(duplicated.id)}.`,
           );
         }
 
@@ -1606,7 +1613,7 @@ export class ProcessService {
           {
             actorUserId: userId,
             extraData: {
-              resolution_number: data.resolution_number.trim().toUpperCase(),
+              resolution_number: effectiveResolution,
               start_date: new Date(data.start_date),
               end_date: new Date(data.end_date),
               validity_status: 'VIGENTE',
@@ -1620,7 +1627,7 @@ export class ProcessService {
             },
             metadata: JSON.parse(
               JSON.stringify({
-                resolution_number: data.resolution_number,
+                resolution_number: effectiveResolution,
                 start_date: data.start_date,
                 end_date: data.end_date,
                 responsables_count: data.responsables.length,

@@ -53,6 +53,7 @@ export default function Stage2Registro({
     decidedAt,
     publishedAt,
     registeredAt,
+    tramiteCode,
     canManage,
     onRefresh,
 }: {
@@ -62,6 +63,7 @@ export default function Stage2Registro({
     decidedAt?: string | null;
     publishedAt?: string | null;
     registeredAt?: string | null;
+    tramiteCode?: string | null;
     canManage: boolean;
     onRefresh: () => Promise<void>;
 }) {
@@ -79,7 +81,9 @@ export default function Stage2Registro({
 
     const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [isRegistering, setIsRegistering] = useState(false);
-    const [regResolutionNumber, setRegResolutionNumber] = useState('');
+    const [regResolutionNumber, setRegResolutionNumber] = useState(
+        () => tramiteCode ?? '',
+    );
     const [regStartDate, setRegStartDate] = useState('');
     const [regEndDate, setRegEndDate] = useState('');
     const [regDriveLink, setRegDriveLink] = useState('');
@@ -96,8 +100,7 @@ export default function Stage2Registro({
 
     const validResponsables = regResponsables.filter((r) => r.name.trim());
     const canSubmitRegister = Boolean(
-        regResolutionNumber.trim() &&
-            regStartDate &&
+        regStartDate &&
             regEndDate &&
             regFile &&
             validResponsables.length > 0,
@@ -166,7 +169,7 @@ export default function Stage2Registro({
     };
 
     const handleRegister = async () => {
-        if (!regResolutionNumber.trim()) {
+        if (!regResolutionNumber.trim() && !tramiteCode) {
             toast.error('El N° de resolución es obligatorio.');
             return;
         }
@@ -187,7 +190,7 @@ export default function Stage2Registro({
             await registerConvenio(
                 agreementId,
                 {
-                    resolution_number: regResolutionNumber.trim(),
+                    resolution_number: (regResolutionNumber || tramiteCode || '').trim(),
                     start_date: regStartDate,
                     end_date: regEndDate,
                     responsables: validResponsables.map((r) => ({
@@ -575,8 +578,11 @@ export default function Stage2Registro({
 
                         <div>
                             <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                N° de Resolución Rectoral / Convenio{' '}
-                                <span className="text-red-500">*</span>
+                                N° de Resolución Rectoral / Convenio
+                                {tramiteCode ? ' (código único registrado)' : ' '}
+                                {!tramiteCode && (
+                                    <span className="text-red-500">*</span>
+                                )}
                             </label>
                             <input
                                 type="text"
@@ -584,9 +590,19 @@ export default function Stage2Registro({
                                 onChange={(e) =>
                                     setRegResolutionNumber(e.target.value.toUpperCase())
                                 }
-                                placeholder="EJ: R.R. N° 0124-2026-UNCP"
+                                placeholder={
+                                    tramiteCode
+                                        ? `Código del convenio: ${tramiteCode}`
+                                        : 'EJ: R.R. N° 0124-2026-UNCP'
+                                }
                                 className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f] uppercase"
                             />
+                            {tramiteCode && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Se usará el código <strong>{tramiteCode}</strong> del
+                                    trámite si deja este campo vacío.
+                                </p>
+                            )}
                         </div>
 
                         <div>

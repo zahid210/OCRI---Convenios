@@ -216,7 +216,13 @@ export class AgreementsService {
     } else if (filters.scope === 'en_registro') {
       // Etapa 2 · Registro: decisión de Rectorado, registro y publicación
       where.process_status = {
-        in: ['ENVIADO_A_RECTORADO', 'NO_SUSCRITO', 'SUSCRITO', 'REGISTRADO', 'PUBLICADO'],
+        in: [
+          'ENVIADO_A_RECTORADO',
+          'NO_SUSCRITO',
+          'SUSCRITO',
+          'REGISTRADO',
+          'PUBLICADO',
+        ],
       };
     } else if (filters.scope === 'registrados') {
       // Etapa 3 · Seguimiento: convenios publicados ya en gestión de entregables
@@ -448,16 +454,28 @@ export class AgreementsService {
   // ─── Semáforo de convenios (vigencia) ──────────────────────────────────────
 
   async getExpirationTracking() {
+    // Directorio completo: todos los convenios firmados/suscritos (misma
+    // población base que los reportes), ordenados del más reciente al antiguo
+    // por fecha de registro. El semáforo (temporal_status) se deriva en vivo
+    // de la fecha de fin para que aquí y en reportes coincidan.
     const agreements = await this.prisma.agreements.findMany({
       where: {
-        validity_status: { in: ['VIGENTE', 'SUSPENDIDO'] },
+        process_status: {
+          in: [
+            'SUSCRITO',
+            'REGISTRADO',
+            'PUBLICADO',
+            'EN_SEGUIMIENTO',
+            'SEGUIMIENTO_CONCLUIDO',
+          ],
+        },
       },
       include: {
         institutions: { select: { name: true } },
         agreement_types: { select: { name: true } },
         responsables: true,
       },
-      orderBy: { end_date: 'asc' },
+      orderBy: [{ registered_at: 'desc' }, { id: 'desc' }],
     });
 
     const rows = agreements.map((a) => {

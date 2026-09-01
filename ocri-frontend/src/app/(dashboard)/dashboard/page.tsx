@@ -139,10 +139,10 @@ export default function DashboardPage() {
             {/* Grid Principal */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                {/* Tabla de Expedientes Recientes */}
+                {/* Tabla de Convenios Recientes */}
                 <div className="lg:col-span-3 flex flex-col border border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
-                        <h2 className="text-lg font-normal text-gray-700">Expedientes Recientes</h2>
+                        <h2 className="text-lg font-normal text-gray-700">Convenios Recientes</h2>
                         <Link
                             href="/convenios"
                             className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
@@ -156,7 +156,7 @@ export default function DashboardPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                             <tr className="bg-[#f8f9fa] border-y border-gray-200">
-                                <th className="py-3 px-4 text-sm font-medium text-gray-600">Expediente</th>
+                                <th className="py-3 px-4 text-sm font-medium text-gray-600">Código</th>
                                 <th className="py-3 px-4 text-sm font-medium text-gray-600">Tipo</th>
                                 <th className="py-3 px-4 text-sm font-medium text-gray-600 hidden sm:table-cell">Institución</th>
                                 <th className="py-3 px-4 text-sm font-medium text-gray-600 hidden md:table-cell">País</th>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                                             onClick={() => router.push(isProposal ? `/propuestas/${agreement.id}` : `/convenios/${agreement.id}`)}
                                         >
                                             <td className="py-3 px-4 text-sm text-gray-800">
-                                                {agreement.resolution_number || agreement.title || `Expediente #${agreement.id}`}
+                                                {agreement.resolution_number || agreement.title || `Código #${agreement.id}`}
                                             </td>
                                             <td className="py-3 px-4">
                                                 <span className={`inline-block px-2 py-1 text-xs border font-medium ${

@@ -39,6 +39,7 @@ export default function CreatePropuestaPage() {
     const [saving, setSaving] = useState(false);
 
     const [rectorateOficioNumber, setRectorateOficioNumber] = useState('');
+    const [tramiteCode, setTramiteCode] = useState('');
     const [institutionId, setInstitutionId] = useState('');
     const [applicantName, setApplicantName] = useState('');
     const [applicantEmail, setApplicantEmail] = useState('');
@@ -220,6 +221,7 @@ export default function CreatePropuestaPage() {
             formData.append('agreement_type_id', Number(agreementTypeId).toString());
 
             if (name.trim()) formData.append('name', name.trim().toUpperCase());
+            if (tramiteCode.trim()) formData.append('tramite_code', tramiteCode.trim().toUpperCase());
             if (rectorateOficioNumber.trim()) formData.append('rectorate_oficio_number', rectorateOficioNumber.trim().toUpperCase());
             if (applicantName.trim()) formData.append('applicant_name', applicantName.trim());
             if (applicantEmail.trim()) formData.append('applicant_email', applicantEmail.trim());
@@ -382,7 +384,8 @@ export default function CreatePropuestaPage() {
                             </div>
                         )}
                         <p className="text-xs text-gray-400 italic -mt-2">
-                            El código de trámite se genera automáticamente al registrar el expediente.
+                            El código de trámite se usa de forma automática como número de
+                            resolución al registrar el convenio (código único OCRI).
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -460,18 +463,37 @@ export default function CreatePropuestaPage() {
                     </div>
 
                     <div className="p-6 space-y-5">
-                        <div className="space-y-1.5">
-                            <label className="block text-xs font-semibold uppercase text-gray-600">
-                                Título del Convenio <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="EJ: PROPUESTA CONVENIO MARCO UNCP - ESSALUD"
-                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
+                                    Título del Convenio <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="EJ: PROPUESTA CONVENIO MARCO UNCP - ESSALUD"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold uppercase text-gray-600">
+                                    Código <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={tramiteCode}
+                                    onChange={(e) => setTramiteCode(e.target.value)}
+                                    placeholder="EJ: 001-2026"
+                                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                                />
+                                <p className="text-xs text-gray-400">
+                                    Código único del convenio. Será también el n° de resolución.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="space-y-1.5">

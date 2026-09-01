@@ -509,7 +509,7 @@ export default function ReportsPage() {
                                 <table className="w-full text-left border-collapse">
                                     <thead className="sticky top-0 bg-[#f8f9fa]">
                                     <tr className="border-b border-gray-200">
-                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Expediente</th>
+                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Código</th>
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Institución</th>
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Vence</th>
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Días</th>
@@ -558,7 +558,7 @@ export default function ReportsPage() {
                                 <table className="w-full text-left border-collapse">
                                     <thead className="sticky top-0 bg-[#f8f9fa]">
                                     <tr className="border-b border-gray-200">
-                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Expediente</th>
+                                        <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Código</th>
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">Institución</th>
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Venció</th>
                                         <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">Días</th>

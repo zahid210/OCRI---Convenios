@@ -158,12 +158,12 @@ export default function ConvenioDetailPage({
                             <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
                                 {agreement.tramite_code ? (
                                     <>
-                                        Expediente:{' '}
+                                        Código:{' '}
                                         <span className="font-medium">{agreement.tramite_code}</span>
                                         {' · '}
                                     </>
                                 ) : (
-                                    <>Expediente #{agreementId} · </>
+                                    <>Código #{agreementId} · </>
                                 )}
                                 <span className="font-medium">
                                     {PROCESS_STATUS_LABELS[agreement.process_status] ??
@@ -216,6 +216,7 @@ export default function ConvenioDetailPage({
                     decidedAt={agreement.rectorate_decision_at}
                     publishedAt={agreement.published_at}
                     registeredAt={agreement.registered_at}
+                    tramiteCode={agreement.tramite_code}
                     canManage={manage}
                     onRefresh={loadData}
                 />
