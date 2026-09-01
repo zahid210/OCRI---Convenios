@@ -126,10 +126,10 @@ export class PdfMergerService {
 
     let y = 720;
 
-    page.drawText('UNIVERSIDAD NACIONAL DEL CALLAO', {
+    page.drawText('UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU', {
       x:
         width / 2 -
-        fontBold.widthOfTextAtSize('UNIVERSIDAD NACIONAL DEL CALLAO', 14) / 2,
+        fontBold.widthOfTextAtSize('UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU', 14) / 2,
       y,
       size: 14,
       font: fontBold,
@@ -213,7 +213,7 @@ export class PdfMergerService {
 
     const bodyLines = [
       `Por medio del presente, la Oficina de Coordinación de Relaciones Interinstitucionales`,
-      `(OCRI) de la Universidad Nacional del Callao solicita a usted emitir su opinión`,
+      `(OCRI) de la Universidad Nacional del Centro del Perú solicita a usted emitir su opinión`,
       `técnica respecto al convenio de cooperación interinstitucional que se está`,
       `evaluando.`,
       '',
