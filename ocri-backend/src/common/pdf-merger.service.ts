@@ -5,6 +5,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { renderPdfFromHtml } from 'html-pdf-lite';
 import { PNG } from 'pngjs';
+import { absUploadPath } from './uploads.config';
 
 /**
  * Normaliza el número de oficio al formato estándar `045-2026-OCRI-UNCP`.
@@ -129,7 +130,11 @@ export class PdfMergerService {
     page.drawText('UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU', {
       x:
         width / 2 -
-        fontBold.widthOfTextAtSize('UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU', 14) / 2,
+        fontBold.widthOfTextAtSize(
+          'UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU',
+          14,
+        ) /
+          2,
       y,
       size: 14,
       font: fontBold,
@@ -350,7 +355,7 @@ export class PdfMergerService {
     const mergedPdf = await PDFDocument.create();
 
     for (const doc of orderedDocs) {
-      const filePath = path.resolve('uploads', doc.file_path);
+      const filePath = absUploadPath(doc.file_path);
       try {
         const pdfBytes = await fs.readFile(filePath);
         const srcDoc = await PDFDocument.load(pdfBytes);

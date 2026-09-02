@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  UPLOADS_DIR,
+  absUploadPath,
+  storePath,
   UploadedFileLike,
   normalizeUploadName,
 } from '../common/uploads.config';
@@ -28,8 +29,7 @@ export class AgreementsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private getAbsolutePath(filePath: string): string {
-    const fileName = filePath.split('/').pop()?.split('\\').pop() || filePath;
-    return path.join(UPLOADS_DIR, fileName);
+    return absUploadPath(filePath);
   }
 
   private async deletePhysicalFiles(agreementId: bigint): Promise<void> {
@@ -164,7 +164,7 @@ export class AgreementsService {
     return {
       agreements: { connect: { id: agreementId } },
       name: opts.name,
-      file_path: file.filename ?? originalName,
+      file_path: storePath(file.filename ?? originalName),
       original_name: originalName,
       extension: ext,
       document_types: opts.documentTypeId

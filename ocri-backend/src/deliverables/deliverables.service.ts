@@ -12,6 +12,7 @@ import {
 import {
   UploadedFileLike,
   normalizeUploadName,
+  storePath,
 } from '../common/uploads.config';
 
 const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
@@ -309,7 +310,7 @@ export class DeliverablesService {
           agreements: { connect: { id: deliverable.agreement_id } },
           deliverables: { connect: { id: deliverable.id } },
           name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
-          file_path: file.filename ?? originalName,
+          file_path: storePath(file.filename ?? originalName),
           original_name: originalName,
           extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
           document_types: docType ? { connect: { id: docType.id } } : undefined,

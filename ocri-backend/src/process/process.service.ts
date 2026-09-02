@@ -17,13 +17,14 @@ import {
   UploadedFileLike,
   DOC_TYPE_EXTENSIONS,
   normalizeUploadName,
+  storePath,
+  absUploadPath,
 } from '../common/uploads.config';
 import {
   PdfMergerService,
   normalizeOficioNumber,
 } from '../common/pdf-merger.service';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 
 interface ActorEventOptions {
   actorUserId?: number;
@@ -323,7 +324,7 @@ export class ProcessService {
           data: {
             agreement_id: BigInt(agreementId),
             name: `Oficio Solicitud Opinión - ${depName}`,
-            file_path: filename,
+            file_path: storePath(filename),
             original_name: filename,
             extension: 'pdf',
             document_type_id: docType?.id ?? null,
@@ -485,9 +486,10 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: request.agreement_id } },
               name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
-              file_path:
+              file_path: storePath(
                 (file as UploadedFileLike & { filename?: string }).filename ??
-                normalizeUploadName(file.originalname),
+                  normalizeUploadName(file.originalname),
+              ),
               original_name: normalizeUploadName(file.originalname),
               extension:
                 normalizeUploadName(file.originalname)
@@ -872,7 +874,7 @@ export class ProcessService {
               name:
                 'Oficio de Solicitud de Opinión - ' +
                 (request.dependencias?.name ?? 'Dependencia'),
-              file_path: filename,
+              file_path: storePath(filename),
               original_name: filename,
               extension: 'pdf',
               document_types: docType
@@ -937,7 +939,7 @@ export class ProcessService {
     } catch (err) {
       // Si falla la transacción, elimina el PDF generado para no dejar archivos huérfanos.
       try {
-        await fs.unlink(path.resolve('uploads', filename));
+        await fs.unlink(absUploadPath(filename));
       } catch {
         // el archivo ya no existe o no se pudo borrar: se ignora.
       }
@@ -983,7 +985,7 @@ export class ProcessService {
           data: {
             agreements: { connect: { id: BigInt(agreementId) } },
             name: docType.name,
-            file_path: file.filename ?? originalName,
+            file_path: storePath(file.filename ?? originalName),
             original_name: originalName,
             extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: { connect: { id: docType.id } },
@@ -1075,7 +1077,7 @@ export class ProcessService {
           data: {
             agreement_id: BigInt(agreementId),
             name: 'Expediente Técnico',
-            file_path: filename,
+            file_path: storePath(filename),
             original_name: filename,
             extension: 'pdf',
             document_type_id: docType?.id ?? null,
@@ -1167,7 +1169,7 @@ export class ProcessService {
           data: {
             agreement_id: BigInt(agreementId),
             name: 'Expediente Técnico',
-            file_path: filename,
+            file_path: storePath(filename),
             original_name: filename,
             extension: 'pdf',
             document_type_id: docType?.id ?? null,
@@ -1424,7 +1426,7 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? code,
-              file_path: file.filename ?? originalName,
+              file_path: storePath(file.filename ?? originalName),
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
@@ -1499,7 +1501,7 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? 'Publicación del Convenio',
-              file_path: file.filename ?? originalName,
+              file_path: storePath(file.filename ?? originalName),
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
@@ -1666,7 +1668,7 @@ export class ProcessService {
           data: {
             agreements: { connect: { id: BigInt(agreementId) } },
             name: 'Convenio Firmado Escaneado',
-            file_path: file.filename ?? originalName,
+            file_path: storePath(file.filename ?? originalName),
             original_name: originalName,
             extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: docType

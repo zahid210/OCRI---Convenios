@@ -1,12 +1,42 @@
 import { diskStorage } from 'multer';
 import { basename, extname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { BadRequestException } from '@nestjs/common';
 
 export const UPLOADS_DIR = join(process.cwd(), 'uploads');
 
 /** 15 MB */
 export const MAX_FILE_SIZE = 15 * 1024 * 1024;
+
+/**
+ * Extrae el año de un nombre de archivo con el patrón institucional
+ * `NNN-YYYY.<ext>` (p. ej. "001-2024.pdf" -> "2024"). Si el nombre no sigue
+ * ese patrón devuelve "" (el archivo queda en la raíz de uploads/).
+ */
+export function yearSubdir(filename: string): string {
+  const base = filename.split('/').pop()?.split('\\').pop() || filename;
+  const m = base.match(/^(\d+)-(\d{4})[.\s]/);
+  return m ? m[2] : '';
+}
+
+/**
+ * Ruta relativa bajo uploads/ con la que se persiste un archivo en la BD.
+ * Los documentos institucionales `NNN-YYYY.ext` se organizan en subcarpetas
+ * por año ("2021/001-2021.pdf"); cualquier otro nombre se guarda tal cual en
+ * la raíz para no romper archivos generados (oficios, expedientes, etc.).
+ */
+export function storePath(filename: string): string {
+  const year = yearSubdir(filename);
+  return year ? `${year}/${filename}` : filename;
+}
+
+/**
+ * Ruta absoluta en disco de un `file_path` relativo (ya sea con subcarpeta o
+ * no). Única forma centralizada de ubicar archivos bajo UPLOADS_DIR.
+ */
+export function absUploadPath(filePath: string): string {
+  return join(UPLOADS_DIR, filePath);
+}
 
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf',
@@ -61,7 +91,19 @@ export function normalizeUploadName(name: string): string {
  */
 export const safeDiskStorage = () =>
   diskStorage({
-    destination: './uploads',
+    destination: (
+      _req: unknown,
+      file: UploadedFileLike & { originalname: string },
+      callback: (error: Error | null, destination: string) => void,
+    ) => {
+      const origin = normalizeUploadName(file.originalname);
+      const year = yearSubdir(origin);
+      const subdir = year ? join('uploads', year) : 'uploads';
+      if (!existsSync(subdir)) {
+        mkdirSync(subdir, { recursive: true });
+      }
+      callback(null, subdir);
+    },
     filename: (
       _req: unknown,
       file: UploadedFileLike & { originalname: string },
@@ -92,7 +134,12 @@ export const safeDiskStorage = () =>
       }
       let filename = base;
       let counter = 1;
-      while (existsSync(join(process.cwd(), 'uploads', filename))) {
+      const year = yearSubdir(base);
+      const destFile = (name: string) =>
+        year
+          ? join(process.cwd(), 'uploads', year, name)
+          : join(process.cwd(), 'uploads', name);
+      while (existsSync(destFile(filename))) {
         const dot = base.lastIndexOf('.');
         filename =
           dot > 0

@@ -391,10 +391,11 @@ export default function Stage1Propuesta({
             return;
         }
         try {
-            const fileName = doc.file_path.split('/').pop()?.split('\\').pop() || doc.file_path;
+            const relativePath = doc.file_path.split('/').map((s) => encodeURIComponent(s)).join('/');
+            const endpoint = `/resoluciones/${relativePath}`;
             await downloadFile(
-                `/resoluciones/${encodeURIComponent(fileName)}`,
-                doc.original_name || doc.name || fileName,
+                endpoint,
+                doc.original_name || doc.name || doc.file_path.split('/').pop() || doc.file_path,
             );
             toast.success('Descarga iniciada.');
         } catch (err: unknown) {

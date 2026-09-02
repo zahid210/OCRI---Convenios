@@ -96,12 +96,13 @@ export function getFileUrl(filePath: string | null | undefined): string {
         return filePath;
     }
 
-    // Extrae únicamente el nombre base del archivo
-    const fileName = filePath.split('/').pop()?.split('\\').pop() || filePath;
+    // Conserva la ruta relativa bajo uploads/ (p. ej. "2021/001-2021.pdf"),
+    // codificando cada segmento por separado para mantener el `/` legible.
+    const relativePath = filePath.split('/').map((s) => encodeURIComponent(s)).join('/');
 
     const storageBaseUrl = process.env.NEXT_PUBLIC_STORAGE_URL || API_URL;
 
-    return `${storageBaseUrl}/resoluciones/${encodeURIComponent(fileName)}`;
+    return `${storageBaseUrl}/resoluciones/${relativePath}`;
 }
 
 /**
