@@ -119,6 +119,15 @@ export class ProcessController {
   }
 
   @Roles('admin', 'editor')
+  @Post('opinion-requests/:id/cancel')
+  cancelOpinionRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.cancelOpinionRequest(id, req.user?.id);
+  }
+
+  @Roles('admin', 'editor')
   @Delete('opinion-requests/:id')
   deleteOpinionRequest(
     @Param('id', ParseIntPipe) id: number,

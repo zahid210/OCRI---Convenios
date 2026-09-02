@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Search, Loader2, FileText, Building2, X } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
 
 interface AgreementSearchResult {
   id: number;
@@ -11,8 +12,8 @@ interface AgreementSearchResult {
   name: string | null;
   resolution_number: string | null;
   tramite_code: string | null;
-  status: string;
-  institution_name: string | null;
+  process_status: string | null;
+  institutions?: { name: string | null } | null;
 }
 
 interface InstitutionSearchResult {
@@ -213,13 +214,18 @@ export function HeaderSearch() {
                           {a.resolution_number || a.tramite_code
                             ? `Código: ${a.resolution_number || a.tramite_code}`
                             : null}
-                          {a.resolution_number || a.tramite_code ? " · " : ""}
-                          {a.institution_name || ""}
+                          {(a.resolution_number || a.tramite_code) &&
+                          a.institutions?.name
+                            ? " · "
+                            : ""}
+                          {a.institutions?.name || ""}
                         </span>
                       </span>
-                      {a.status && (
+                      {a.process_status && (
                         <span className="ml-auto shrink-0 border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
-                          {a.status}
+                          {PROCESS_STATUS_LABELS[
+                            a.process_status as keyof typeof PROCESS_STATUS_LABELS
+                          ] || a.process_status}
                         </span>
                       )}
                     </Link>

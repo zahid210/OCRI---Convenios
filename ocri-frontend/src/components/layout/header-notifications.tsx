@@ -53,12 +53,17 @@ export function HeaderNotifications() {
   const [acknowledging, setAcknowledging] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  // Contador de generación: se incrementa ante cada mutación (mark/reset). Sirve
+  // para que el polling (cada 15s) no pise una actualización optimista en vuelo.
+  const mutationEpochRef = useRef(0);
 
-  const load = async ({ silent = false } = {}) => {
+  const load = async ({ silent = false, epoch = 0 } = {}) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetchApi<NotificationsResponse>("/notifications");
+      // Ignora la respuesta si hubo una mutación después de iniciar la petición.
+      if (epoch !== mutationEpochRef.current) return;
       setData(res);
     } catch (err) {
       setError(
@@ -73,30 +78,22 @@ export function HeaderNotifications() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchApi<NotificationsResponse>("/notifications")
-      .then((res) => {
-        if (!cancelled) setData(res);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "No se pudieron cargar las notificaciones.",
-          );
-        }
-      });
 
-    // Actualización en tiempo real (polling) para mantener el badge al día.
-    const timer = setInterval(() => {
+    const poll = () => {
+      const epoch = mutationEpochRef.current;
       fetchApi<NotificationsResponse>("/notifications")
         .then((res) => {
-          if (!cancelled) setData(res);
+          // No pisar el estado local con una lectura iniciada antes de una mutación.
+          if (!cancelled && epoch === mutationEpochRef.current) setData(res);
         })
         .catch(() => {
           /* mantener el último estado conocido si falla el polling */
         });
-    }, POLL_INTERVAL_MS);
+    };
+
+    poll();
+    // Actualización en tiempo real (polling) para mantener el badge al día.
+    const timer = setInterval(poll, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
@@ -120,6 +117,8 @@ export function HeaderNotifications() {
   const acknowledge = async (keys: string[]) => {
     if (keys.length === 0) return;
     setAcknowledging(true);
+    // Marca una mutación para invalidar los polling en vuelto que traen estado previo.
+    const epoch = ++mutationEpochRef.current;
     // Optimista: quitar la(s) notificación(es) ya leída(s) del estado local.
     setData((prev) =>
       prev
@@ -135,10 +134,10 @@ export function HeaderNotifications() {
         body: JSON.stringify({ keys }),
       });
       // Re-sincroniza con el servidor para reflejar el recuento real.
-      load({ silent: true });
+      load({ silent: true, epoch });
     } catch {
       // Si falla, restaurar recargando desde el servidor.
-      load({ silent: true });
+      load({ silent: true, epoch });
     } finally {
       setAcknowledging(false);
     }
@@ -146,6 +145,7 @@ export function HeaderNotifications() {
 
   const resetRead = async () => {
     setAcknowledging(true);
+    const epoch = ++mutationEpochRef.current;
     try {
       const res = await fetchApi<{ pending: number }>(
         "/notifications/reset-read",
@@ -154,9 +154,9 @@ export function HeaderNotifications() {
       setData((prev) =>
         prev ? { total: res.pending, items: prev.items } : prev,
       );
-      load({ silent: true });
+      load({ silent: true, epoch });
     } catch {
-      load({ silent: true });
+      load({ silent: true, epoch });
     } finally {
       setAcknowledging(false);
     }
@@ -172,7 +172,7 @@ export function HeaderNotifications() {
         onClick={() => {
           const next = !open;
           setOpen(next);
-          if (next) load({ silent: true });
+          if (next) load({ silent: true, epoch: mutationEpochRef.current });
         }}
         className="relative cursor-pointer border border-transparent p-2.5 text-gray-600 transition-colors hover:text-[#0b5a41]"
         aria-label={`Notificaciones (${total})`}

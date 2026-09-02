@@ -671,6 +671,90 @@ export class ProcessService {
     return serializeBigInt(updated);
   }
 
+  /**
+   * E1 · Cancela una opinión que no será considerada (p. ej. la dependencia
+   * no respondió o su respuesta se descarta). Permite que el flujo avance a
+   * OPINIONES_COMPLETAS si todas las solicitudes quedan VALIDADA/CANCELADA.
+   */
+  async cancelOpinionRequest(opinionRequestId: number, userId?: number) {
+    const request = await this.prisma.opinion_requests.findUnique({
+      where: { id: BigInt(opinionRequestId) },
+      include: { dependencias: { select: { name: true } } },
+    });
+
+    if (!request) {
+      throw new NotFoundException(
+        `Solicitud de opinión #${opinionRequestId} no encontrada`,
+      );
+    }
+
+    if (
+      request.status !== 'GENERADA' &&
+      request.status !== 'ENVIADA' &&
+      request.status !== 'RESPONDIDA' &&
+      request.status !== 'OBSERVADA'
+    ) {
+      throw new BadRequestException(
+        `No se puede cancelar una opinión ${request.status}.`,
+      );
+    }
+
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const result = await tx.opinion_requests.update({
+          where: { id: BigInt(opinionRequestId) },
+          data: { status: 'CANCELADA', updated_at: new Date() },
+        });
+
+        await this.logEvent(
+          request.agreement_id,
+          'OPINION_CANCELADA',
+          `Opinión de ${
+            request.dependencias?.name ?? 'la dependencia'
+          } cancelada por OCRI.`,
+          {
+            actorUserId: userId,
+            fromValue: request.status,
+            toValue: 'CANCELADA',
+            opinionRequestId: BigInt(opinionRequestId),
+          },
+          undefined,
+          tx,
+        );
+
+        const allRequests = await tx.opinion_requests.findMany({
+          where: { agreement_id: request.agreement_id },
+          select: { status: true },
+        });
+        const allValidated = allRequests.every(
+          (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
+        );
+        const currentStatus = await tx.agreements.findUnique({
+          where: { id: request.agreement_id },
+          select: { process_status: true },
+        });
+        if (
+          allValidated &&
+          currentStatus?.process_status !== 'OPINIONES_COMPLETAS'
+        ) {
+          await this.applyTransition(
+            tx,
+            request.agreement_id,
+            'OPINIONES_COMPLETAS',
+            'OPINIONES_COMPLETAS',
+            'Todas las solicitudes de opinión quedaron resueltas (validadas o canceladas).',
+            { actorUserId: userId },
+          );
+        }
+
+        return result;
+      },
+      { maxWait: 10000, timeout: 30000 },
+    );
+
+    return serializeBigInt(updated);
+  }
+
   // ─── E1 · Eliminar solicitud aún no enviada ─────────────────────────────────
 
   async deleteOpinionRequest(opinionRequestId: number, userId?: number) {
