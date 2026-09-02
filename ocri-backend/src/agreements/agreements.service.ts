@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -64,84 +68,123 @@ export class AgreementsService {
       dto.tramite_code?.trim() ||
       `EXP-${now.getFullYear()}-${String(Date.now()).slice(-5)}`;
 
-    const createdAgreement = await this.prisma.$transaction(async (tx) => {
-      const agr = await tx.agreements.create({
-        data: {
-          tramite_code: tramiteCode,
-          title: dto.title.trim().toUpperCase(),
-          name: dto.name?.trim() || null,
-          applicant_name: dto.applicant_name?.trim() || null,
-          applicant_email: dto.applicant_email?.trim() || null,
-          applicant_unit: dto.applicant_unit?.trim() || null,
-          rectorate_oficio_number: dto.rectorate_oficio_number?.trim() || null,
-          resolution_number: dto.resolution_number
-            ? dto.resolution_number.trim().toUpperCase()
-            : null,
-          start_date: dto.start_date ? new Date(dto.start_date) : null,
-          end_date: dto.end_date ? new Date(dto.end_date) : null,
-          observations: dto.observations?.trim() || null,
-          process_status: 'RECEPCIONADA',
-          validity_status: 'PENDIENTE',
-          stage: 'ETAPA_1_PROPUESTA',
-          institutions: { connect: { id: BigInt(dto.institution_id) } },
-          agreement_types: { connect: { id: BigInt(dto.agreement_type_id) } },
-        },
-        include: agreementIncludes,
-      });
+    const createdAgreement = await this.prisma
+      .$transaction(async (tx) => {
+        const resolution = dto.resolution_number?.trim().toUpperCase() || null;
 
-      const docSpecs: Array<{
-        file?: UploadedFileLike;
-        code: string;
-        fallbackName: string;
-      }> = [
-        {
-          file: files?.dictamen?.[0],
-          code: 'DICTAMEN',
-          fallbackName: 'Dictamen',
-        },
-        ...(files?.documentos_origen ?? []).map((file) => ({
-          file,
-          code: 'DOCUMENTO_DE_ORIGEN',
-          fallbackName: 'Documento de Origen',
-        })),
-      ];
+        if (dto.tramite_code?.trim()) {
+          const duplicatedTr = await tx.agreements.findFirst({
+            where: { tramite_code: dto.tramite_code.trim().toUpperCase() },
+            select: { id: true },
+          });
+          if (duplicatedTr) {
+            throw new ConflictException(
+              `El código de trámite ${dto.tramite_code.trim().toUpperCase()} ya está registrado en el convenio #${Number(duplicatedTr.id)}.`,
+            );
+          }
+        }
 
-      for (const spec of docSpecs) {
-        if (!spec.file) continue;
-        const docType = await tx.document_types.findUnique({
-          where: { code: spec.code },
-        });
-        await tx.documents.create({
-          data: this.buildDocumentData(agr.id, spec.file, {
-            name: docType?.name ?? spec.fallbackName,
-            documentTypeId: docType?.id ?? null,
-            direction: 'ENTRADA',
+        if (resolution) {
+          const duplicated = await tx.agreements.findFirst({
+            where: { resolution_number: resolution },
+            select: { id: true },
+          });
+          if (duplicated) {
+            throw new ConflictException(
+              `El código de resolución ${resolution} ya está registrado en el convenio #${Number(duplicated.id)}.`,
+            );
+          }
+        }
+
+        const agr = await tx.agreements.create({
+          data: {
+            tramite_code: tramiteCode,
+            title: dto.title.trim().toUpperCase(),
+            name: dto.name?.trim() || null,
+            applicant_name: dto.applicant_name?.trim() || null,
+            applicant_email: dto.applicant_email?.trim() || null,
+            applicant_unit: dto.applicant_unit?.trim() || null,
+            rectorate_oficio_number:
+              dto.rectorate_oficio_number?.trim() || null,
+            resolution_number: resolution,
+            start_date: dto.start_date ? new Date(dto.start_date) : null,
+            end_date: dto.end_date ? new Date(dto.end_date) : null,
+            observations: dto.observations?.trim() || null,
+            process_status: 'RECEPCIONADA',
+            validity_status: 'PENDIENTE',
             stage: 'ETAPA_1_PROPUESTA',
-          }),
+            institutions: { connect: { id: BigInt(dto.institution_id) } },
+            agreement_types: { connect: { id: BigInt(dto.agreement_type_id) } },
+          },
+          include: agreementIncludes,
         });
-      }
 
-      await tx.process_events.create({
-        data: {
-          agreement_id: agr.id,
-          event_type: 'SOLICITUD_RECEPCIONADA',
-          description: `OCRI recibió de Rectorado la solicitud de propuesta de convenio${dto.rectorate_oficio_number ? ` (Oficio ${dto.rectorate_oficio_number})` : ''}. Inicia evaluación técnica.`,
-          to_value: 'RECEPCIONADA',
-          stage: 'ETAPA_1_PROPUESTA',
-          metadata: JSON.parse(
-            JSON.stringify({
-              tramite_code: tramiteCode,
-              applicant_name: dto.applicant_name ?? null,
-              has_dictamen: Boolean(files?.dictamen?.[0]),
-              documentos_origen_count: files?.documentos_origen?.length ?? 0,
+        const docSpecs: Array<{
+          file?: UploadedFileLike;
+          code: string;
+          fallbackName: string;
+        }> = [
+          {
+            file: files?.dictamen?.[0],
+            code: 'DICTAMEN',
+            fallbackName: 'Dictamen',
+          },
+          ...(files?.documentos_origen ?? []).map((file) => ({
+            file,
+            code: 'DOCUMENTO_DE_ORIGEN',
+            fallbackName: 'Documento de Origen',
+          })),
+        ];
+
+        for (const spec of docSpecs) {
+          if (!spec.file) continue;
+          const docType = await tx.document_types.findUnique({
+            where: { code: spec.code },
+          });
+          await tx.documents.create({
+            data: this.buildDocumentData(agr.id, spec.file, {
+              name: docType?.name ?? spec.fallbackName,
+              documentTypeId: docType?.id ?? null,
+              direction: 'ENTRADA',
+              stage: 'ETAPA_1_PROPUESTA',
             }),
-          ) as Prisma.InputJsonValue,
-          occurred_at: now,
-        },
-      });
+          });
+        }
 
-      return agr;
-    });
+        await tx.process_events.create({
+          data: {
+            agreement_id: agr.id,
+            event_type: 'SOLICITUD_RECEPCIONADA',
+            description: `OCRI recibió de Rectorado la solicitud de propuesta de convenio${dto.rectorate_oficio_number ? ` (Oficio ${dto.rectorate_oficio_number})` : ''}. Inicia evaluación técnica.`,
+            to_value: 'RECEPCIONADA',
+            stage: 'ETAPA_1_PROPUESTA',
+            metadata: JSON.parse(
+              JSON.stringify({
+                tramite_code: tramiteCode,
+                applicant_name: dto.applicant_name ?? null,
+                has_dictamen: Boolean(files?.dictamen?.[0]),
+                documentos_origen_count: files?.documentos_origen?.length ?? 0,
+              }),
+            ) as Prisma.InputJsonValue,
+            occurred_at: now,
+          },
+        });
+
+        return agr;
+      })
+      .catch((error) => {
+        // Fallback de robustez: si la BD cortó por restricción @unique
+        // (carrera simultánea), convertir en 409 con mensaje claro.
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          throw new ConflictException(
+            'El código de trámite o de resolución ya está registrado en otro convenio.',
+          );
+        }
+        throw error;
+      });
 
     return serializeBigInt<typeof createdAgreement>(createdAgreement);
   }
@@ -323,6 +366,26 @@ export class AgreementsService {
     if (dto.agreement_type_id !== undefined)
       data.agreement_types = { connect: { id: BigInt(dto.agreement_type_id) } };
 
+    const newResolution =
+      typeof data.resolution_number === 'string'
+        ? data.resolution_number
+        : (data.resolution_number?.set ?? null);
+
+    if (newResolution) {
+      const duplicated = await this.prisma.agreements.findFirst({
+        where: {
+          resolution_number: newResolution,
+          NOT: { id: agreementId },
+        },
+        select: { id: true },
+      });
+      if (duplicated) {
+        throw new ConflictException(
+          `El código de resolución ${newResolution} ya está registrado en el convenio #${Number(duplicated.id)}.`,
+        );
+      }
+    }
+
     try {
       const updated = await this.prisma.agreements.update({
         where: { id: agreementId },
@@ -339,6 +402,14 @@ export class AgreementsService {
         error.code === 'P2025'
       ) {
         throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
+      }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `El código de resolución ya está registrado en otro convenio.`,
+        );
       }
       throw error;
     }
