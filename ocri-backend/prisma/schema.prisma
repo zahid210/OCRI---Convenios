@@ -172,7 +172,7 @@ model document_types {
 model agreements {
   id           BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
   tramite_code String  @unique @db.VarChar(30)
-  title        String  @db.VarChar(255)
+  title        String  @db.VarChar(510)
   name         String? @db.VarChar(500) // objeto/denominación completa
 
   // Solicitud (E1): entidad que propuso el convenio y su derivación por Rectorado
