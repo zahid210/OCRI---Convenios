@@ -201,7 +201,9 @@ export default function DashboardPage() {
                                             onClick={() => router.push(isProposal ? `/propuestas/${agreement.id}` : `/convenios/${agreement.id}`)}
                                         >
                                             <td className="py-3 px-4 text-sm text-gray-800">
-                                                {agreement.resolution_number || agreement.title || `Código #${agreement.id}`}
+                                                <span className="block line-clamp-2 min-w-0" title={agreement.resolution_number || agreement.title}>
+                                                    {agreement.resolution_number || agreement.title || `Código #${agreement.id}`}
+                                                </span>
                                             </td>
                                             <td className="py-3 px-4">
                                                 <span className={`inline-block px-2 py-1 text-xs border font-medium ${

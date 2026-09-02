@@ -170,26 +170,26 @@ export default function ConveniosPage() {
 
             {/* Tabla */}
             <div className="border border-gray-200 bg-white shadow-sm">
-                <div className="overflow-x-visible md:overflow-x-auto min-h-[350px]">
+                <div className="overflow-x-auto min-h-[350px]">
                     <table className="w-full text-left border-collapse">
                         <thead>
                         <tr className="bg-[#f8f9fa] border-b border-gray-200">
-                            <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                            <th className="py-4 px-5 w-[34%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                                 <span className="ml-10">Título / Código</span>
                             </th>
-                            <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                            <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                                 Institución
                             </th>
-                            <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                            <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
                                 Vigencia
                             </th>
-                            <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                            <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
                                 Plazo
                             </th>
-                            <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                            <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
                                 Estado
                             </th>
-                            <th className="py-4 text-right pr-12"></th>
+                            <th className="py-4 px-5 text-right"></th>
                         </tr>
                         </thead>
 
@@ -225,13 +225,13 @@ export default function ConveniosPage() {
                                         className="group hover:bg-gray-50 transition-colors cursor-pointer"
                                         onClick={() => router.push(`/convenios/${item.id}`)}
                                     >
-                                        <td className="py-5">
+                                        <td className="py-5 px-5">
                                             <div className="flex items-center gap-4 ml-10">
                                                 <div className="p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0">
                                                     <FileText className="h-4 w-4" />
                                                 </div>
-                                                <div>
-                                                    <div className="font-medium text-gray-800 text-sm">
+                                                <div className="min-w-0">
+                                                    <div className="font-medium text-gray-800 text-sm line-clamp-2 pr-2">
                                                         {item.title || `Convenio #${item.id}`}
                                                     </div>
                                                     {item.tramite_code && (
@@ -243,13 +243,13 @@ export default function ConveniosPage() {
                                             </div>
                                         </td>
 
-                                        <td className="py-5">
+                                        <td className="py-5 px-5">
                                             <div className="text-sm text-gray-800 line-clamp-1">
                                                 {item.institution_name || 'No especificada'}
                                             </div>
                                         </td>
 
-                                        <td className="py-5 text-center">
+                                        <td className="py-5 px-5 text-center">
                                             <div className="flex flex-col items-center gap-0.5">
                                                 {item.start_date && (
                                                     <span className="text-[10px] text-gray-400 font-mono">
@@ -266,7 +266,7 @@ export default function ConveniosPage() {
                                             </div>
                                         </td>
 
-                                        <td className="py-5 text-center">
+                                        <td className="py-5 px-5 text-center">
                                             {item.days_remaining !== null ? (
                                                 <span className={`text-xs font-medium ${cfg.color}`}>
                                                     {item.days_remaining < 0
@@ -278,7 +278,7 @@ export default function ConveniosPage() {
                                             )}
                                         </td>
 
-                                        <td className="py-5 text-center">
+                                        <td className="py-5 px-5 text-center">
                                             <div className="flex justify-center">
                                                 <span className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
                                                     {cfg.label}
@@ -286,7 +286,7 @@ export default function ConveniosPage() {
                                             </div>
                                         </td>
 
-                                        <td className="py-5 pr-12">
+                                        <td className="py-5 px-5 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <Link
                                                     href={`/convenios/${item.id}`}

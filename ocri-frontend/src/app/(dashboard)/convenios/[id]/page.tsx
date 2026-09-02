@@ -152,8 +152,8 @@ export default function ConvenioDetailPage({
             <div className="bg-white border border-gray-200 p-6 shadow-sm space-y-4">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="space-y-1">
-                        <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2">
-                            {agreement.title}
+                        <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2 min-w-0" title={agreement.title}>
+                            <span className="line-clamp-2">{agreement.title}</span>
                         </h1>
                             <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
                                 {agreement.tramite_code ? (

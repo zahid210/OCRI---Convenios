@@ -144,22 +144,22 @@ export default function SeguimientoPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#f8f9fa] border-b border-gray-200">
-                <th className="py-4 pl-10 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                <th className="py-4 px-5 w-[30%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   Título / Código
                 </th>
-                <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
                   Estado
                 </th>
-                <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   Plan de Trabajo
                 </th>
-                <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   Informes
                 </th>
-                <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   Avance de Entregables
                 </th>
-                <th className="py-4 text-right pr-10"></th>
+                <th className="py-4 px-5 text-right"></th>
               </tr>
             </thead>
 
@@ -218,7 +218,7 @@ export default function SeguimientoPage() {
                   return (
                     <Fragment key={row.id}>
                       <tr className="group hover:bg-gray-50 transition-colors">
-                        <td className="py-5 pl-10">
+                        <td className="py-5 px-5">
                           <div className="flex items-center gap-4">
                             <button
                               type="button"
@@ -236,8 +236,8 @@ export default function SeguimientoPage() {
                                 <ChevronDown className="h-4 w-4" />
                               )}
                             </button>
-                            <div>
-                              <div className="font-medium text-gray-800 text-sm">
+                            <div className="min-w-0">
+                              <div className="font-medium text-gray-800 text-sm line-clamp-2 pr-2">
                                 {row.titulo}
                               </div>
                               {row.tramite_code && (
@@ -249,7 +249,7 @@ export default function SeguimientoPage() {
                           </div>
                         </td>
 
-                        <td className="py-5 text-center">
+                        <td className="py-5 px-5 text-center">
                           <div className="flex justify-center">
                             <span
                               className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border ${STATUS_META[row.process_status]?.classes || "bg-gray-50 text-gray-600 border-gray-200"}`}
@@ -260,7 +260,7 @@ export default function SeguimientoPage() {
                           </div>
                         </td>
 
-                        <td className="py-5">
+                        <td className="py-5 px-5">
                           <span
                             className={`inline-flex items-center px-2 py-1 uppercase text-xs border ${planColor}`}
                           >
@@ -268,7 +268,7 @@ export default function SeguimientoPage() {
                           </span>
                         </td>
 
-                        <td className="py-5">
+                        <td className="py-5 px-5">
                           {historicoConcluido ? (
                             <span className="inline-flex items-center px-2 py-1 uppercase text-xs border bg-green-50 text-green-700 border-green-200">
                               Registrado
@@ -287,8 +287,8 @@ export default function SeguimientoPage() {
                           )}
                         </td>
 
-                        <td className="py-5">
-                          <div className="flex items-center gap-3 pr-6">
+                        <td className="py-5 px-5">
+                          <div className="flex items-center gap-3">
                             <div className="flex-1 bg-gray-100 h-2">
                               <div
                                 className={`h-2 ${progressColor(row.progreso)} transition-all`}
@@ -303,7 +303,7 @@ export default function SeguimientoPage() {
                           </div>
                         </td>
 
-                        <td className="py-5 pr-10">
+                        <td className="py-5 px-5">
                           <div className="flex items-center justify-end gap-2">
                             <Link
                               href={`/seguimiento/${row.id}`}
