@@ -374,3 +374,19 @@ model app_config {
   value      String    @db.VarChar(255)
   updated_at DateTime? @db.Timestamp(0)
 }
+
+// ─── Acknowledgment de notificaciones (marcar como leído) ───────────────────
+// Guarda, por usuario, las notificaciones derivadas que ya fueron vistas.
+// `key` es el identificador compuesto de cada notificación (p. ej.
+// "expiring-17", "pending_area-8"). Las notificaciones con `key` registrado
+// aquí se excluyen de la cuenta de pendientes y del listado.
+
+model notification_acknowledgements {
+  id      BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id BigInt   @db.UnsignedBigInt
+  key     String   @db.VarChar(120)
+  read_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([user_id, key])
+  @@index([user_id])
+}
