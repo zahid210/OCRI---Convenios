@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Users as UsersIcon,
-  Shield,
   X,
   ChevronDown,
 } from "lucide-react";

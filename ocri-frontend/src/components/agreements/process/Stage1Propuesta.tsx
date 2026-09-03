@@ -498,7 +498,7 @@ export default function Stage1Propuesta({
     return () => {
       cancelled = true;
     };
-  }, [allRectoradoReady, processStatus, agreementId, onRefresh, toast]);
+  }, [allRectoradoReady, processStatus, agreementId, onRefresh, toast, router]);
 
   const openRespondModal = (requestId: number) => {
     setRespondDate("");
