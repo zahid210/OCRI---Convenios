@@ -65,7 +65,7 @@ export class AgreementsService {
     const now = new Date();
 
     const tramiteCode =
-      dto.tramite_code?.trim() ||
+      dto.tramite_code?.trim().toUpperCase() ||
       `EXP-${now.getFullYear()}-${String(Date.now()).slice(-5)}`;
 
     const createdAgreement = await this.prisma

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
+import { BCRYPT_ROUNDS } from './auth.constants';
 
 @Injectable()
 export class AuthService {
@@ -11,9 +12,20 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  // Hash de relleno: se compara cuando el email no existe para que el tiempo de
+  // respuesta sea idéntico al del flujo real (mismo costo bcrypt). Esto evita
+  // que un atacante pueda enumerar usuarios midiendo la latencia del login.
+  private static readonly DUMMY_HASH = (() => {
+    // Se reutiliza el costo configurado; el contenido del hash es irrelevante.
+    const salt = bcrypt.genSaltSync(BCRYPT_ROUNDS);
+    return bcrypt.hashSync('dummy-password-timing', salt);
+  })();
+
   async validateUser(email: string, pass: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
+      // Compara contra un hash ficticio para igualar la duración del camino real.
+      await bcrypt.compare(pass, AuthService.DUMMY_HASH);
       throw new UnauthorizedException('Credenciales inválidas');
     }
 

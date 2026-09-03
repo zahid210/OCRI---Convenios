@@ -30,7 +30,9 @@ export default function InstitutionModal({
   const [isCustomCountry, setIsCustomCountry] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Ajuste de estado derivado de props durante el render (Evita useEffect y errores de linter)
+  // Ajuste de estado derivado de props durante el render: React redibuja de
+  // inmediato y el guard prev* evita bucles. Es el patrón recomendado para
+  // sincronizar estado local con props que cambian, sin useEffect.
   const [prevCountries, setPrevCountries] = useState(countries);
   const [prevInstitution, setPrevInstitution] = useState<
     InstitutionItem | null | undefined
@@ -130,6 +132,7 @@ export default function InstitutionModal({
         <button
           type="button"
           onClick={handleClose}
+          aria-label="Cerrar"
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
         >
           <X className="h-5 w-5" />

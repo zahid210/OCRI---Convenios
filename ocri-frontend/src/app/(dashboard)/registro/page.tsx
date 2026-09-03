@@ -1,317 +1,282 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Agreement, PaginatedResponse } from '@/types/agreements';
-import { fetcher } from '@/lib/api';
-import {
-    Search,
-    Eye,
-    FileText,
-    Loader2,
-    ChevronLeft,
-    ChevronRight,
-    Building2,
-    ChevronDown,
-} from 'lucide-react';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Agreement, PaginatedResponse } from "@/types/agreements";
+import { fetcher } from "@/lib/api";
+import { Search, Eye, FileText, Loader2 } from "lucide-react";
+import { ClickableTableRow } from "@/components/ui/clickable-table-row";
+import { PagePagination } from "@/components/ui/page-pagination";
 
 const REGISTRO_STATUS: Record<
-    string,
-    { label: string; hint: string; badge: string }
+  string,
+  { label: string; hint: string; badge: string }
 > = {
-    ENVIADO_A_RECTORADO: {
-        label: 'Enviado a Rectorado',
-        hint: 'Aún es propuesta · esperando decisión',
-        badge: 'bg-purple-50 text-purple-700 border-purple-200',
-    },
-    NO_SUSCRITO: {
-        label: 'No Suscrito',
-        hint: 'Decisión desfavorable de Rectorado',
-        badge: 'bg-red-50 text-red-700 border-red-200',
-    },
-    SUSCRITO: {
-        label: 'Suscrito',
-        hint: 'Pendiente de registro formal',
-        badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    },
-    REGISTRADO: {
-        label: 'Registrado',
-        hint: 'Pendiente de publicación',
-        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    },
-    PUBLICADO: {
-        label: 'Publicado',
-        hint: 'Listo para seguimiento',
-        badge: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
+  ENVIADO_A_RECTORADO: {
+    label: "Enviado a Rectorado",
+    hint: "Aún es propuesta · esperando decisión",
+    badge: "bg-purple-50 text-purple-700 border-purple-200",
+  },
+  NO_SUSCRITO: {
+    label: "No Suscrito",
+    hint: "Decisión desfavorable de Rectorado",
+    badge: "bg-red-50 text-red-700 border-red-200",
+  },
+  SUSCRITO: {
+    label: "Suscrito",
+    hint: "Pendiente de registro formal",
+    badge: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  },
+  REGISTRADO: {
+    label: "Registrado",
+    hint: "Pendiente de publicación",
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  PUBLICADO: {
+    label: "Publicado",
+    hint: "Listo para seguimiento",
+    badge: "bg-blue-50 text-blue-700 border-blue-200",
+  },
 };
 
 export default function RegistroPage() {
-    const router = useRouter();
-    const [data, setData] = useState<PaginatedResponse<Agreement> | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [search, setSearch] = useState('');
-    const [activeSearch, setActiveSearch] = useState('');
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(10);
+  const router = useRouter();
+  const [data, setData] = useState<PaginatedResponse<Agreement> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
-    useEffect(() => {
-        let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-        async function loadRegistro() {
-            try {
-                setError(null);
-                const params = new URLSearchParams({
-                    page: page.toString(),
-                    per_page: perPage.toString(),
-                    scope: 'en_registro',
-                    ...(activeSearch && { search: activeSearch }),
-                });
-                const res = await fetcher<PaginatedResponse<Agreement>>(`/agreements?${params.toString()}`);
+    async function loadRegistro() {
+      try {
+        setError(null);
+        const params = new URLSearchParams({
+          page: page.toString(),
+          per_page: perPage.toString(),
+          scope: "en_registro",
+          ...(activeSearch && { search: activeSearch }),
+        });
+        const res = await fetcher<PaginatedResponse<Agreement>>(
+          `/agreements?${params.toString()}`,
+        );
 
-                if (isMounted) {
-                    setData(res);
-                }
-            } catch (err) {
-                if (isMounted) {
-                    console.error('Error al cargar la bandeja de registro:', err);
-                    setError('Ocurrió un error al cargar la bandeja de registro.');
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
+        if (isMounted) {
+          setData(res);
         }
+      } catch (err) {
+        if (isMounted) {
+          console.error("Error al cargar la bandeja de registro:", err);
+          setError("Ocurrió un error al cargar la bandeja de registro.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
 
-        loadRegistro();
+    loadRegistro();
 
-        return () => {
-            isMounted = false;
-        };
-    }, [page, perPage, activeSearch]);
-
-    const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setPage(1);
-        setActiveSearch(search.trim());
+    return () => {
+      isMounted = false;
     };
+  }, [page, perPage, activeSearch]);
 
-    const rows = data?.data ?? [];
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setPage(1);
+    setActiveSearch(search.trim());
+  };
 
-    return (
-        <div className="space-y-6 pb-12 font-sans text-gray-700">
-            {/* Header */}
-            <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-xl font-normal text-gray-800">
-                        Bandeja de Registro de Convenios
-                    </h1>
-                    <div className="flex items-center gap-2 text-gray-500">
-                        <span className="text-xs text-gray-500">
-                            Aprobación de Rectorado, registro formal y publicación
-                        </span>
-                    </div>
-                </div>
+  const rows = data?.data ?? [];
 
-                <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                    <div className="relative w-full sm:w-80">
-                        <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Nombre, expediente, institución o país..."
-                            className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
-                        />
-                    </div>
-                </form>
-            </div>
-
-            {/* Tabla */}
-            <div className="border border-gray-200 bg-white shadow-sm">
-                <div className="overflow-x-auto min-h-[350px]">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                        <tr className="bg-[#f8f9fa] border-b border-gray-200">
-                            <th className="py-4 px-5 w-[38%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
-                                <span className="ml-10">Título / Código</span>
-                            </th>
-                            <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
-                                Institución
-                            </th>
-                            <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
-                                Estado
-                            </th>
-                            <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
-                                Siguiente paso
-                            </th>
-                            <th className="py-4 px-5 text-right"></th>
-                        </tr>
-                        </thead>
-
-                        <tbody className="divide-y divide-gray-100">
-                        {loading ? (
-                            <tr>
-                                <td colSpan={5} className="py-12 text-center text-gray-500">
-                                    <div className="flex justify-center items-center gap-2">
-                                        <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
-                                        <span className="text-sm">Cargando registros...</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : error ? (
-                            <tr>
-                                <td colSpan={5} className="py-12 text-center text-red-600 text-sm">
-                                    {error}
-                                </td>
-                            </tr>
-                        ) : rows.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
-                                    No hay convenios en etapa de registro.
-                                </td>
-                            </tr>
-                        ) : (
-                            rows.map((agreement) => {
-                                const cfg = REGISTRO_STATUS[agreement.process_status] ?? {
-                                    label: agreement.process_status,
-                                    hint: '—',
-                                    badge: 'bg-gray-100 text-gray-700 border-gray-200',
-                                };
-                                const inst = agreement.institutions;
-
-                                return (
-                                    <tr
-                                        key={agreement.id}
-                                        className="group hover:bg-gray-50 transition-colors cursor-pointer"
-                                        onClick={() => router.push(`/registro/${agreement.id}`)}
-                                    >
-                                        <td className="py-5 px-5">
-                                            <div className="flex items-center gap-4 ml-10">
-                                                <div className="p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0">
-                                                    <FileText className="h-4 w-4" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <div className="font-medium text-gray-800 text-sm line-clamp-2 pr-2">
-                                                        {agreement.title || `Convenio #${agreement.id}`}
-                                                    </div>
-                                                    {agreement.tramite_code && (
-                                                        <div className="text-[11px] font-mono text-[#0b5a41] font-semibold">
-                                                            {agreement.tramite_code}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        <td className="py-5 px-5">
-                                            <div className="text-sm text-gray-800 line-clamp-1">
-                                                {inst?.name || 'No especificada'}
-                                            </div>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
-                                                <span className="text-[10px] uppercase font-semibold text-gray-400">
-                                                    {inst?.country || 'PERÚ'}
-                                                </span>
-                                            </div>
-                                        </td>
-
-                                        <td className="py-5 px-5 text-center">
-                                            <div className="flex justify-center">
-                                                <span className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border ${cfg.badge}`}>
-                                                    {cfg.label}
-                                                </span>
-                                            </div>
-                                        </td>
-
-                                        <td className="py-5 px-5 text-center">
-                                            <span className="text-xs text-gray-500">
-                                                {cfg.hint}
-                                            </span>
-                                        </td>
-
-                                        <td className="py-5 px-5 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Link
-                                                    href={`/registro/${agreement.id}`}
-                                                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                    Continuar
-                                                </Link>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {data && (
-                    <div className="px-12 py-4 bg-[#f8f9fa] border-t border-gray-200">
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-                            <div className="flex items-center gap-2">
-                                <span>Mostrar</span>
-                                <div className="relative">
-                                <select
-                                    value={perPage}
-                                    onChange={(e) => {
-                                        setLoading(true);
-                                        setPerPage(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    {[10, 15, 25, 50, 100].map((count) => (
-                                        <option key={count} value={count}>
-                                            {count}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                                </div>
-                                <span>por página</span>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <span>
-                                    Página <strong className="font-semibold text-gray-800">{data.meta.page}</strong> de{' '}
-                                    <strong className="font-semibold text-gray-800">{data.meta.last_page}</strong>
-                                </span>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        disabled={page === 1}
-                                        onClick={() => {
-                                            setLoading(true);
-                                            setPage((p) => Math.max(p - 1, 1));
-                                        }}
-                                        className="p-1.5 border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        disabled={page >= data.meta.last_page}
-                                        onClick={() => {
-                                            setLoading(true);
-                                            setPage((p) => p + 1);
-                                        }}
-                                        className="p-1.5 border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+  return (
+    <div className="space-y-6 pb-12 font-sans text-gray-700">
+      {/* Header */}
+      <div className="bg-white border border-gray-200 p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-xl font-normal text-gray-800">
+            Bandeja de Registro de Convenios
+          </h1>
+          <div className="flex items-center gap-2 text-gray-500">
+            <span className="text-xs text-gray-500">
+              Aprobación de Rectorado, registro formal y publicación
+            </span>
+          </div>
         </div>
-    );
+
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto"
+        >
+          <div className="relative w-full sm:w-80">
+            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nombre, expediente, institución o país..."
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+            />
+          </div>
+        </form>
+      </div>
+
+      {/* Tabla */}
+      <div className="border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto min-h-[350px]">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#f8f9fa] border-b border-gray-200">
+                <th className="py-4 px-5 w-[38%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                  <span className="ml-10">Título / Código</span>
+                </th>
+                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                  Institución
+                </th>
+                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                  Estado
+                </th>
+                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                  Siguiente paso
+                </th>
+                <th className="py-4 px-5 text-right"></th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-gray-500">
+                    <div className="flex justify-center items-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+                      <span className="text-sm">Cargando registros...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="py-12 text-center text-red-600 text-sm"
+                  >
+                    {error}
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="py-12 text-center text-sm text-gray-500"
+                  >
+                    No hay convenios en etapa de registro.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((agreement) => {
+                  const cfg = REGISTRO_STATUS[agreement.process_status] ?? {
+                    label: agreement.process_status,
+                    hint: "—",
+                    badge: "bg-gray-100 text-gray-700 border-gray-200",
+                  };
+                  const inst = agreement.institutions;
+
+                  return (
+                    <ClickableTableRow
+                      key={agreement.id}
+                      className="group hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => router.push(`/registro/${agreement.id}`)}
+                      ariaLabel={`Abrir convenio ${agreement.title || agreement.tramite_code || agreement.id}`}
+                    >
+                      <td className="py-5 px-5">
+                        <div className="flex items-center gap-4 ml-10">
+                          <div className="p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-gray-800 text-sm line-clamp-2 pr-2">
+                              {agreement.title || `Convenio #${agreement.id}`}
+                            </div>
+                            {agreement.tramite_code && (
+                              <div className="text-[11px] font-mono text-[#0b5a41] font-semibold">
+                                {agreement.tramite_code}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-5 px-5">
+                        <div className="text-sm text-gray-800 line-clamp-1">
+                          {inst?.name || "No especificada"}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          <span className="text-[10px] uppercase font-semibold text-gray-400">
+                            {inst?.country || "PERÚ"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-5 px-5 text-center">
+                        <div className="flex justify-center">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border ${cfg.badge}`}
+                          >
+                            {cfg.label}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-5 px-5 text-center">
+                        <span className="text-xs text-gray-500">
+                          {cfg.hint}
+                        </span>
+                      </td>
+
+                      <td className="py-5 px-5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/registro/${agreement.id}`}
+                            className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Eye className="h-4 w-4" />
+                            Continuar
+                          </Link>
+                        </div>
+                      </td>
+                    </ClickableTableRow>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {data && (
+          <PagePagination
+            page={data.meta.page}
+            totalPages={data.meta.last_page}
+            perPage={perPage}
+            onPageChange={(p) => {
+              setLoading(true);
+              setPage(p);
+            }}
+            onPerPageChange={(v) => {
+              setLoading(true);
+              setPerPage(v);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
 }

@@ -7,6 +7,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { user_role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { BCRYPT_ROUNDS } from '../auth/auth.constants';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -84,7 +85,7 @@ export class UsersService {
       throw new ConflictException('Ya existe un usuario con ese correo.');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
     const user = await this.prisma.users.create({
       data: {
@@ -145,7 +146,8 @@ export class UsersService {
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.email !== undefined) data.email = dto.email;
     if (dto.role !== undefined) data.role = dto.role as user_role;
-    if (dto.password) data.password = await bcrypt.hash(dto.password, 10);
+    if (dto.password)
+      data.password = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
     const updated = await this.prisma.users.update({
       where: { id: BigInt(id) },

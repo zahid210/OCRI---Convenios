@@ -5,6 +5,7 @@ import { fetchApi } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
+import { ClickableTableRow } from "@/components/ui/clickable-table-row";
 import {
   FileCheck,
   Clock,
@@ -238,7 +239,7 @@ export default function DashboardPage() {
                           ? "bg-red-50 text-red-700 border-red-200"
                           : "bg-green-50 text-green-700 border-green-200";
                     return (
-                      <tr
+                      <ClickableTableRow
                         key={agreement.id}
                         className="hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() =>
@@ -248,6 +249,7 @@ export default function DashboardPage() {
                               : `/convenios/${agreement.id}`,
                           )
                         }
+                        ariaLabel={`Abrir ${isProposal ? "propuesta" : "convenio"} ${agreement.title || agreement.resolution_number || agreement.id}`}
                       >
                         <td className="py-3 px-4 text-sm text-gray-800">
                           <span
@@ -284,8 +286,8 @@ export default function DashboardPage() {
                           >
                             {stateLabel}
                           </span>
-                        </td>
-                      </tr>
+                         </td>
+                      </ClickableTableRow>
                     );
                   })
                 )}

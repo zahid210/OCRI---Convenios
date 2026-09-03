@@ -442,6 +442,7 @@ export default function UsersPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
+              aria-label="Cerrar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="h-5 w-5" />

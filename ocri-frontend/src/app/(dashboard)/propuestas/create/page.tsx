@@ -675,6 +675,7 @@ export default function CreatePropuestaPage() {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
+              aria-label="Cerrar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X className="h-5 w-5" />
@@ -817,6 +818,7 @@ export default function CreatePropuestaPage() {
                   onClick={() => setIsDictamenPreviewOpen(false)}
                   className="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
                   title="Cerrar"
+                  aria-label="Cerrar"
                 >
                   <X className="h-5 w-5" />
                 </button>

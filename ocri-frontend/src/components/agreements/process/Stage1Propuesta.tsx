@@ -748,12 +748,24 @@ export default function Stage1Propuesta({
                   {pendingRequests.map((req) => (
                     <div key={req.id} className="py-4">
                       <div
-                        className="flex items-center gap-3 cursor-pointer group"
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expandedRequest === req.id}
+                        aria-controls={`opinion-${req.id}`}
+                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#df9f1f]"
                         onClick={() =>
                           setExpandedRequest(
                             expandedRequest === req.id ? null : req.id,
                           )
                         }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setExpandedRequest(
+                              expandedRequest === req.id ? null : req.id,
+                            );
+                          }
+                        }}
                       >
                         <StatusDot status={req.status} />
                         <div className="flex-1 min-w-0">
@@ -826,7 +838,10 @@ export default function Stage1Propuesta({
                       </div>
 
                       {expandedRequest === req.id && (
-                        <div className="mt-3 ml-6 p-4 bg-[#f8f9fa] border border-gray-200 text-sm space-y-2">
+                        <div
+                          id={`opinion-${req.id}`}
+                          className="mt-3 ml-6 p-4 bg-[#f8f9fa] border border-gray-200 text-sm space-y-2"
+                        >
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <span className="text-xs font-semibold uppercase text-gray-500">
@@ -883,12 +898,24 @@ export default function Stage1Propuesta({
                   {respondedRequests.map((req) => (
                     <div key={req.id} className="py-4">
                       <div
-                        className="flex items-center gap-3 cursor-pointer group"
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expandedRequest === req.id}
+                        aria-controls={`opinion-${req.id}`}
+                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#df9f1f]"
                         onClick={() =>
                           setExpandedRequest(
                             expandedRequest === req.id ? null : req.id,
                           )
                         }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setExpandedRequest(
+                              expandedRequest === req.id ? null : req.id,
+                            );
+                          }
+                        }}
                       >
                         <StatusDot status={req.status} />
                         <div className="flex-1 min-w-0">
@@ -976,7 +1003,10 @@ export default function Stage1Propuesta({
                       </div>
 
                       {expandedRequest === req.id && (
-                        <div className="mt-3 ml-6 p-4 bg-[#f8f9fa] border border-gray-200 text-sm space-y-2">
+                        <div
+                          id={`opinion-${req.id}`}
+                          className="mt-3 ml-6 p-4 bg-[#f8f9fa] border border-gray-200 text-sm space-y-2"
+                        >
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <span className="text-xs font-semibold uppercase text-gray-500">
@@ -1310,6 +1340,7 @@ export default function Stage1Propuesta({
               <button
                 onClick={() => setShowOficioEditor(false)}
                 title="Cerrar"
+                aria-label="Cerrar"
                 className="ml-auto p-1 text-gray-500 hover:text-gray-800 transition-colors"
               >
                 <X className="h-4 w-4" />
