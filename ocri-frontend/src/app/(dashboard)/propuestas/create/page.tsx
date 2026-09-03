@@ -215,8 +215,11 @@ export default function CreatePropuestaPage() {
       setIsModalOpen(false);
       toast.success("Institución registrada correctamente.");
     } catch (err) {
-      console.error("Error al crear institución:", err);
-      toast.error("No se pudo registrar la institución.");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "No se pudo registrar la institución.",
+      );
     } finally {
       setSavingInst(false);
     }

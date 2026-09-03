@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -96,7 +97,16 @@ export class ProcessService {
       select: { process_status: true },
     });
 
-    validateTransition(current?.process_status ?? 'DESCONOCIDO', nextStatus);
+    const currentStatus = current?.process_status ?? 'DESCONOCIDO';
+
+    // Reentrancia: si dos operaciones concurrentes intentan la misma
+    // transición, la segunda ya encuentra el proceso en el estado destino.
+    // Se trata como no-op en lugar de lanzar un error espurio (500).
+    if (currentStatus === nextStatus) {
+      return;
+    }
+
+    validateTransition(currentStatus, nextStatus);
 
     await tx.agreements.update({
       where: { id: agreementId },
@@ -1675,146 +1685,161 @@ export class ProcessService {
 
     const now = new Date();
 
-    await this.prisma.$transaction(
-      async (tx) => {
-        // Resolución única
-        const duplicated = await tx.agreements.findFirst({
-          where: {
-            resolution_number: effectiveResolution,
-            NOT: { id: BigInt(agreementId) },
-          },
-        });
-        if (duplicated) {
-          throw new BadRequestException(
-            `La resolución ${effectiveResolution} ya está asociada al trámite #${Number(duplicated.id)}.`,
-          );
-        }
-
-        await this.applyTransition(
-          tx,
-          BigInt(agreementId),
-          'REGISTRADO',
-          'CONVENIO_REGISTRADO',
-          'Convenio registrado formalmente: resolución, vigencia y responsables verificados. Documentación organizada en el repositorio institucional.',
-          {
-            actorUserId: userId,
-            extraData: {
+    await this.prisma
+      .$transaction(
+        async (tx) => {
+          // Resolución única
+          const duplicated = await tx.agreements.findFirst({
+            where: {
               resolution_number: effectiveResolution,
-              start_date: new Date(data.start_date),
-              end_date: new Date(data.end_date),
-              validity_status: 'VIGENTE',
-              registered_at: now,
-              ...(data.drive_link?.trim()
-                ? { drive_link: data.drive_link.trim() }
-                : {}),
-              ...(data.observations?.trim()
-                ? { observations: data.observations.trim() }
-                : {}),
+              NOT: { id: BigInt(agreementId) },
             },
-            metadata: JSON.parse(
-              JSON.stringify({
+          });
+          if (duplicated) {
+            throw new ConflictException(
+              `La resolución ${effectiveResolution} ya está asociada al trámite #${Number(duplicated.id)}.`,
+            );
+          }
+
+          await this.applyTransition(
+            tx,
+            BigInt(agreementId),
+            'REGISTRADO',
+            'CONVENIO_REGISTRADO',
+            'Convenio registrado formalmente: resolución, vigencia y responsables verificados. Documentación organizada en el repositorio institucional.',
+            {
+              actorUserId: userId,
+              extraData: {
                 resolution_number: effectiveResolution,
-                start_date: data.start_date,
-                end_date: data.end_date,
-                responsables_count: data.responsables.length,
-                drive_link: data.drive_link ?? null,
-              }),
-            ) as Record<string, unknown>,
-          },
-        );
+                start_date: new Date(data.start_date),
+                end_date: new Date(data.end_date),
+                validity_status: 'VIGENTE',
+                registered_at: now,
+                ...(data.drive_link?.trim()
+                  ? { drive_link: data.drive_link.trim() }
+                  : {}),
+                ...(data.observations?.trim()
+                  ? { observations: data.observations.trim() }
+                  : {}),
+              },
+              metadata: JSON.parse(
+                JSON.stringify({
+                  resolution_number: effectiveResolution,
+                  start_date: data.start_date,
+                  end_date: data.end_date,
+                  responsables_count: data.responsables.length,
+                  drive_link: data.drive_link ?? null,
+                }),
+              ) as Record<string, unknown>,
+            },
+          );
 
-        await tx.agreement_responsables.deleteMany({
-          where: { agreement_id: BigInt(agreementId) },
-        });
+          await tx.agreement_responsables.deleteMany({
+            where: { agreement_id: BigInt(agreementId) },
+          });
 
-        for (const r of data.responsables) {
-          await tx.agreement_responsables.create({
+          for (const r of data.responsables) {
+            await tx.agreement_responsables.create({
+              data: {
+                agreement_id: BigInt(agreementId),
+                name: r.name.trim(),
+                role: r.role?.trim() || null,
+                side: (r.side ?? 'UNCP') as never,
+                email: r.email?.trim() || null,
+                phone: r.phone?.trim() || null,
+                created_at: now,
+                updated_at: now,
+              },
+            });
+          }
+
+          const docType = await tx.document_types.findUnique({
+            where: { code: 'CONVENIO_FIRMADO' },
+          });
+
+          const originalName = normalizeUploadName(file.originalname);
+
+          await tx.documents.create({
             data: {
-              agreement_id: BigInt(agreementId),
-              name: r.name.trim(),
-              role: r.role?.trim() || null,
-              side: (r.side ?? 'UNCP') as never,
-              email: r.email?.trim() || null,
-              phone: r.phone?.trim() || null,
+              agreements: { connect: { id: BigInt(agreementId) } },
+              name: 'Convenio Firmado Escaneado',
+              file_path: storePath(file.filename ?? originalName),
+              original_name: originalName,
+              extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+              document_types: docType
+                ? { connect: { id: docType.id } }
+                : undefined,
+              direction: 'ENTRADA',
+              stage: 'ETAPA_2_REGISTRO',
+              uploaded_by:
+                userId != null
+                  ? { connect: { id: BigInt(userId) } }
+                  : undefined,
               created_at: now,
               updated_at: now,
             },
           });
-        }
 
-        const docType = await tx.document_types.findUnique({
-          where: { code: 'CONVENIO_FIRMADO' },
-        });
+          // ─── E3 Auto-generación de Entregables según fórmula ───
+          // Fórmula: Informes Semestrales = Duración en Años * 2 + 1 Informe Final obligatorio al cierre.
+          const start = new Date(data.start_date);
+          const end = new Date(data.end_date);
+          const durationYears =
+            (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+          const numSemestrales = Math.max(0, Math.round(durationYears * 2));
 
-        const originalName = normalizeUploadName(file.originalname);
-
-        await tx.documents.create({
-          data: {
-            agreements: { connect: { id: BigInt(agreementId) } },
-            name: 'Convenio Firmado Escaneado',
-            file_path: storePath(file.filename ?? originalName),
-            original_name: originalName,
-            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-            document_types: docType
-              ? { connect: { id: docType.id } }
-              : undefined,
-            direction: 'ENTRADA',
-            stage: 'ETAPA_2_REGISTRO',
-            uploaded_by:
-              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
-            created_at: now,
-            updated_at: now,
-          },
-        });
-
-        // ─── E3 Auto-generación de Entregables según fórmula ───
-        // Fórmula: Informes Semestrales = Duración en Años * 2 + 1 Informe Final obligatorio al cierre.
-        const start = new Date(data.start_date);
-        const end = new Date(data.end_date);
-        const durationYears =
-          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-        const numSemestrales = Math.max(0, Math.round(durationYears * 2));
-
-        // 1. Plan de Trabajo (obligatorio al inicio)
-        await tx.deliverables.create({
-          data: {
-            agreement_id: BigInt(agreementId),
-            type: 'PLAN_DE_TRABAJO',
-            title: 'Plan de Trabajo',
-            status: 'SOLICITADO',
-            period: 'Inicial',
-            requested_at: now,
-          },
-        });
-
-        // 2. Informes Semestrales
-        for (let i = 1; i <= numSemestrales; i++) {
+          // 1. Plan de Trabajo (obligatorio al inicio)
           await tx.deliverables.create({
             data: {
               agreement_id: BigInt(agreementId),
-              type: 'INFORME_SEMESTRAL',
-              title: `Informe Semestral ${i}`,
+              type: 'PLAN_DE_TRABAJO',
+              title: 'Plan de Trabajo',
               status: 'SOLICITADO',
-              period: `Semestre ${i}`,
+              period: 'Inicial',
               requested_at: now,
             },
           });
-        }
 
-        // 3. Informe Final (obligatorio al cierre)
-        await tx.deliverables.create({
-          data: {
-            agreement_id: BigInt(agreementId),
-            type: 'INFORME_FINAL',
-            title: 'Informe Final de Cierre',
-            status: 'SOLICITADO',
-            period: 'Final',
-            requested_at: now,
-          },
-        });
-      },
-      { maxWait: 10000, timeout: 30000 },
-    );
+          // 2. Informes Semestrales
+          for (let i = 1; i <= numSemestrales; i++) {
+            await tx.deliverables.create({
+              data: {
+                agreement_id: BigInt(agreementId),
+                type: 'INFORME_SEMESTRAL',
+                title: `Informe Semestral ${i}`,
+                status: 'SOLICITADO',
+                period: `Semestre ${i}`,
+                requested_at: now,
+              },
+            });
+          }
+
+          // 3. Informe Final (obligatorio al cierre)
+          await tx.deliverables.create({
+            data: {
+              agreement_id: BigInt(agreementId),
+              type: 'INFORME_FINAL',
+              title: 'Informe Final de Cierre',
+              status: 'SOLICITADO',
+              period: 'Final',
+              requested_at: now,
+            },
+          });
+        },
+        { maxWait: 10000, timeout: 30000 },
+      )
+      .catch((error) => {
+        // Carrera simultánea: la BD cortó por restricción @unique de resolución.
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          throw new ConflictException(
+            `La resolución ${effectiveResolution} ya está registrada en otro convenio.`,
+          );
+        }
+        throw error;
+      });
 
     return serializeBigInt({
       agreement_id: agreementId,

@@ -1,235 +1,262 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { X, Loader2, ChevronDown } from 'lucide-react';
-import { InstitutionItem } from '@/types/agreements';
-import { fetcher } from '@/lib/api';
-import { useToast } from '@/components/ui/toast';
+import { useState } from "react";
+import { X, Loader2, ChevronDown } from "lucide-react";
+import { InstitutionItem } from "@/types/agreements";
+import { fetcher } from "@/lib/api";
+import { useToast } from "@/components/ui/toast";
 
 interface InstitutionModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSaved: (institution: InstitutionItem) => void;
-    countries: string[];
-    institution?: InstitutionItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSaved: (institution: InstitutionItem) => void;
+  countries: string[];
+  institution?: InstitutionItem | null;
 }
 
 export default function InstitutionModal({
-                                             isOpen,
-                                             onClose,
-                                             onSaved,
-                                             countries,
-                                             institution,
-                                         }: InstitutionModalProps) {
-    const editing = Boolean(institution);
-    const toast = useToast();
+  isOpen,
+  onClose,
+  onSaved,
+  countries,
+  institution,
+}: InstitutionModalProps) {
+  const editing = Boolean(institution);
+  const toast = useToast();
 
-    const [name, setName] = useState('');
-    const [type, setType] = useState('Universidad Nacional');
-    const [customCountry, setCustomCountry] = useState('');
-    const [isCustomCountry, setIsCustomCountry] = useState(false);
-    const [loading, setLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [type, setType] = useState("Universidad Nacional");
+  const [customCountry, setCustomCountry] = useState("");
+  const [isCustomCountry, setIsCustomCountry] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-    // Ajuste de estado derivado de props durante el render (Evita useEffect y errores de linter)
-    const [prevCountries, setPrevCountries] = useState(countries);
-    const [prevInstitution, setPrevInstitution] = useState<InstitutionItem | null | undefined>(institution);
-    const [selectedCountry, setSelectedCountry] = useState(countries?.[0] || 'PERÚ');
+  // Ajuste de estado derivado de props durante el render (Evita useEffect y errores de linter)
+  const [prevCountries, setPrevCountries] = useState(countries);
+  const [prevInstitution, setPrevInstitution] = useState<
+    InstitutionItem | null | undefined
+  >(institution);
+  const [selectedCountry, setSelectedCountry] = useState(
+    countries?.[0] || "PERÚ",
+  );
 
-    if (countries !== prevCountries) {
-        setPrevCountries(countries);
-        if (countries && countries.length > 0 && !countries.includes(selectedCountry)) {
-            setSelectedCountry(countries[0]);
-        }
+  if (countries !== prevCountries) {
+    setPrevCountries(countries);
+    if (
+      countries &&
+      countries.length > 0 &&
+      !countries.includes(selectedCountry)
+    ) {
+      setSelectedCountry(countries[0]);
     }
+  }
 
-    if (institution !== prevInstitution) {
-        setPrevInstitution(institution);
-        setName(institution?.name ?? '');
-        setType(institution?.type || 'Universidad Nacional');
-        setIsCustomCountry(!!institution && !(countries || []).includes(institution.country));
-        setCustomCountry(institution && !(countries || []).includes(institution.country) ? institution.country : '');
-        setSelectedCountry(
-            institution && countries?.includes(institution.country) ? institution.country : (countries?.[0] || 'PERÚ'),
-        );
-    }
-
-    if (!isOpen) return null;
-
-    const resetForm = () => {
-        setName('');
-        setCustomCountry('');
-        setIsCustomCountry(false);
-        if (countries && countries.length > 0) {
-            setSelectedCountry(countries[0]);
-        }
-    };
-
-    const handleClose = () => {
-        resetForm();
-        onClose();
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const finalCountry = isCustomCountry ? customCountry.trim().toUpperCase() : selectedCountry;
-
-        if (!name.trim() || !finalCountry || !type) {
-            toast.warning('Por favor, completa todos los campos de la institución.');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const payload = {
-                name: name.trim().toUpperCase(),
-                country: finalCountry,
-                type,
-            };
-
-            const saved = await fetcher<InstitutionItem>(
-                institution ? `/institutions/${institution.id}` : '/institutions',
-                {
-                    method: institution ? 'PATCH' : 'POST',
-                    body: JSON.stringify(payload),
-                },
-            );
-
-            onSaved(saved);
-            resetForm();
-            onClose();
-        } catch (err) {
-            console.error('Error al guardar institución:', err);
-            toast.error(err instanceof Error ? err.message : 'Error al guardar la institución.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white border border-gray-200 w-full max-w-md p-6 shadow-xl space-y-4 relative">
-                <button
-                    type="button"
-                    onClick={handleClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                    <X className="h-5 w-5" />
-                </button>
-
-                <div>
-                    <h3 className="text-base font-semibold text-gray-800">
-                        {editing ? 'Editar Institución' : 'Registrar Nueva Institución'}
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                        {editing
-                            ? 'Actualiza los datos básicos del directorio.'
-                            : 'Ingresa los datos básicos para añadirla al directorio.'}
-                    </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold uppercase text-gray-600">
-                            Nombre de la Institución <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            required
-                            value={name}
-                            onChange={(e) => setName(e.target.value.toUpperCase())}
-                            placeholder="EJ. UNIVERSIDAD NACIONAL DE INGENIERÍA"
-                            className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
-                        />
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                            <label className="block text-xs font-semibold uppercase text-gray-600">
-                                País <span className="text-red-500">*</span>
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => setIsCustomCountry(!isCustomCountry)}
-                                className="text-xs font-semibold text-blue-600 hover:underline"
-                            >
-                                {isCustomCountry ? 'Seleccionar existente' : 'Escribir país nuevo'}
-                            </button>
-                        </div>
-
-                        {!isCustomCountry ? (
-                            <div className="w-full relative">
-                                <select
-                                    value={selectedCountry}
-                                    onChange={(e) => setSelectedCountry(e.target.value)}
-                                    className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                                >
-                                    {countries.map((c) => (
-                                        <option key={c} value={c}>
-                                            {c}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                            </div>
-                        ) : (
-                            <input
-                                type="text"
-                                required
-                                value={customCountry}
-                                onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
-                                placeholder="EJ. ARGENTINA"
-                                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
-                            />
-                        )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold uppercase text-gray-600">
-                            Tipo de Institución <span className="text-red-500">*</span>
-                        </label>
-                        <div className="w-full relative">
-                            <select
-                                value={type}
-                                onChange={(e) => setType(e.target.value)}
-                                className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
-                            >
-                                <option value="Universidad Nacional">Universidad Nacional</option>
-                                <option value="Universidad Privada">Universidad Privada</option>
-                                <option value="Entidad Gubernamental">Entidad Gubernamental</option>
-                                <option value="Empresa Privada">Empresa Privada</option>
-                                <option value="Organización Internacional">Organización Internacional</option>
-                            </select>
-                            <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 transition-colors cursor-pointer"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    <span>Guardando...</span>
-                                </>
-                            ) : editing ? (
-                                'Guardar Cambios'
-                            ) : (
-                                'Guardar'
-                            )}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+  if (institution !== prevInstitution) {
+    setPrevInstitution(institution);
+    setName(institution?.name ?? "");
+    setType(institution?.type || "Universidad Nacional");
+    setIsCustomCountry(
+      !!institution && !(countries || []).includes(institution.country),
     );
+    setCustomCountry(
+      institution && !(countries || []).includes(institution.country)
+        ? institution.country
+        : "",
+    );
+    setSelectedCountry(
+      institution && countries?.includes(institution.country)
+        ? institution.country
+        : countries?.[0] || "PERÚ",
+    );
+  }
+
+  if (!isOpen) return null;
+
+  const resetForm = () => {
+    setName("");
+    setCustomCountry("");
+    setIsCustomCountry(false);
+    if (countries && countries.length > 0) {
+      setSelectedCountry(countries[0]);
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalCountry = isCustomCountry
+      ? customCountry.trim().toUpperCase()
+      : selectedCountry;
+
+    if (!name.trim() || !finalCountry || !type) {
+      toast.warning("Por favor, completa todos los campos de la institución.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        name: name.trim().toUpperCase(),
+        country: finalCountry,
+        type,
+      };
+
+      const saved = await fetcher<InstitutionItem>(
+        institution ? `/institutions/${institution.id}` : "/institutions",
+        {
+          method: institution ? "PATCH" : "POST",
+          body: JSON.stringify(payload),
+        },
+      );
+
+      onSaved(saved);
+      resetForm();
+      onClose();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Error al guardar la institución.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white border border-gray-200 w-full max-w-md p-6 shadow-xl space-y-4 relative">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div>
+          <h3 className="text-base font-semibold text-gray-800">
+            {editing ? "Editar Institución" : "Registrar Nueva Institución"}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {editing
+              ? "Actualiza los datos básicos del directorio."
+              : "Ingresa los datos básicos para añadirla al directorio."}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase text-gray-600">
+              Nombre de la Institución <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value.toUpperCase())}
+              placeholder="EJ. UNIVERSIDAD NACIONAL DE INGENIERÍA"
+              className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold uppercase text-gray-600">
+                País <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCustomCountry(!isCustomCountry)}
+                className="text-xs font-semibold text-blue-600 hover:underline"
+              >
+                {isCustomCountry
+                  ? "Seleccionar existente"
+                  : "Escribir país nuevo"}
+              </button>
+            </div>
+
+            {!isCustomCountry ? (
+              <div className="w-full relative">
+                <select
+                  value={selectedCountry}
+                  onChange={(e) => setSelectedCountry(e.target.value)}
+                  className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                >
+                  {countries.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              </div>
+            ) : (
+              <input
+                type="text"
+                required
+                value={customCountry}
+                onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
+                placeholder="EJ. ARGENTINA"
+                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+              />
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase text-gray-600">
+              Tipo de Institución <span className="text-red-500">*</span>
+            </label>
+            <div className="w-full relative">
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+              >
+                <option value="Universidad Nacional">
+                  Universidad Nacional
+                </option>
+                <option value="Universidad Privada">Universidad Privada</option>
+                <option value="Entidad Gubernamental">
+                  Entidad Gubernamental
+                </option>
+                <option value="Empresa Privada">Empresa Privada</option>
+                <option value="Organización Internacional">
+                  Organización Internacional
+                </option>
+              </select>
+              <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Guardando...</span>
+                </>
+              ) : editing ? (
+                "Guardar Cambios"
+              ) : (
+                "Guardar"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
