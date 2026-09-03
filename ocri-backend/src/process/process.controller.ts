@@ -171,6 +171,37 @@ export class ProcessController {
     );
   }
 
+  /** Devuelve el cuerpo editable precargado del oficio de envío a Rectorado */
+  @Roles('admin', 'editor')
+  @Get(':agreementId/oficio-rectorado/template')
+  getOficioRectoradoTemplate(
+    @Param('agreementId', ParseIntPipe) agreementId: number,
+  ) {
+    return this.processService.getOficioRectoradoTemplate(agreementId);
+  }
+
+  /** Genera el oficio a Rectorado, lo adjunta automáticamente y registra el evento */
+  @Roles('admin', 'editor')
+  @Post(':agreementId/oficio-rectorado/generate')
+  generateOficioRectorado(
+    @Param('agreementId', ParseIntPipe) agreementId: number,
+    @Body()
+    body: {
+      bodyHtml: string;
+      oficio_number?: string;
+    },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.generateOficioRectorado(
+      agreementId,
+      {
+        bodyHtml: body.bodyHtml,
+        oficio_number: body.oficio_number,
+      },
+      req.user?.id,
+    );
+  }
+
   // ─── E1 · Expediente técnico y envío a Rectorado ───────────────────────────
 
   /** Genera el expediente técnico fusionando automáticamente los oficios de respuesta */

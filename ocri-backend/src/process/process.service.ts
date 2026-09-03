@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { basename } from 'path';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../app-config/app-config.service';
@@ -20,6 +21,7 @@ import {
   normalizeUploadName,
   storePath,
   absUploadPath,
+  moveIntoAgreementDir,
 } from '../common/uploads.config';
 import {
   PdfMergerService,
@@ -351,7 +353,7 @@ export class ProcessService {
             agreement_id: BigInt(agreementId),
             name: `Oficio Solicitud Opinión - ${depName}`,
             file_path: storePath(filename),
-            original_name: filename,
+            original_name: basename(filename),
             extension: 'pdf',
             document_type_id: docType?.id ?? null,
             opinion_request_id: requestId ? BigInt(requestId) : undefined,
@@ -536,9 +538,12 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: request.agreement_id } },
               name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
-              file_path: storePath(
+              file_path: moveIntoAgreementDir(
                 (file as UploadedFileLike & { filename?: string }).filename ??
                   normalizeUploadName(file.originalname),
+                request.agreements.tramite_code,
+                request.agreements.created_at,
+                normalizeUploadName(file.originalname),
               ),
               original_name: normalizeUploadName(file.originalname),
               extension:
@@ -968,6 +973,98 @@ export class ProcessService {
   }
 
   /**
+   * Devuelve el cuerpo editable precargado del oficio de envío del expediente
+   * técnico a Rectorado (fin de E1). Reutiliza la misma plantilla, membrete,
+   * CSS, logos y firma/sello que el oficio de opinión; solo cambian el
+   * destinatario, el asunto y el cuerpo.
+   */
+  async getOficioRectoradoTemplate(agreementId: number) {
+    const agreement = await this.prisma.agreements.findUnique({
+      where: { id: BigInt(agreementId) },
+    });
+
+    if (!agreement) {
+      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+    }
+
+    const title =
+      agreement.title ?? 'convenio de cooperación interinstitucional';
+    const destinatario = 'Rectorado';
+    const tramiteCode = agreement.tramite_code ?? '';
+    const oficio = normalizeOficioNumber(
+      `${tramiteCode.split('-')[0] ?? ''}-${new Date().getFullYear()}`,
+    );
+
+    const fecha = new Date().toLocaleDateString('es-PE', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const asunto = `REMISI&Oacute;N DE EXPEDIENTE T&Oacute;CNICO DEL ${title} PARA SU SUSCRIPCI&Oacute;N`;
+
+    const img = (uri: string, alt: string) =>
+      uri ? `<img src="${uri}" alt="${alt}"/>` : '';
+
+    const [assets, css, firmaSello] = await Promise.all([
+      this.pdfMerger.getOficioOpinionAssets(),
+      this.pdfMerger.getOficioOpinionTemplateCss(),
+      this.pdfMerger.getOficioSignatureStamp(),
+    ]);
+
+    const html = `
+      <div class="header-table">
+        <div class="header-logo-left">${img(assets.logoIzq, 'Logo UNCP')}</div>
+        <div class="header-text">
+          <p class="univ-name">UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU</p>
+          <p class="office-name">OFICINA DE COOPERACION Y RELACIONES INTERNACIONALES</p>
+        </div>
+        <div class="header-logo-right">${img(assets.logoDer, 'Logo OCRI')}</div>
+      </div>
+      <div class="epigraph">
+        "A&ntilde;o de la Recuperaci&oacute;n y Consolidaci&oacute;n de la Econom&iacute;a Peruana"
+      </div>
+      <div class="doc-date">Huancayo, ${fecha}</div>
+      <div class="doc-number">OFICIO N&deg;${oficio}</div>
+      <div class="addressee">
+        <p><strong>${destinatario}</strong></p>
+        <p class="role">Rector&iacute;a</p>
+        <p><br><u>Presente</u>.</p>
+      </div>
+      <div class="subject-table">
+        <div class="subject-label">ASUNTO:</div>
+        <div class="subject-content">${asunto}</div>
+        <div class="subject-label"><br>Referencia:</div>
+        <div class="subject-content"></div>
+      </div>
+      <div class="body-text">
+        <p>Luego de un atento y cordial saludo me dirijo a usted, a fin de remitir el expediente t&eacute;cnico del
+        <strong>${title}</strong>, conjuntamente con la propuesta de
+        convenio y las opiniones emitidas, para su revisi&oacute;n y la suscripci&oacute;n correspondiente del mencionado
+        convenio de cooperaci&oacute;n interinstitucional.</p>
+      </div>
+      <div class="closing">
+        Sin otro particular, propicio la ocasi&oacute;n para expresarle las muestras de mi consideraci&oacute;n y estima personal.
+      </div>
+      <div class="signature-section">
+        <div class="signature-atentamente">Atentamente,</div>
+        <div class="signature-box">
+          ${firmaSello ? `<div class="signature-img">${img(firmaSello, 'Firma y sello')}</div>` : ''}
+          <div class="signature-line">
+            <p class="signature-name">ANA MARIA HUACAYCHUCO RUIZ</p>
+            <p class="signature-title">Jefe de Cooperaci&oacute;n y Relaciones Internacionales</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        c.c. Archivo
+      </div>
+    `;
+
+    return { html, css };
+  }
+
+  /**
    * Genera el oficio de solicitud de opinión a partir del cuerpo editable
    * recibido, lo adjunta automáticamente como documento del proceso y marca la
    * solicitud como enviada. Todo en una sola transacción.
@@ -1041,7 +1138,7 @@ export class ProcessService {
                 'Oficio de Solicitud de Opinión - ' +
                 (request.dependencias?.name ?? 'Dependencia'),
               file_path: storePath(filename),
-              original_name: filename,
+              original_name: basename(filename),
               extension: 'pdf',
               document_types: docType
                 ? { connect: { id: docType.id } }
@@ -1113,6 +1210,105 @@ export class ProcessService {
     }
   }
 
+  /**
+   * Genera el oficio de envío del expediente técnico a Rectorado (fin de E1)
+   * a partir del cuerpo editable, reutilizando la misma plantilla del oficio
+   * de opinión. Reemplaza la carga manual: el PDF se renderiza, se adjunta como
+   * documento del proceso (OFICIO_RESPUESTA_RECTORADO) y se registra el evento.
+   */
+  async generateOficioRectorado(
+    agreementId: number,
+    dto: { bodyHtml: string; oficio_number?: string },
+    userId?: number,
+  ) {
+    const agreement = await this.getAgreementOrThrow(agreementId);
+
+    if (
+      agreement.process_status !== 'OPINIONES_COMPLETAS' &&
+      agreement.process_status !== 'EXPEDIENTE_TECNICO_LISTO'
+    ) {
+      throw new BadRequestException(
+        `El oficio a Rectorado se genera con las opiniones completas. Estado actual: ${agreement.process_status}`,
+      );
+    }
+
+    if (!dto.bodyHtml || !dto.bodyHtml.trim()) {
+      throw new BadRequestException(
+        'El cuerpo del oficio no puede estar vacío.',
+      );
+    }
+
+    // Sobrescribe el número de oficio dentro del cuerpo con el valor digitado.
+    let renderedBody = dto.bodyHtml;
+    if (dto.oficio_number && dto.oficio_number.trim()) {
+      const normalized = normalizeOficioNumber(dto.oficio_number);
+      renderedBody = renderedBody.replace(
+        /(<div class="doc-number">)[\s\S]*?(<\/div>)/,
+        `$1OFICIO N&deg;${normalized}$2`,
+      );
+    }
+
+    const filename = await this.pdfMerger.renderOficioOpinionPdf(
+      renderedBody,
+      dto.oficio_number,
+      agreement.tramite_code,
+      agreement.created_at,
+    );
+
+    const docType = await this.prisma.document_types.findUnique({
+      where: { code: 'OFICIO_RESPUESTA_RECTORADO' },
+    });
+
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          await tx.documents.create({
+            data: {
+              agreements: { connect: { id: BigInt(agreementId) } },
+              name: 'Oficio de Respuesta a Rectorado',
+              file_path: storePath(filename),
+              original_name: basename(filename),
+              extension: 'pdf',
+              document_types: docType
+                ? { connect: { id: docType.id } }
+                : undefined,
+              direction: 'SALIDA',
+              stage: 'ETAPA_1_PROPUESTA',
+              uploaded_by:
+                userId != null
+                  ? { connect: { id: BigInt(userId) } }
+                  : undefined,
+              created_at: new Date(),
+              updated_at: new Date(),
+            },
+          });
+
+          await this.logEvent(
+            BigInt(agreementId),
+            'OFICIO_ENVIADO_RECTORADO',
+            'Oficio de envío del expediente técnico a Rectorado generado y adjuntado automáticamente.',
+            {
+              actorUserId: userId,
+              metadata: { oficio_number: dto.oficio_number ?? null },
+            },
+            'ETAPA_1_PROPUESTA',
+            tx,
+          );
+        },
+        { maxWait: 10000, timeout: 30000 },
+      );
+
+      return serializeBigInt({ id: BigInt(agreementId), ok: true });
+    } catch (err) {
+      try {
+        await fs.unlink(absUploadPath(filename));
+      } catch {
+        // el archivo ya no existe o no se pudo borrar: se ignora.
+      }
+      throw err as Error;
+    }
+  }
+
   // ─── Documentos tipados del expediente ──────────────────────────────────────
 
   async uploadProcessDocument(
@@ -1151,7 +1347,12 @@ export class ProcessService {
           data: {
             agreements: { connect: { id: BigInt(agreementId) } },
             name: docType.name,
-            file_path: storePath(file.filename ?? originalName),
+            file_path: moveIntoAgreementDir(
+              file.filename ?? originalName,
+              agreement.tramite_code,
+              agreement.created_at,
+              originalName,
+            ),
             original_name: originalName,
             extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: { connect: { id: docType.id } },
@@ -1259,7 +1460,7 @@ export class ProcessService {
             agreement_id: BigInt(agreementId),
             name: 'Expediente Técnico',
             file_path: storePath(filename),
-            original_name: filename,
+            original_name: basename(filename),
             extension: 'pdf',
             document_type_id: docType?.id ?? null,
             direction: 'INTERNO',
@@ -1344,7 +1545,7 @@ export class ProcessService {
           agreement_id: BigInt(agreementId),
           name: 'Expediente Técnico',
           file_path: storePath(filename),
-          original_name: filename,
+          original_name: basename(filename),
           extension: 'pdf',
           document_type_id: docType?.id ?? null,
           direction: 'INTERNO',
@@ -1599,7 +1800,12 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? code,
-              file_path: storePath(file.filename ?? originalName),
+              file_path: moveIntoAgreementDir(
+                file.filename ?? originalName,
+                agreement.tramite_code,
+                agreement.created_at,
+                originalName,
+              ),
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
@@ -1674,7 +1880,12 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? 'Publicación del Convenio',
-              file_path: storePath(file.filename ?? originalName),
+              file_path: moveIntoAgreementDir(
+                file.filename ?? originalName,
+                agreement.tramite_code,
+                agreement.created_at,
+                originalName,
+              ),
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
@@ -1842,7 +2053,12 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: 'Convenio Firmado Escaneado',
-              file_path: storePath(file.filename ?? originalName),
+              file_path: moveIntoAgreementDir(
+                file.filename ?? originalName,
+                agreement.tramite_code,
+                agreement.created_at,
+                originalName,
+              ),
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType

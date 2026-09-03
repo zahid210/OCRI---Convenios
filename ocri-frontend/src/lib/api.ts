@@ -318,6 +318,22 @@ export async function generateOficioOpinion(
   });
 }
 
+/** Devuelve el cuerpo editable precargado del oficio de envío a Rectorado */
+export async function getOficioRectoradoTemplate(agreementId: number) {
+  return fetchApi(`/process/${agreementId}/oficio-rectorado/template`);
+}
+
+/** Genera el oficio a Rectorado y lo adjunta automáticamente al proceso */
+export async function generateOficioRectorado(
+  agreementId: number,
+  data: { bodyHtml: string; oficio_number?: string },
+) {
+  return fetchApi(`/process/${agreementId}/oficio-rectorado/generate`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 /** Sube un documento tipado al proceso */
 export async function uploadProcessDocument(
   agreementId: number,

@@ -1,6 +1,6 @@
 import { diskStorage } from 'multer';
-import { basename, extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { dirname, join, basename, extname } from 'path';
+import { existsSync, mkdirSync, readdirSync, renameSync, unlinkSync } from 'fs';
 import { BadRequestException } from '@nestjs/common';
 
 export const UPLOADS_DIR = join(process.cwd(), 'uploads');
@@ -46,9 +46,14 @@ export function agreementDir(
   tramiteCode: string,
   createdAt: Date | string | null,
 ): string {
-  const year = createdAt
-    ? new Date(createdAt).getFullYear()
-    : new Date().getFullYear();
+  // El año de la carpeta se toma del código de trámite (formato NNN-YYYY)
+  // siempre que sea posible; si no, del created_at; y si tampoco, del año real.
+  const m = tramiteCode.match(/^\d+-(\d{4})$/);
+  const year = m
+    ? m[1]
+    : createdAt
+      ? new Date(createdAt).getFullYear()
+      : new Date().getFullYear();
   return `${year}/${tramiteCode}`;
 }
 
@@ -72,6 +77,103 @@ export function ensureDir(dir: string): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
+}
+
+/**
+ * Mueve un archivo que multer dejó en `uploads/` (según `safeDiskStorage`) hacia
+ * la carpeta del convenio `{año}/{código_trámite}/` y devuelve la ruta relativa
+ * resultante. Se usa para que TODOS los documentos (subidos manualmente o
+ * generados) queden dentro de la carpeta de su convenio.
+ */
+export function moveIntoAgreementDir(
+  sourceRelPath: string,
+  tramiteCode: string,
+  createdAt: Date | string | null,
+  preferredName?: string,
+): string {
+  const subdir = agreementDir(tramiteCode, createdAt);
+  const dstDir = absUploadPath(subdir);
+  ensureDir(dstDir);
+
+  // Nombre físico final en la carpeta: se prioriza el nombre limpio del usuario
+  // (sin el contador "(1)" que multer añade ante colisiones previas en la raíz).
+  const filename = basename(preferredName?.trim() || sourceRelPath);
+  let targetRel = `${subdir}/${filename}`;
+  let dst = join(UPLOADS_DIR, targetRel);
+  // Si ya existe en la carpeta del convenio, se desambigua con contador.
+  let counter = 1;
+  while (existsSync(dst) && !sameFile(sourceRelPath, targetRel)) {
+    const dot = basename(filename).lastIndexOf('.');
+    const next =
+      dot > 0
+        ? `${basename(filename).slice(0, dot)}(${counter})${basename(filename).slice(dot)}`
+        : `${basename(filename)}(${counter})`;
+    targetRel = `${subdir}/${next}`;
+    dst = join(UPLOADS_DIR, targetRel);
+    counter += 1;
+  }
+
+  // Ubicación donde multer (safeDiskStorage) dejó realmente el archivo: en la
+  // raíz uploads/ o en uploads/{año}/ según el patrón de año del nombre.
+  const srcName = basename(sourceRelPath);
+  const year = yearSubdir(srcName);
+  const src = join(UPLOADS_DIR, year ? `${year}/${srcName}` : srcName);
+
+  if (existsSync(src) && src !== dst) {
+    renameSync(src, dst);
+  }
+
+  // Limpia residuos homónimos que hayan quedado en la raíz/año (por ejemplo el
+  // "dictamen_test.pdf" original cuando multer guardó "dictamen_test(1).pdf").
+  if (preferredName) {
+    cleanupResidual(src, dst, preferredName);
+  }
+
+  return targetRel;
+}
+
+/**
+ * Elimina un residual homónimo del archivo recién movido que haya quedado en la
+ * ubicación de origen de multer (raíz uploads/ o uploads/{año}/). Evita duplicados
+ * cuando multer guardó una variante "(n)" y dejó también el nombre base original.
+ */
+function cleanupResidual(
+  src: string,
+  dst: string,
+  preferredName: string,
+): void {
+  const base = basename(preferredName);
+  const dir = dirname(src);
+  for (const name of readdirSync(dir)) {
+    const candidate = join(dir, name);
+    if (candidate === dst || candidate === src) continue;
+    if (!isResidualName(base, name)) continue;
+    try {
+      unlinkSync(candidate);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function isResidualName(base: string, name: string): boolean {
+  if (name === base) return true;
+  const dot = base.lastIndexOf('.');
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const ext = dot > 0 ? base.slice(dot) : '';
+  return new RegExp(
+    `^${escapeRegExp(stem)}\\(\\d+\\)${escapeRegExp(ext)}$`,
+  ).test(name);
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function sameFile(a: string, b: string): boolean {
+  const pa = absUploadPath(a);
+  const pb = absUploadPath(b);
+  return pa === pb;
 }
 
 const ALLOWED_EXTENSIONS = new Set([

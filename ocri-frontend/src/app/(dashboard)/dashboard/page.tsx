@@ -23,6 +23,7 @@ import {
 interface Agreement {
   id: number;
   resolution_number?: string;
+  tramite_code?: string;
   title?: string;
   institutions?: {
     name?: string;
@@ -255,10 +256,13 @@ export default function DashboardPage() {
                           <span
                             className="block line-clamp-2 min-w-0"
                             title={
-                              agreement.resolution_number || agreement.title
+                              agreement.resolution_number ||
+                              agreement.tramite_code ||
+                              agreement.title
                             }
                           >
                             {agreement.resolution_number ||
+                              agreement.tramite_code ||
                               agreement.title ||
                               `Código #${agreement.id}`}
                           </span>
@@ -286,7 +290,7 @@ export default function DashboardPage() {
                           >
                             {stateLabel}
                           </span>
-                         </td>
+                        </td>
                       </ClickableTableRow>
                     );
                   })

@@ -9,9 +9,9 @@ import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   absUploadPath,
-  storePath,
   UploadedFileLike,
   normalizeUploadName,
+  moveIntoAgreementDir,
 } from '../common/uploads.config';
 import {
   deriveTemporalStatus,
@@ -144,6 +144,8 @@ export class AgreementsService {
           await tx.documents.create({
             data: this.buildDocumentData(agr.id, spec.file, {
               name: docType?.name ?? spec.fallbackName,
+              tramiteCode: agr.tramite_code,
+              createdAt: agr.created_at,
               documentTypeId: docType?.id ?? null,
               direction: 'ENTRADA',
               stage: 'ETAPA_1_PROPUESTA',
@@ -194,6 +196,8 @@ export class AgreementsService {
     file: UploadedFileLike & { filename?: string },
     opts: {
       name: string;
+      tramiteCode: string;
+      createdAt?: Date | string | null;
       documentTypeId: bigint | null;
       direction: 'ENTRADA' | 'SALIDA' | 'INTERNO';
       stage?: string;
@@ -207,7 +211,12 @@ export class AgreementsService {
     return {
       agreements: { connect: { id: agreementId } },
       name: opts.name,
-      file_path: storePath(file.filename ?? originalName),
+      file_path: moveIntoAgreementDir(
+        file.filename ?? originalName,
+        opts.tramiteCode,
+        opts.createdAt ?? null,
+        originalName,
+      ),
       original_name: originalName,
       extension: ext,
       document_types: opts.documentTypeId

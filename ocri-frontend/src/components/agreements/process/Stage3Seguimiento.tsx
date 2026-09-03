@@ -10,6 +10,7 @@ import {
   submitDeliverable,
   submitWorkPlan,
 } from "@/lib/api";
+import { fileName } from "@/lib/utils";
 import { Deliverable, ProcessStatus } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -121,7 +122,7 @@ function DeliverableCard({
                 >
                   <FileText className="h-4 w-4 text-gray-400 shrink-0" />
                   <span className="truncate flex-1 min-w-0">
-                    {doc.original_name || doc.name}
+                    {fileName(doc.original_name, fileName(doc.name))}
                   </span>
                   <button
                     type="button"

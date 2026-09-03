@@ -553,7 +553,7 @@ export class PdfMergerService {
       margins: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
-    const filename = `oficio-${normalizeOficioNumber(oficioNumber)}.pdf`;
+    const filename = `${normalizeOficioNumber(oficioNumber)}.pdf`;
     const subdir = tramiteCode
       ? agreementDir(tramiteCode, createdAt ?? null)
       : '';
