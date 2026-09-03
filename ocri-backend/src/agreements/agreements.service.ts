@@ -157,7 +157,7 @@ export class AgreementsService {
           data: {
             agreement_id: agr.id,
             event_type: 'SOLICITUD_RECEPCIONADA',
-            description: `OCRI recibió de Rectorado la solicitud de propuesta de convenio${dto.rectorate_oficio_number ? ` (Oficio ${dto.rectorate_oficio_number})` : ''}. Inicia evaluación técnica.`,
+            description: `OCRI recibió de Rectorado la solicitud de propuesta de convenio${dto.rectorate_oficio_number ? ` (Dictamen ${dto.rectorate_oficio_number})` : ''}. Inicia evaluación técnica.`,
             to_value: 'RECEPCIONADA',
             stage: 'ETAPA_1_PROPUESTA',
             metadata: JSON.parse(

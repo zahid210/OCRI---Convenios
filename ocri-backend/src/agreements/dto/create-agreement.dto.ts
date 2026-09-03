@@ -44,7 +44,7 @@ export class CreateAgreementDto {
   @Transform(trim)
   applicant_unit?: string;
 
-  /** Oficio con que Rectorado deriva la solicitud a OCRI */
+  /** N° del Dictamen con que Rectorado deriva la solicitud a OCRI */
   @IsOptional()
   @IsString()
   @Transform(trim)

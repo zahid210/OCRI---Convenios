@@ -344,7 +344,7 @@ export default function CreatePropuestaPage() {
                     required
                     value={rectorateOficioNumber}
                     onChange={(e) => setRectorateOficioNumber(e.target.value)}
-                    placeholder="EJ: DIC. N° 129-2026-RECTORADO"
+                    placeholder="EJ: DICTAMEN N° 02236-2024-R-UNCP"
                     className="flex-1 px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
                   />
                   <input
@@ -425,10 +425,6 @@ export default function CreatePropuestaPage() {
                 </button>
               </div>
             )}
-            <p className="text-xs text-gray-400 italic -mt-2">
-              El código de trámite se usa de forma automática como número de
-              resolución al registrar el convenio (código único OCRI).
-            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
