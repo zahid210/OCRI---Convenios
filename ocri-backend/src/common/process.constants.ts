@@ -80,6 +80,13 @@ export const REQUIRED_DOCS_TO_SEND_TO_RECTORADO = [
 /** Días por defecto para vencimiento de vigencia tras registro (semáforo). */
 export const EXPIRATION_WARNING_DAYS = 90;
 
+/**
+ * Máximo de iteraciones de corrección de una opinión observada antes de que
+ * solo quede la opción de cancelarla. Evita un ciclo infinito de "observada →
+ * re-responder" y fuerza al usuario a cerrar la solicitud con trazabilidad.
+ */
+export const MAX_OPINION_OBSERVATIONS = 3;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Serialización BigInt → number segura para JSON
 // ═══════════════════════════════════════════════════════════════════════════

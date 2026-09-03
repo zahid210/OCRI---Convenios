@@ -874,6 +874,18 @@ export default function Stage1Propuesta({
                               Adjuntar Respuesta
                             </button>
                           )}
+                          {actionsOpen && req.status === "OBSERVADA" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openRespondModal(req.id);
+                              }}
+                              className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                            >
+                              <FileText className="h-4 w-4" />
+                              Adjuntar Corrección
+                            </button>
+                          )}
                           {actionsOpen && req.status === "GENERADA" && (
                             <button
                               onClick={(e) => {

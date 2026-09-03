@@ -10,6 +10,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../app-config/app-config.service';
 import {
+  MAX_OPINION_OBSERVATIONS,
   REQUIRED_DOCS_TO_SEND_TO_RECTORADO,
   serializeBigInt,
   STATUS_STAGE,
@@ -491,9 +492,11 @@ export class ProcessService {
       );
     }
 
-    if (request.status !== 'ENVIADA') {
+    const isCorrection = request.status === 'OBSERVADA';
+
+    if (request.status !== 'ENVIADA' && request.status !== 'OBSERVADA') {
       throw new BadRequestException(
-        `La solicitud debe estar ENVIADA para registrar respuesta. Estado actual: ${request.status}`,
+        `La solicitud debe estar ENVIADA para registrar respuesta (o OBSERVADA para adjuntar la corrección). Estado actual: ${request.status}`,
       );
     }
 
@@ -503,25 +506,46 @@ export class ProcessService {
       );
     }
 
+    // Ciclo de corrección: si la opinión fue observada, esta nueva respuesta es
+    // la enmienda de la dependencia. Se reinicia la marca de validación para que
+    // OCRI deba re-validar la corrección (evita el bypass de validar sin corregir).
+    if (isCorrection) {
+      const revisits = await this.prisma.process_events.count({
+        where: {
+          opinion_request_id: BigInt(opinionRequestId),
+          event_type: 'OPINION_OBSERVADA',
+        },
+      });
+      if (revisits >= MAX_OPINION_OBSERVATIONS) {
+        throw new BadRequestException(
+          `La opinión llegó al máximo de ${MAX_OPINION_OBSERVATIONS} correcciones sin resolverse. Cancele la solicitud para concluir el trámite.`,
+        );
+      }
+    }
+
     const updated = await this.prisma.$transaction(
       async (tx) => {
         // Update condicional por estado: evita que dos respuestas concurrentes
         // sobre la misma solicitud avancen ambas (guard de integridad).
         const updated = await tx.opinion_requests.updateMany({
-          where: { id: BigInt(opinionRequestId), status: 'ENVIADA' },
+          where: {
+            id: BigInt(opinionRequestId),
+            status: { in: ['ENVIADA', 'OBSERVADA'] },
+          },
           data: {
             status: 'RESPONDIDA',
             response_date: dto.response_date
               ? new Date(dto.response_date)
               : new Date(),
             observations: dto.observations ?? null,
+            validated_at: isCorrection ? null : request.validated_at,
             updated_at: new Date(),
           },
         });
 
         if (updated.count === 0) {
           throw new ConflictException(
-            'La solicitud ya no está en estado ENVIADA y no puede registrar una respuesta nuevamente.',
+            'La solicitud ya no está en estado ENVIADA/OBSERVADA y no puede registrar una respuesta nuevamente.',
           );
         }
 
@@ -571,11 +595,13 @@ export class ProcessService {
 
         await this.logEvent(
           request.agreement_id,
-          'RESPUESTA_REGISTRADA',
-          `Respuesta/opinión recibida de ${request.dependencias?.name ?? 'la dependencia'}.`,
+          isCorrection ? 'RESPUESTA_CORREGIDA' : 'RESPUESTA_REGISTRADA',
+          isCorrection
+            ? `La dependencia ${request.dependencias?.name ?? ''} adjuntó la corrección de su opinión.`.trim()
+            : `Respuesta/opinión recibida de ${request.dependencias?.name ?? 'la dependencia'}.`,
           {
             actorUserId: userId,
-            fromValue: 'ENVIADA',
+            fromValue: request.status,
             toValue: 'RESPONDIDA',
             opinionRequestId: BigInt(opinionRequestId),
           },
@@ -643,9 +669,12 @@ export class ProcessService {
       );
     }
 
-    if (request.status !== 'RESPONDIDA' && request.status !== 'OBSERVADA') {
+    // Solo una opinión RESPONDIDA es validable. Una OBSERVADA vuelve a
+    // RESPONDIDA únicamente cuando la dependencia adjunta su corrección, de modo
+    // que no se puede "revalidar" como válida algo que nunca fue enmendado.
+    if (request.status !== 'RESPONDIDA') {
       throw new BadRequestException(
-        `Solo se puede validar una opinión RESPONDIDA u OBSERVADA (revalidación). Estado actual: ${request.status}`,
+        `Solo se puede validar una opinión RESPONDIDA. Si fue observada, la dependencia debe adjuntar su corrección primero. Estado actual: ${request.status}`,
       );
     }
 
@@ -659,12 +688,12 @@ export class ProcessService {
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
-        // Update condicional por estado de origen (RESPONDIDA u OBSERVADA):
+        // Update condicional por estado de origen (RESPONDIDA):
         // impide que dos validaciones concurrentes avancen la misma solicitud.
         const updated = await tx.opinion_requests.updateMany({
           where: {
             id: BigInt(opinionRequestId),
-            status: { in: ['RESPONDIDA', 'OBSERVADA'] },
+            status: 'RESPONDIDA',
           },
           data: {
             status: newStatus,
@@ -678,7 +707,7 @@ export class ProcessService {
 
         if (updated.count === 0) {
           throw new ConflictException(
-            'La solicitud ya no está en estado RESPONDIDA/OBSERVADA y no puede validarse nuevamente.',
+            'La solicitud ya no está en estado RESPONDIDA y no puede validarse nuevamente.',
           );
         }
 

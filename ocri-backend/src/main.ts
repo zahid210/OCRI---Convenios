@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
+import { OrphanFileFilter } from './common/orphan-file.filter';
 
 // Extensión tipada de BigInt para serialización JSON segura
 declare global {
@@ -79,6 +80,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.useGlobalFilters(new OrphanFileFilter());
 
   await app.listen(process.env.PORT ?? 3000);
 }
