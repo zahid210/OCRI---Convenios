@@ -38,6 +38,42 @@ export function absUploadPath(filePath: string): string {
   return join(UPLOADS_DIR, filePath);
 }
 
+/**
+ * Subcarpeta bajo uploads/ para archivos generados de un convenio.
+ * Formato: `{año}/{código_trámite}` (p. ej. `"2025/EXP-2025-001"`).
+ */
+export function agreementDir(
+  tramiteCode: string,
+  createdAt: Date | string | null,
+): string {
+  const year = createdAt
+    ? new Date(createdAt).getFullYear()
+    : new Date().getFullYear();
+  return `${year}/${tramiteCode}`;
+}
+
+/**
+ * Subcarpeta para documentos de opinión de una dependencia dentro del
+ * convenio. Formato: `{año}/{código}/opiniones/{dependencia}`.
+ */
+export function opinionDir(
+  tramiteCode: string,
+  createdAt: Date | string | null,
+  dependenciaName: string,
+): string {
+  return `${agreementDir(tramiteCode, createdAt)}/opiniones/${dependenciaName}`;
+}
+
+/**
+ * Crea la carpeta si no existe (recursivo). Usa mkdirSync para no necesitar
+ * await en contextos síncronos.
+ */
+export function ensureDir(dir: string): void {
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+}
+
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf',
   '.doc',

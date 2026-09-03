@@ -49,9 +49,13 @@ export class FilesController {
       throw new BadRequestException('Ruta de archivo inválida');
     }
 
-    // Solo permite el patrón: [<año>/]<nombre.ext> (máximo un nivel de subcarpeta).
+    // Solo permite el patrón: [<año>/][<código>[/opiniones/<dependencia>]]/<nombre.ext>
+    // (hasta 3 niveles de subcarpeta) para soportar la organización por año y
+    // por convenio (incluyendo las subcarpetas de opiniones por dependencia).
     if (
-      !/^[\w.\-() º\u00A0-\u017F]+(\/[\w.\-() º\u00A0-\u017F]+)?$/.test(decoded)
+      !/^([\w.\-() º\u00A0-\u017F]+\/){0,3}[\w.\-() º\u00A0-\u017F]+$/.test(
+        decoded,
+      )
     ) {
       throw new BadRequestException('Ruta de archivo inválida');
     }

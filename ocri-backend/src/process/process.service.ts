@@ -337,7 +337,9 @@ export class ProcessService {
           agreementId,
           depName,
           oficioNumber,
+          agreement.tramite_code,
           options?.directedTo,
+          agreement.created_at,
         );
 
         const docType = await this.prisma.document_types.findFirst({
@@ -1018,6 +1020,8 @@ export class ProcessService {
     const filename = await this.pdfMerger.renderOficioOpinionPdf(
       renderedBody,
       dto.oficio_number,
+      request.agreements?.tramite_code,
+      request.agreements?.created_at,
     );
 
     const docType = await this.prisma.document_types.findUnique({
@@ -1238,7 +1242,11 @@ export class ProcessService {
       await this.prisma.documents.delete({ where: { id: existDoc.id } });
     }
 
-    const filename = await this.pdfMerger.mergeOpinionResponses(agreementId);
+    const filename = await this.pdfMerger.mergeOpinionResponses(
+      agreementId,
+      agreement.tramite_code,
+      agreement.created_at,
+    );
 
     const docType = await this.prisma.document_types.findFirst({
       where: { code: 'EXPEDIENTE_TECNICO' },
@@ -1322,35 +1330,27 @@ export class ProcessService {
     });
 
     if (!hasExpediente) {
-      await this.pdfMerger.mergeOpinionResponses(agreementId);
-
-      const existDoc = await this.prisma.documents.findFirst({
-        where: {
-          agreement_id: BigInt(agreementId),
-          document_types: { code: 'EXPEDIENTE_TECNICO' },
-        },
+      const filename = await this.pdfMerger.mergeOpinionResponses(
+        agreementId,
+        agreement.tramite_code,
+        agreement.created_at,
+      );
+      const docType = await this.prisma.document_types.findFirst({
+        where: { code: 'EXPEDIENTE_TECNICO' },
       });
 
-      if (!existDoc) {
-        const filename =
-          await this.pdfMerger.mergeOpinionResponses(agreementId);
-        const docType = await this.prisma.document_types.findFirst({
-          where: { code: 'EXPEDIENTE_TECNICO' },
-        });
-
-        await this.prisma.documents.create({
-          data: {
-            agreement_id: BigInt(agreementId),
-            name: 'Expediente Técnico',
-            file_path: storePath(filename),
-            original_name: filename,
-            extension: 'pdf',
-            document_type_id: docType?.id ?? null,
-            direction: 'INTERNO',
-            stage: agreement.stage,
-          },
-        });
-      }
+      await this.prisma.documents.create({
+        data: {
+          agreement_id: BigInt(agreementId),
+          name: 'Expediente Técnico',
+          file_path: storePath(filename),
+          original_name: filename,
+          extension: 'pdf',
+          document_type_id: docType?.id ?? null,
+          direction: 'INTERNO',
+          stage: agreement.stage,
+        },
+      });
     }
 
     const documents = await this.prisma.documents.findMany({

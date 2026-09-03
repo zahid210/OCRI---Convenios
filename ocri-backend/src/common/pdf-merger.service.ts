@@ -3,9 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { join } from 'path';
 import { renderPdfFromHtml } from 'html-pdf-lite';
 import { PNG } from 'pngjs';
-import { absUploadPath } from './uploads.config';
+import {
+  absUploadPath,
+  agreementDir,
+  opinionDir,
+  ensureDir,
+} from './uploads.config';
 
 /**
  * Normaliza el número de oficio al formato estándar `045-2026-OCRI-UNCP`.
@@ -117,7 +123,9 @@ export class PdfMergerService {
     agreementId: number,
     dependenciaName: string,
     oficioNumber: string,
+    tramiteCode: string,
     directedTo?: string,
+    createdAt?: Date | string | null,
   ): Promise<string> {
     const pdf = await PDFDocument.create();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -244,13 +252,16 @@ export class PdfMergerService {
     }
 
     const mergedBytes = await pdf.save();
-    const filename = `oficio-solicitud-${oficioNumber.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-    const outputPath = path.resolve('uploads', filename);
+    const filename = `oficio-solicitud-${dependenciaName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    const dir = absUploadPath(
+      opinionDir(tramiteCode, createdAt ?? null, dependenciaName),
+    );
+    ensureDir(dir);
+    const outputPath = join(dir, filename);
     await fs.writeFile(outputPath, mergedBytes);
-
-    this.logger.log(`Oficio de solicitud generado: ${filename}`);
-
-    return filename;
+    const relPath = `${opinionDir(tramiteCode, createdAt ?? null, dependenciaName)}/${filename}`;
+    this.logger.log(`Oficio de solicitud generado: ${relPath}`);
+    return relPath;
   }
 
   /**
@@ -266,7 +277,11 @@ export class PdfMergerService {
    * demás), en orden cronológico ascendente.
    * Retorna la ruta relativa del archivo generado.
    */
-  async mergeOpinionResponses(agreementId: number): Promise<string> {
+  async mergeOpinionResponses(
+    agreementId: number,
+    tramiteCode: string,
+    createdAt?: Date | string | null,
+  ): Promise<string> {
     const documents = await this.prisma.documents.findMany({
       where: { agreement_id: BigInt(agreementId) },
       include: {
@@ -374,15 +389,18 @@ export class PdfMergerService {
     }
 
     const mergedBytes = await mergedPdf.save();
-    const filename = 'Expediente-tecnico.pdf';
-    const outputPath = path.resolve('uploads', filename);
+    const filename = 'expediente-tecnico.pdf';
+    const subdir = agreementDir(tramiteCode, createdAt ?? null);
+    const dir = absUploadPath(subdir);
+    ensureDir(dir);
+    const outputPath = join(dir, filename);
     await fs.writeFile(outputPath, mergedBytes);
 
     this.logger.log(
-      `Expediente técnico generado: ${filename} (${orderedDocs.length} documentos PDF fusionados, en parejas por opinión)`,
+      `Expediente técnico generado: ${subdir}/${filename} (${orderedDocs.length} documentos PDF fusionados, en parejas por opinión)`,
     );
 
-    return filename;
+    return `${subdir}/${filename}`;
   }
 
   /**
@@ -525,6 +543,8 @@ export class PdfMergerService {
   async renderOficioOpinionPdf(
     bodyHtml: string,
     oficioNumber?: string,
+    tramiteCode?: string,
+    createdAt?: Date | string | null,
   ): Promise<string> {
     const template = await this.readOficioOpinionTemplate();
     const fullHtml = template.replace('{{CUERPO}}', bodyHtml);
@@ -533,12 +553,18 @@ export class PdfMergerService {
       margins: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
-    const filename = `OFICIO Nº${normalizeOficioNumber(oficioNumber)}.pdf`;
-    const outputPath = path.resolve('uploads', filename);
+    const filename = `oficio-${normalizeOficioNumber(oficioNumber)}.pdf`;
+    const subdir = tramiteCode
+      ? agreementDir(tramiteCode, createdAt ?? null)
+      : '';
+    const dir = subdir ? absUploadPath(subdir) : path.resolve('uploads');
+    ensureDir(dir);
+    const outputPath = join(dir, filename);
     await fs.writeFile(outputPath, pdfBuffer);
 
-    this.logger.log(`Oficio de solicitud de opinión generado: ${filename}`);
+    const relPath = subdir ? `${subdir}/${filename}` : filename;
+    this.logger.log(`Oficio de solicitud de opinión generado: ${relPath}`);
 
-    return filename;
+    return relPath;
   }
 }
