@@ -298,8 +298,21 @@ export class AgreementsService {
       }),
     ]);
 
+    // Enriquecer cada fila con el semáforo temporal derivado en vivo (misma
+    // lógica que getExpirationTracking/reportes) para que dashboard y listados
+    // usen el mismo criterio (umbral EXPIRATION_WARNING_DAYS) y no re-deriven
+    // un Vencido/Vigente binario que ignora el estado POR_VENCER.
+    const dataWithStatus = data.map((a) => {
+      const temporal = deriveTemporalStatus(a.end_date);
+      return {
+        ...a,
+        temporal_status: temporal.temporal_status,
+        days_remaining: temporal.days_remaining,
+      };
+    });
+
     return serializeBigInt<unknown>({
-      data,
+      data: dataWithStatus,
       meta: {
         total,
         page,
@@ -407,8 +420,16 @@ export class AgreementsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
+        const target = Array.isArray(error.meta?.target)
+          ? (error.meta.target as unknown[])
+          : [];
+        if (target.includes('tramite_code')) {
+          throw new ConflictException(
+            'El código de trámite ya está registrado en otro convenio.',
+          );
+        }
         throw new ConflictException(
-          `El código de resolución ya está registrado en otro convenio.`,
+          'El código de resolución ya está registrado en otro convenio.',
         );
       }
       throw error;

@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FilterReportsDto {
@@ -24,5 +24,6 @@ export class FilterReportsDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'top debe ser un número' })
   @Min(1)
+  @Max(100)
   top?: number;
 }

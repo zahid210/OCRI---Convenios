@@ -196,7 +196,8 @@ export function HeaderNotifications() {
                 <button
                   type="button"
                   onClick={resetRead}
-                  className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 transition-colors hover:text-[#0b5a41]"
+                  disabled={acknowledging}
+                  className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 transition-colors hover:text-[#0b5a41] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <RotateCcw className="h-3 w-3" />
                   Restablecer
@@ -267,7 +268,8 @@ export function HeaderNotifications() {
                       title="Marcar como leída"
                       aria-label="Marcar como leída"
                       onClick={() => acknowledge([n.id])}
-                      className="mt-0.5 shrink-0 rounded-none border border-[#0b5a41]/30 bg-[#0b5a41]/5 p-1 text-[#0b5a41] transition-colors hover:bg-[#0b5a41] hover:text-white"
+                      disabled={acknowledging}
+                      className="mt-0.5 shrink-0 rounded-none border border-[#0b5a41]/30 bg-[#0b5a41]/5 p-1 text-[#0b5a41] transition-colors hover:bg-[#0b5a41] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <CheckCheck className="h-3.5 w-3.5" />
                     </button>

@@ -1,4 +1,11 @@
-import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FilterAgreementsDto {
@@ -6,12 +13,14 @@ export class FilterAgreementsDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'page debe ser un número' })
   @Min(1)
+  @Max(10000)
   page?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({}, { message: 'per_page debe ser un número' })
   @Min(1)
+  @Max(100)
   per_page?: number;
 
   @IsOptional()

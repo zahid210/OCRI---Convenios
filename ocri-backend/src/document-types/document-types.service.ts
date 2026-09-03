@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -34,7 +34,7 @@ export class DocumentTypesService {
     });
 
     if (!docType) {
-      throw new Error(`Tipo de documento #${id} no encontrado`);
+      throw new NotFoundException(`Tipo de documento #${id} no encontrado`);
     }
 
     return this.serializeBigInt(docType);

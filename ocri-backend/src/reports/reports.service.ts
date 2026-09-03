@@ -320,7 +320,10 @@ export class ReportsService {
       ['Total de trámites/convenios', summary.total],
       ['En Trámite (propuestas)', summary.en_tramite],
       ['Vigentes', summary.vigentes],
-      ['Próximos a vencer (${EXPIRATION_WARNING_DAYS} días)', summary.proximos_a_vencer],
+      [
+        `Próximos a vencer (${EXPIRATION_WARNING_DAYS} días)`,
+        summary.proximos_a_vencer,
+      ],
       ['Vencidos', summary.vencidos],
       ['No suscritos', summary.no_suscritos],
     ]);

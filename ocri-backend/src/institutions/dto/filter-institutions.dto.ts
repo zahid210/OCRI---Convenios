@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class FilterInstitutionsDto {
   @IsOptional()
@@ -10,17 +10,20 @@ export class FilterInstitutionsDto {
   @Type(() => Number)
   @IsInt({ message: 'page debe ser un número entero' })
   @Min(1)
+  @Max(10000)
   page?: number = 1;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'limit debe ser un número entero' })
   @Min(1)
+  @Max(100)
   limit?: number = 12;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'per_page debe ser un número entero' })
   @Min(1)
+  @Max(100)
   per_page?: number;
 }

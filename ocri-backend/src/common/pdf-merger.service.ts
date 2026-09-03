@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as fs from 'fs/promises';
@@ -282,7 +282,7 @@ export class PdfMergerService {
       .filter((d) => d.document_types?.code !== 'EXPEDIENTE_TECNICO');
 
     if (pdfDocs.length === 0) {
-      throw new Error(
+      throw new BadRequestException(
         'No hay documentos PDF para fusionar en el expediente técnico.',
       );
     }

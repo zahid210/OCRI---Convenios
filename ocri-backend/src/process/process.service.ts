@@ -269,41 +269,55 @@ export class ProcessService {
       options?.defaultDays ?? (await this.appConfig.getOpinionDefaultDays());
     dueDate.setDate(dueDate.getDate() + defaultDays);
 
-    const created = await this.prisma.$transaction(
-      async (tx) => {
-        const requests: Array<{ id: bigint }> = [];
-        for (const depId of dependenciaIds) {
-          const r = await tx.opinion_requests.create({
-            data: {
-              agreement_id: BigInt(agreementId),
-              dependencia_id: BigInt(depId),
-              stage: 'ETAPA_1_PROPUESTA',
-              status: 'GENERADA',
-              oficio_number: options?.oficioNumber ?? null,
-              directed_to: options?.directedTo ?? null,
-              due_at: dueDate,
-              created_at: new Date(),
-              updated_at: new Date(),
-            },
-          });
-          requests.push({ id: r.id });
-        }
+    const created = await this.prisma
+      .$transaction(
+        async (tx) => {
+          const requests: Array<{ id: bigint }> = [];
+          for (const depId of dependenciaIds) {
+            const r = await tx.opinion_requests.create({
+              data: {
+                agreement_id: BigInt(agreementId),
+                dependencia_id: BigInt(depId),
+                stage: 'ETAPA_1_PROPUESTA',
+                status: 'GENERADA',
+                oficio_number: options?.oficioNumber ?? null,
+                directed_to: options?.directedTo ?? null,
+                due_at: dueDate,
+                created_at: new Date(),
+                updated_at: new Date(),
+              },
+            });
+            requests.push({ id: r.id });
+          }
 
-        if (agreement.process_status === 'RECEPCIONADA') {
-          await this.applyTransition(
-            tx,
-            BigInt(agreementId),
-            'OPINIONES_EN_CURSO',
-            'SOLICITUDES_GENERADAS',
-            `OCRI generó ${dependenciaIds.length} solicitud(es) de opinión para las dependencias involucradas.`,
-            { actorUserId: userId },
+          if (agreement.process_status === 'RECEPCIONADA') {
+            await this.applyTransition(
+              tx,
+              BigInt(agreementId),
+              'OPINIONES_EN_CURSO',
+              'SOLICITUDES_GENERADAS',
+              `OCRI generó ${dependenciaIds.length} solicitud(es) de opinión para las dependencias involucradas.`,
+              { actorUserId: userId },
+            );
+          }
+
+          return requests;
+        },
+        { maxWait: 10000, timeout: 30000 },
+      )
+      .catch((error) => {
+        // Carrera simultánea: otra petición ya generó una solicitud para la misma
+        // (agreement, dependencia, etapa). El check previo es best-effort.
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          throw new ConflictException(
+            'Ya existe una solicitud de opinión para una de las dependencias seleccionadas.',
           );
         }
-
-        return requests;
-      },
-      { maxWait: 10000, timeout: 30000 },
-    );
+        throw error;
+      });
 
     const dependencias = await this.prisma.dependencias.findMany({
       where: { id: { in: dependenciaIds.map((id) => BigInt(id)) } },
@@ -387,8 +401,10 @@ export class ProcessService {
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
-        const result = await tx.opinion_requests.update({
-          where: { id: BigInt(opinionRequestId) },
+        // Update condicional por estado: evita que dos envíos concurrentes
+        // sobre la misma solicitud avancen ambos (guard de integridad).
+        const updated = await tx.opinion_requests.updateMany({
+          where: { id: BigInt(opinionRequestId), status: 'GENERADA' },
           data: {
             status: 'ENVIADA',
             sent_via: dto.sent_via ?? null,
@@ -398,6 +414,16 @@ export class ProcessService {
             sent_at: new Date(),
             updated_at: new Date(),
           },
+        });
+
+        if (updated.count === 0) {
+          throw new ConflictException(
+            'La solicitud ya no está en estado GENERADA y no puede enviarse nuevamente.',
+          );
+        }
+
+        const result = await tx.opinion_requests.findUniqueOrThrow({
+          where: { id: BigInt(opinionRequestId) },
         });
 
         await this.logEvent(
@@ -475,8 +501,10 @@ export class ProcessService {
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
-        const result = await tx.opinion_requests.update({
-          where: { id: BigInt(opinionRequestId) },
+        // Update condicional por estado: evita que dos respuestas concurrentes
+        // sobre la misma solicitud avancen ambas (guard de integridad).
+        const updated = await tx.opinion_requests.updateMany({
+          where: { id: BigInt(opinionRequestId), status: 'ENVIADA' },
           data: {
             status: 'RESPONDIDA',
             response_date: dto.response_date
@@ -485,6 +513,16 @@ export class ProcessService {
             observations: dto.observations ?? null,
             updated_at: new Date(),
           },
+        });
+
+        if (updated.count === 0) {
+          throw new ConflictException(
+            'La solicitud ya no está en estado ENVIADA y no puede registrar una respuesta nuevamente.',
+          );
+        }
+
+        const result = await tx.opinion_requests.findUniqueOrThrow({
+          where: { id: BigInt(opinionRequestId) },
         });
 
         if (file) {
@@ -614,8 +652,13 @@ export class ProcessService {
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
-        const result = await tx.opinion_requests.update({
-          where: { id: BigInt(opinionRequestId) },
+        // Update condicional por estado de origen (RESPONDIDA u OBSERVADA):
+        // impide que dos validaciones concurrentes avancen la misma solicitud.
+        const updated = await tx.opinion_requests.updateMany({
+          where: {
+            id: BigInt(opinionRequestId),
+            status: { in: ['RESPONDIDA', 'OBSERVADA'] },
+          },
           data: {
             status: newStatus,
             observations: dto.valid
@@ -624,6 +667,16 @@ export class ProcessService {
             validated_at: dto.valid ? new Date() : null,
             updated_at: new Date(),
           },
+        });
+
+        if (updated.count === 0) {
+          throw new ConflictException(
+            'La solicitud ya no está en estado RESPONDIDA/OBSERVADA y no puede validarse nuevamente.',
+          );
+        }
+
+        const result = await tx.opinion_requests.findUniqueOrThrow({
+          where: { id: BigInt(opinionRequestId) },
         });
 
         await this.logEvent(
@@ -770,6 +823,7 @@ export class ProcessService {
   async deleteOpinionRequest(opinionRequestId: number, userId?: number) {
     const request = await this.prisma.opinion_requests.findUnique({
       where: { id: BigInt(opinionRequestId) },
+      include: { documents: { select: { id: true, file_path: true } } },
     });
 
     if (!request) {
@@ -782,6 +836,20 @@ export class ProcessService {
       throw new BadRequestException(
         'Solo se puede eliminar una solicitud que aún no ha sido enviada.',
       );
+    }
+
+    // Borra del disco los archivos generados para esta solicitud (oficios, etc.)
+    // para no dejar huérfanos. El borrado físico es best-effort.
+    for (const doc of request.documents) {
+      try {
+        await fs.unlink(absUploadPath(doc.file_path));
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+          this.logger?.warn?.(
+            `No se pudo eliminar el archivo ${doc.file_path} de la solicitud de opinión.`,
+          );
+        }
+      }
     }
 
     await this.prisma.opinion_requests.delete({
@@ -1153,9 +1221,20 @@ export class ProcessService {
         agreement_id: BigInt(agreementId),
         document_types: { code: 'EXPEDIENTE_TECNICO' },
       },
+      select: { id: true, file_path: true },
     });
 
     if (existDoc) {
+      // Evita dejar huérfano el PDF previo en disco al regenerar el expediente.
+      try {
+        await fs.unlink(absUploadPath(existDoc.file_path));
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+          this.logger?.warn?.(
+            `No se pudo eliminar el expediente anterior: ${existDoc.file_path}`,
+          );
+        }
+      }
       await this.prisma.documents.delete({ where: { id: existDoc.id } });
     }
 

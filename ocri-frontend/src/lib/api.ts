@@ -178,6 +178,19 @@ export async function downloadFile(
   const response = await fetch(`${API_URL}${endpoint}`, { headers });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      Cookies.remove("access_token", { path: "/" });
+      Cookies.remove("user", { path: "/" });
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login")
+      ) {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.assign(`${window.location.origin}/login`);
+      }
+      throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
+    }
+
     let message = "Error al exportar el archivo.";
     try {
       const data = await response.json();

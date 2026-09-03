@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,26 +20,39 @@ export class DependenciasService {
     });
 
     if (existing) {
-      throw new BadRequestException(
+      throw new ConflictException(
         `Ya existe una dependencia con el código "${dto.code}".`,
       );
     }
 
-    const dependencia = await this.prisma.dependencias.create({
-      data: {
-        code: dto.code.trim().toUpperCase(),
-        name: dto.name.trim(),
-        kind: dto.kind,
-        email: dto.email?.trim() || null,
-        is_default_opinion: dto.is_default_opinion ?? false,
-        sort_order: dto.sort_order ?? 0,
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
+    try {
+      const dependencia = await this.prisma.dependencias.create({
+        data: {
+          code: dto.code.trim().toUpperCase(),
+          name: dto.name.trim(),
+          kind: dto.kind,
+          email: dto.email?.trim() || null,
+          is_default_opinion: dto.is_default_opinion ?? false,
+          sort_order: dto.sort_order ?? 0,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
 
-    return serializeBigInt(dependencia);
+      return serializeBigInt(dependencia);
+    } catch (error) {
+      // Carrera simultánea: el código ya fue insertado por otra petición.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Ya existe una dependencia con el código "${dto.code}".`,
+        );
+      }
+      throw error;
+    }
   }
 
   async findAll(query?: {
@@ -635,7 +649,7 @@ export class DependenciasService {
         where: { code: dto.code.trim().toUpperCase() },
       });
       if (existing) {
-        throw new BadRequestException(
+        throw new ConflictException(
           `Ya existe una dependencia con el código "${dto.code}".`,
         );
       }
@@ -654,12 +668,25 @@ export class DependenciasService {
     if (dto.sort_order !== undefined) data.sort_order = dto.sort_order;
     if (dto.is_active !== undefined) data.is_active = dto.is_active;
 
-    const updated = await this.prisma.dependencias.update({
-      where: { id: BigInt(id) },
-      data,
-    });
+    try {
+      const updated = await this.prisma.dependencias.update({
+        where: { id: BigInt(id) },
+        data,
+      });
 
-    return serializeBigInt(updated);
+      return serializeBigInt(updated);
+    } catch (error) {
+      // Carrera simultánea sobre el código único.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Ya existe una dependencia con el código "${dto.code}".`,
+        );
+      }
+      throw error;
+    }
   }
 
   async remove(id: number) {
