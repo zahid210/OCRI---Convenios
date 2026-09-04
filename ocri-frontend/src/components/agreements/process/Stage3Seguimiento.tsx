@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   completeMonitoring,
+  downloadFile,
   evaluateDeliverable,
   openFilePreview,
   requestReport,
@@ -21,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardList,
+  Download,
   ExternalLink,
   FileText,
   Loader2,
@@ -52,11 +54,35 @@ function DeliverableCard({
   ) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const toast = useToast();
   const documents = deliverable.documents ?? [];
   const observations = [...(deliverable.observations ?? [])].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
+
+  const handleDownloadDocument = async (doc: (typeof documents)[number]) => {
+    if (!doc.file_path) {
+      toast.error("Este documento no tiene un archivo asociado.");
+      return;
+    }
+    try {
+      const relativePath = doc.file_path
+        .split("/")
+        .map((s) => encodeURIComponent(s))
+        .join("/");
+      const endpoint = `/resoluciones/${relativePath}`;
+      await downloadFile(
+        endpoint,
+        fileName(doc.original_name, fileName(doc.file_path, doc.name || "")),
+      );
+      toast.success("Descarga iniciada.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al descargar el documento";
+      toast.error(message);
+    }
+  };
 
   return (
     <div className="border border-gray-200 bg-white">
@@ -78,9 +104,6 @@ function DeliverableCard({
           className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${DELIVERABLE_STATUS_COLORS[deliverable.status]}`}
         >
           {DELIVERABLE_STATUS_LABELS[deliverable.status]}
-        </span>
-        <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium border bg-gray-100 text-gray-600 border-gray-200">
-          v{deliverable.version}
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-gray-800">
@@ -132,6 +155,15 @@ function DeliverableCard({
                   >
                     Ver
                     <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadDocument(doc)}
+                    className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline shrink-0"
+                    title="Descargar documento"
+                  >
+                    Descargar
+                    <Download className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
@@ -188,7 +220,7 @@ function DeliverableCard({
                     <Send className="h-3.5 w-3.5" />
                   )}
                   {deliverable.status === "OBSERVADO"
-                    ? `Reenviar Corregido (v${deliverable.version + 1})`
+                    ? "Reenviar Corregido"
                     : "Enviar"}
                   <input
                     type="file"
