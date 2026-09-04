@@ -1100,7 +1100,7 @@ export class ProcessService {
         <div class="subject-label">ASUNTO:</div>
         <div class="subject-content">${asunto}</div>
         <div class="subject-label">Referencia:</div>
-        <div class="subject-content">${referencia}</div>
+        <div class="subject-content subject-referencia">${referencia}</div>
       </div>
       <div class="body-text">
         <p>Luego de un atento y cordial saludo me dirijo a usted, a fin de remitir el expediente t&eacute;cnico del

@@ -137,6 +137,12 @@
             text-align: justify;
             font-weight: bold;
         }
+        /* La lista de Referencia (nombres de documentos separados por coma)
+           NO debe justificarse: el renderizador de PDF reparte el ancho libre
+           entre los huecos y los nombres salen muy espaciados. */
+        .subject-content.subject-referencia {
+            text-align: left;
+        }
 
         /* Cuerpo del documento */
         .body-text {
