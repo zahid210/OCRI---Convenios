@@ -1054,6 +1054,18 @@ export class ProcessService {
       year: 'numeric',
     });
 
+    // Referencia: se listan los NOMBRES de todos los documentos que forman
+    // parte del proceso del convenio (oficios, dictamen, opiniones, expediente,
+    // etc.), en el orden cronológico en que fueron incorporados al trámite.
+    const documentos = await this.prisma.documents.findMany({
+      where: { agreement_id: BigInt(agreementId) },
+      include: {
+        document_types: { select: { name: true } },
+      },
+      orderBy: { id: 'asc' },
+    });
+    const referencia = this.buildOficioRectoradoReferencia(documentos);
+
     const asunto = `REMISI&Oacute;N DE EXPEDIENTE T&Oacute;CNICO DEL ${title} PARA SU SUSCRIPCI&Oacute;N`;
 
     const img = (uri: string, alt: string) =>
@@ -1087,8 +1099,8 @@ export class ProcessService {
       <div class="subject-table">
         <div class="subject-label">ASUNTO:</div>
         <div class="subject-content">${asunto}</div>
-        <div class="subject-label"><br>Referencia:</div>
-        <div class="subject-content"></div>
+        <div class="subject-label">Referencia:</div>
+        <div class="subject-content">${referencia}</div>
       </div>
       <div class="body-text">
         <p>Luego de un atento y cordial saludo me dirijo a usted, a fin de remitir el expediente t&eacute;cnico del
@@ -1115,6 +1127,39 @@ export class ProcessService {
     `;
 
     return { html, css };
+  }
+
+  /**
+   * Construye el listado de la sección "Referencia:" del oficio a Rectorado a
+   * partir de los documentos realmente procesados del convenio. Se listan los
+   * NOMBRES de los documentos (el archivo original sin extensión), en el orden
+   * en que fueron incorporados al trámite (id ascendente = cronológico).
+   */
+  private buildOficioRectoradoReferencia(
+    documentos: Array<{
+      original_name: string | null;
+      file_path: string;
+    }>,
+  ): string {
+    const nombres: string[] = [];
+
+    for (const doc of documentos) {
+      const base = doc.original_name ?? doc.file_path.split('/').pop() ?? '';
+      const nombre = base.replace(/\.[^.]+$/, '').trim();
+      if (nombre) nombres.push(nombre);
+    }
+
+    return nombres.map((n) => this.escapeHtml(n)).join(', ');
+  }
+
+  /** Escapa caracteres sensibles antes de inyectar en el HTML de la plantilla. */
+  private escapeHtml(raw: string): string {
+    return raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**
