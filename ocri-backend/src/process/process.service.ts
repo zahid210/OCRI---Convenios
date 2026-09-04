@@ -554,6 +554,30 @@ export class ProcessService {
         });
 
         if (file) {
+          // Si es una corrección (desde OBSERVADA), eliminar el documento
+          // anterior de la respuesta observada tanto en disco como en BD.
+          if (isCorrection) {
+            const oldDocs = await tx.documents.findMany({
+              where: {
+                opinion_request_id: BigInt(opinionRequestId),
+              },
+              orderBy: { created_at: 'desc' },
+            });
+            for (const oldDoc of oldDocs) {
+              try {
+                await fs.unlink(absUploadPath(oldDoc.file_path));
+              } catch (err) {
+                const e = err as NodeJS.ErrnoException;
+                if (e.code !== 'ENOENT') {
+                  this.logger.warn(
+                    `No se pudo eliminar archivo observado: ${oldDoc.file_path} — ${e.message}`,
+                  );
+                }
+              }
+              await tx.documents.delete({ where: { id: oldDoc.id } });
+            }
+          }
+
           const docType = await tx.document_types.findUnique({
             where: { code: 'OFICIO_RESPUESTA_OPINION' },
           });
