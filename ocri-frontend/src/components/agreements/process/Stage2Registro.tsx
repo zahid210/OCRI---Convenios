@@ -86,7 +86,6 @@ export default function Stage2Registro({
     );
     const [regStartDate, setRegStartDate] = useState('');
     const [regEndDate, setRegEndDate] = useState('');
-    const [regDriveLink, setRegDriveLink] = useState('');
     const [regObservations, setRegObservations] = useState('');
     const [regFile, setRegFile] = useState<File | null>(null);
     const [regResponsables, setRegResponsables] = useState<ResponsableRow[]>([
@@ -200,7 +199,6 @@ export default function Stage2Registro({
                         email: r.email.trim() || undefined,
                         phone: r.phone.trim() || undefined,
                     })),
-                    drive_link: regDriveLink || undefined,
                     observations: regObservations || undefined,
                 },
                 regFile,
@@ -210,7 +208,6 @@ export default function Stage2Registro({
             setRegResolutionNumber('');
             setRegStartDate('');
             setRegEndDate('');
-            setRegDriveLink('');
             setRegObservations('');
             setRegFile(null);
             setRegResponsables([{ ...EMPTY_RESPONSABLE }]);
@@ -328,10 +325,9 @@ export default function Stage2Registro({
 
                 {decision === 'APPROVED' && processStatus === 'SUSCRITO' && (
                     <div className="mb-6 bg-[#eefaf4] border border-[#b5e3d0] p-4 text-sm text-[#0b6e4f] flex items-start gap-2">
-                        <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
                         <div>
                             <p className="font-semibold">
-                                ✓ Rectorado aprobó · es ahora un Convenio oficial
+                                Rectorado aprobó
                             </p>
                             <p className="mt-1 text-xs">
                                 Esta propuesta fue aprobada por Rectorado y a partir de este
@@ -682,7 +678,7 @@ export default function Stage2Registro({
                                         </div>
                                         <div className="col-span-4 sm:col-span-2">
                                             <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
-                                                Rol
+                                                Cargo
                                             </label>
                                             <input
                                                 value={resp.role}
@@ -695,7 +691,7 @@ export default function Stage2Registro({
                                         </div>
                                             <div className="col-span-4 sm:col-span-2">
                                             <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
-                                                Lado
+                                                Entidad
                                             </label>
                                             <div className="w-full relative">
                                                 <select
@@ -742,23 +738,26 @@ export default function Stage2Registro({
                                                 className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
                                             />
                                         </div>
-                                        <div className="col-span-1">
-                                            {regResponsables.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setRegResponsables(
-                                                            regResponsables.filter(
-                                                                (_, i) => i !== idx,
-                                                            ),
-                                                        )
-                                                    }
-                                                    className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                    Eliminar
-                                                </button>
-                                            )}
+                                        <div className="col-span-4 sm:col-span-1">
+                                            <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1 opacity-0 select-none">
+                                                eliminar
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setRegResponsables(
+                                                        regResponsables.filter(
+                                                            (_, i) => i !== idx,
+                                                        ),
+                                                    )
+                                                }
+                                                disabled={regResponsables.length <= 1}
+                                                aria-label={`Eliminar responsable ${idx + 1}`}
+                                                title="Eliminar responsable"
+                                                className="inline-flex items-center justify-center h-[32px] w-full border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -777,34 +776,17 @@ export default function Stage2Registro({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                                    Almacenamiento Digital
-                                </h3>
-                                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                    Enlace al Drive / Repositorio{' '}
-                                    <span className="normal-case font-normal">(opcional)</span>
-                                </label>
-                                <input
-                                    value={regDriveLink}
-                                    onChange={(e) => setRegDriveLink(e.target.value)}
-                                    className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
-                                    placeholder="https://drive.google.com/..."
-                                />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                                    Observaciones
-                                </h3>
-                                <textarea
-                                    value={regObservations}
-                                    onChange={(e) => setRegObservations(e.target.value)}
-                                    rows={2}
-                                    className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
-                                    placeholder="Observaciones del registro (opcional)..."
-                                />
-                            </div>
+                        <div>
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                                Observaciones
+                            </h3>
+                            <textarea
+                                value={regObservations}
+                                onChange={(e) => setRegObservations(e.target.value)}
+                                rows={2}
+                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
+                                placeholder="Observaciones del registro (opcional)..."
+                            />
                         </div>
                     </div>
                 </ModalShell>
