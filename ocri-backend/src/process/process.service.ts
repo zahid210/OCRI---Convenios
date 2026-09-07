@@ -1167,6 +1167,14 @@ export class ProcessService {
    * recibido, lo adjunta automáticamente como documento del proceso y marca la
    * solicitud como enviada. Todo en una sola transacción.
    */
+  /** Vista previa en vivo del oficio de solicitud de opinión (sin persistir) */
+  async renderOficioOpinionPreview(bodyHtml: string): Promise<Buffer> {
+    if (!bodyHtml || !bodyHtml.trim()) {
+      throw new BadRequestException('El contenido del oficio no puede estar vacío.');
+    }
+    return this.pdfMerger.renderOficioOpinionPreview(bodyHtml);
+  }
+
   async generateOficioOpinion(
     opinionRequestId: number,
     dto: {

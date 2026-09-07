@@ -366,9 +366,28 @@ function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
   // línea (la última línea no se estira, igual que en CSS). Solo aplica a
   // líneas de texto plano (sin inline-box ni emoji atómicos). La anchura
   // natural incluye los espacios (leads) para no desbordar el contenedor.
-  let y = layout.y;
+  // Paginación por línea: si el siguiente renglón no cabe en la hoja actual
+  // (para bloques de texto más altos que una hoja entera), se continúa dibujando
+  // en la hoja siguiente manteniendo la misma columna (x) y empezando en el
+  // margen superior real de la página. El cursor del layout (layout.y) queda en
+  // el final real del último renglón dibujado, para que los bloques posteriores
+  // se maqueten sobre la última hoja usada.
+  const y0 = layout.y;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    if (!measureOnly && layout.paginationAllowed !== false) {
+      const pg = doc.page || {};
+      const topM = pg.margins && Number.isFinite(pg.margins.top) ? pg.margins.top : layout.marginTop || 0;
+      const botM = pg.margins && Number.isFinite(pg.margins.bottom) ? pg.margins.bottom : layout.marginBottom || 0;
+      const advance = line.height + (i < lines.length - 1 ? lineGap : 0);
+      if (layout.y + advance > (pg.height || 0) - botM) {
+        doc.addPage();
+        layout.y = topM;
+        layout.atStartOfPage = true;
+        layout.pendingBottomMargin = 0;
+      }
+    }
+    let y = layout.y;
     const naturalWidth = line.width + line.leads;
     let justifyLine = false;
     let extraWord = 0;
@@ -438,15 +457,25 @@ function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
             enableInternalAnchors: ctx?.options?.enableInternalAnchors,
           });
           selectFontForInline(doc, item.styles, !!item.run.bold, !!item.run.italic, item.glyphSize ?? item.size, item.run.text);
-          doc.text(item.text || '', pieceX + item.border + item.padL, textY + (item.vShift || 0), { lineGap: 0, lineBreak: false, ...linkOpts });
+          doc.text(item.text || '', pieceX + item.border + item.padL, textY + (item.vShift || 0), {
+            lineGap: 0,
+            lineBreak: false,
+            ...linkOpts,
+          });
         }
       }
       run = pieceX + item.w;
     }
-    y += line.height + (i < lines.length - 1 ? lineGap : 0);
+    layout.y += line.height + (i < lines.length - 1 ? lineGap : 0);
   }
 
-  return y - layout.y;
+  return layout.y - y0;
+}
+
+function remainingHeight(doc, layout) {
+  const pg = doc.page || {};
+  const botM = pg.margins && Number.isFinite(pg.margins.bottom) ? pg.margins.bottom : layout.marginBottom || 0;
+  return (pg.height || 0) - botM - (layout.y || 0);
 }
 
 function renderInlineRunsAt(runs, ctx, { baseStyles, align, lineGap, tag, x, y, width, measureOnly = false }) {
@@ -461,6 +490,7 @@ function renderInlineRunsAt(runs, ctx, { baseStyles, align, lineGap, tag, x, y, 
     measureOnly: measureOnly || !!ctx?.measureOnly,
   });
   inlineLayout.atStartOfPage = false;
+  inlineLayout.paginationAllowed = false;
   return renderInlineRuns(
     runs,
     { ...ctx, layout: inlineLayout, measureOnly: measureOnly || !!ctx?.measureOnly },
@@ -712,6 +742,23 @@ async function renderNodeImpl(node, ctx) {
             wordSpacing,
           });
       const boxH = paddingTop + h + paddingBottom;
+      // Bloque de texto que no cabe en lo que queda de la hoja actual: se pagina
+      // por renglón en lugar de empujar el bloque completo (hueco) y desbordar
+      // el margen inferior.
+      if (!measureOnly && !bg && !borderLeft && boxH > remainingHeight(doc, layout)) {
+        const prevX = layout.x;
+        const prevCW = layout.contentWidth;
+        layout.x = blockX + paddingLeft;
+        layout.contentWidth = () => availableWidth;
+        layout.y = startY + paddingTop;
+        renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
+        layout.y = layout.y + paddingBottom;
+        layout.x = prevX;
+        layout.contentWidth = prevCW;
+        finishBlock();
+        applyPageBreakAfter(styles, ctx, node);
+        return;
+      }
       layout.ensureSpace(boxH);
 
       if (!measureOnly) {
@@ -876,6 +923,21 @@ async function renderNodeImpl(node, ctx) {
         });
 
     const totalHeight = paddingTop + h + paddingBottom + borderBottom;
+    // Encabezados de texto plano (sin subrayado inferior): cuando no caben en lo
+    // que queda de la hoja actual se pagan por renglón en la hoja siguiente.
+    if (!measureOnly && !borderBottom && totalHeight > remainingHeight(doc, layout)) {
+      const startYForSplit = layout.y;
+      const prevX = layout.x;
+      const prevCW = layout.contentWidth;
+      layout.y = startYForSplit + paddingTop;
+      renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
+      layout.y = layout.y + paddingBottom;
+      layout.x = prevX;
+      layout.contentWidth = prevCW;
+      finishBlock();
+      applyPageBreakAfter(styles, ctx, node);
+      return;
+    }
     layout.ensureSpace(totalHeight);
 
     const startY = layout.y;
@@ -986,6 +1048,25 @@ async function renderNodeImpl(node, ctx) {
           wordSpacing,
         });
     let boxHeight = h + paddingTop + paddingBottom;
+    // Bloque de texto que no cabe en lo que queda de la hoja actual: se dibuja en el
+    // mismo lugar y se pagina por renglón dentro de renderInlineRuns, en lugar de
+    // empujar el bloque completo a la siguiente hoja (hueco en blanco) y desbordar
+    // el margen inferior (texto pegado al borde). Solo para texto plano sin fondo/borde.
+    if (!useInlineBoxes && !measureOnly && !bg && !borderLeft && boxHeight > remainingHeight(doc, layout)) {
+      const startYForSplit = layout.y;
+      const prevX = layout.x;
+      const prevCW = layout.contentWidth;
+      layout.x = layout.x + paddingLeft;
+      layout.contentWidth = () => availableWidth;
+      layout.y = startYForSplit + paddingTop;
+      renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
+      layout.y = layout.y + paddingBottom;
+      layout.x = prevX;
+      layout.contentWidth = prevCW;
+      finishBlock();
+      applyPageBreakAfter(styles, ctx, node);
+      return;
+    }
     if (useInlineBoxes) {
       layout.ensureSpace(boxHeight);
       const startYInline = layout.y + paddingTop;
@@ -1371,6 +1452,49 @@ async function renderNodeImpl(node, ctx) {
         const useInlineBoxes = runs.some((run) => runHasInlineBoxStyles(run.styles || {}, styles));
         const hasFrame =
           bg || borderTop.width || borderRight.width || borderBottom.width || borderLeft.width || radius > 0;
+        // Texto en línea que no cabe en lo que queda de la hoja actual (sin fondo ni
+        // borde): se pagina por renglón dentro de renderInlineRuns en el mismo
+        // lugar, en lugar de empujar el bloque completo a la siguiente hoja
+        // (hueco en blanco) y desbordar el margen inferior (texto pegado al borde).
+        const splitInPlace =
+          !useInlineBoxes &&
+          !measureOnly &&
+          !hasFrame &&
+          (() => {
+            const _plain = runs.map((r) => r.text).join('');
+            if (!_plain.trim()) return 0;
+            const _ls = styleNumber(styles, 'letter-spacing', 0, { baseSize: size });
+            const _ws = styleNumber(styles, 'word-spacing', 0, { baseSize: size });
+            const _groupEst =
+              !runs.some((r) => r.href) &&
+              (align !== 'left' ||
+                runs.length > 1 ||
+                (doc._emoji && runs.some((r) => r.isEmoji)) ||
+                runs.some((r) => r.subscript || r.superscript));
+            return _groupEst
+              ? renderInlineRunsAt(runs, ctx, {
+                  baseStyles: styles,
+                  align,
+                  lineGap: gap,
+                  tag,
+                  x: layout.x,
+                  y: layout.y,
+                  width: layout.contentWidth(),
+                  measureOnly: true,
+                })
+              : doc.heightOfString(_plain, {
+                  width: layout.contentWidth(),
+                  align,
+                  lineGap: gap,
+                  characterSpacing: _ls,
+                  wordSpacing: _ws,
+                });
+          })() > remainingHeight(doc, layout);
+        if (splitInPlace) {
+          renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
+          layout.y = Math.max(layout.y, 0);
+          layout.pendingBottomMargin = 0;
+        }
 
         if (useInlineBoxes) {
           const plain = runs.map((r) => r.text).join('');
@@ -1384,7 +1508,7 @@ async function renderNodeImpl(node, ctx) {
           const startYInline = layout.y;
           const h = renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
           layout.y = Math.max(layout.y, startYInline + h);
-        } else {
+        } else if (!splitInPlace) {
           const plain = runs.map((r) => r.text).join('');
           const letterSpacing = styleNumber(styles, 'letter-spacing', 0, { baseSize: size });
           const wordSpacing = styleNumber(styles, 'word-spacing', 0, { baseSize: size });

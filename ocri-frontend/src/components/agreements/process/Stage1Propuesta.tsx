@@ -13,6 +13,7 @@ import {
   getOficioOpinionTemplate,
   getOficioRectoradoTemplate,
   generateOficioRectorado,
+  previewOficioOpinion,
   openFilePreview,
   respondOpinionRequest,
   sendToRectorado,
@@ -1432,6 +1433,7 @@ export default function Stage1Propuesta({
                 initialHtml={oficioHtml}
                 css={oficioCss}
                 onChange={setOficioHtml}
+                renderPdf={(html) => previewOficioOpinion(showSendModal, html)}
               />
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa]">

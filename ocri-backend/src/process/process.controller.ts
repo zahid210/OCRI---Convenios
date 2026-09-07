@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Post,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -17,6 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ProcessService } from './process.service';
 import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
+import type { Response } from 'express';
 
 interface AuthenticatedRequest {
   user?: {
@@ -141,6 +143,23 @@ export class ProcessController {
   @Get('opinion-requests/:id/oficio/template')
   getOficioOpinionTemplate(@Param('id', ParseIntPipe) id: number) {
     return this.processService.getOficioOpinionTemplate(id);
+  }
+
+  /**
+   * Vista previa en vivo: renderiza el oficio con el MISMO motor que el PDF
+   * final (html-pdf-lite + plantilla de márgenes) y lo devuelve sin persistir.
+   */
+  @Roles('admin', 'editor')
+  @Post('opinion-requests/:id/oficio/preview')
+  async previewOficioOpinion(
+    @Param('id', ParseIntPipe) _id: number,
+    @Body('bodyHtml') bodyHtml: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.processService.renderOficioOpinionPreview(bodyHtml);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
+    res.send(pdf);
   }
 
   /** Genera el oficio, lo adjunta automáticamente y marca la solicitud como enviada */

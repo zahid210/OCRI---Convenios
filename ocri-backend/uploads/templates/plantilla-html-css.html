@@ -23,18 +23,19 @@
             color: #000;
         }
 
-        /* Contenedor principal (hoja A4). El padding se declara por lado (no el
-           shorthand de 4 valores): el motor no expande el shorthand y lo leería
-           como un único número en puntos (25pt en vez de 25mm). Valores iguales
-           a la plantilla original: 25mm 25mm 25mm 30mm. */
+        /* Contenedor principal (hoja A4). Los márgenes de página (25mm arriba/
+           abajo/derecha y 30mm izquierda) se configuran en el renderizador
+           (renderOficioOpinionPdf) y NO aquí: es lo único que garantiza que las
+           hojas 2+ del documento repitan el mismo margen (html-pdf-lite reinicia
+           el cursor en los márgenes de página tras un salto, no en este padding).
+           Antes este bloque usaba padding min-height: 297mm con margen de página
+           0, y todo el contenido que desbordaba a la segunda hoja aparecía desde
+           la esquina superior izquierda (x=0, y=0), totalmente desmaquetado.
+           Si se restaurara min-height:297mm aquí, el motor detectaría que el
+           bloque no cabe en lo que queda de hoja y empujaría TODO a la hoja 2. */
         .document {
-            padding-top: 25mm;
-            padding-right: 25mm;
-            padding-bottom: 25mm;
-            padding-left: 30mm;
-            width: 210mm;
-            min-height: 297mm;
-            box-sizing: border-box;
+            /* Sin padding, width ni min-height: simplemente llena el ancho de
+               contenido (155mm) respetando los márgenes de página. */
         }
 
         /* Encabezado: logos izquierda/derecha y texto central. Grid en lugar de
@@ -45,6 +46,9 @@
             display: grid;
             grid-template-columns: 15% 70% 15%;
             margin-bottom: 10px;
+            /* El membrete nunca debe quedar partido entre dos hojas. */
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .header-logo-left {
             text-align: left;
@@ -112,6 +116,9 @@
         /* Destinatario */
         .addressee {
             margin-bottom: 10px;
+            /* El bloque del destinatario no debe quedar partido entre hojas. */
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .addressee p {
             margin: 2px 0;
@@ -129,6 +136,9 @@
             display: grid;
             grid-template-columns: 20% 80%;
             margin-bottom: 12px;
+            /* El bloque ASUNTO/Referencia no debe partirse entre hojas. */
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .subject-label {
             font-weight: bold;
@@ -174,6 +184,12 @@
         .signature-section {
             /* Sin width ni margin-left: el bloque ocupa todo el ancho. */
             position: relative;
+            /* "Atentamente," + sello + nombre/cargo deben quedar juntos en la
+               misma hoja: si no cabe en lo que resta de página, el bloque
+               completo pasa a la siguiente (html-pdf-lite soporta break-inside
+               avoid midiendo el bloque antes de dibujarlo). */
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .signature-atentamente {
             text-align: center;
@@ -187,7 +203,8 @@
         .signature-box {
             text-align: center;
             position: relative;
-            margin-top: 10px;
+            /* Espaciado leve entre "Atentamente," y la imagen de la firma/sello. */
+            margin-top: 26px;
         }
         .signature-img {
             text-align: center;

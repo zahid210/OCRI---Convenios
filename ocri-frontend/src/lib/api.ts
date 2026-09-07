@@ -301,6 +301,42 @@ export async function getOficioOpinionTemplate(requestId: number) {
   return fetchApi(`/process/opinion-requests/${requestId}/oficio/template`);
 }
 
+/**
+ * Vista previa en vivo del oficio: el backend renderiza el HTML actual con el
+ * MISMO motor que el PDF final y devuelve el PDF (sin persistir). Retorna el
+ * Blob para poder renderizarlo página por página en el editor.
+ */
+export async function previewOficioOpinion(
+  requestId: number,
+  bodyHtml: string,
+): Promise<Blob> {
+  const token = Cookies.get("access_token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const response = await fetch(
+    `${API_URL}/process/opinion-requests/${requestId}/oficio/preview`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ bodyHtml }),
+    },
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
+    }
+    throw new Error(
+      `No se pudo generar la vista previa (HTTP ${response.status}).`,
+    );
+  }
+
+  return response.blob();
+}
+
 /** Genera el oficio, lo adjunta automáticamente y marca la solicitud como enviada */
 export async function generateOficioOpinion(
   requestId: number,
