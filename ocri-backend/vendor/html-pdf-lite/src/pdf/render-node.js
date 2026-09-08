@@ -229,6 +229,42 @@ function runHasInlineBoxStyles(runStyles = {}, baseStyles = {}) {
   return radius > 0 && radius !== baseRadius;
 }
 
+// Rompe tokens sin espacios (URL, códigos, títulos) que exceden `maxWidth`
+// insertando un espacio entre fragmentos medidos con la fuente activa. Sin esto
+// pdfkit envuelve por palabra pero una palabra más ancha que la caja se dibuja
+// más allá del margen derecho (llegando incluso fuera de la hoja).
+function breakWideText(doc, text, maxWidth, charSpacing = 0) {
+  if (!text || !(maxWidth > 0)) return text;
+  const chunks = text.split(/(\s+)/);
+  let out = '';
+  for (const chunk of chunks) {
+    if (!chunk) continue;
+    if (/\s/.test(chunk)) {
+      out += chunk;
+      continue;
+    }
+    if (doc.widthOfString(chunk, { characterSpacing: charSpacing }) <= maxWidth) {
+      out += chunk;
+      continue;
+    }
+    let seg = '';
+    let sw = 0;
+    for (const ch of chunk) {
+      const cw = doc.widthOfString(ch, { characterSpacing: charSpacing });
+      if (seg && sw + cw > maxWidth) {
+        out += seg + ' ';
+        seg = ch;
+        sw = cw;
+      } else {
+        seg += ch;
+        sw += cw;
+      }
+    }
+    if (seg) out += seg;
+  }
+  return out;
+}
+
 function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
   const { doc, layout } = ctx;
   const measureOnly = !!ctx?.measureOnly;
@@ -347,15 +383,52 @@ function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
         if (pendingSpace > spaceW) pendingSpace = spaceW;
         const wordW = doc.widthOfString(word, { characterSpacing: letterSpacing });
         if (current.pieces.length && current.width + current.leads + pendingSpace + wordW > contentWidth) flushLine();
-        const leadW = pendingSpace;
+        let leadW = pendingSpace;
         pendingSpace = spaceW + wordSpacing;
-        pushPiece({
-          run, styles: s, text: word, inlineBox: false, size,
-          glyphSize, vShift, letterSpacing, wordSpacing,
-          leadW, w: wordW, boxH, textHeight: measuredTextHeight,
-          emojiInfo: null, emojiAscender: 0, emojiLeadW: 0,
-          padL: 0, padR: 0, padT: 0, padB: 0, border: 0, borderPaint: null, radius: 0, bg: null,
-        });
+        if (wordW <= contentWidth) {
+          pushPiece({
+            run, styles: s, text: word, inlineBox: false, size,
+            glyphSize, vShift, letterSpacing, wordSpacing,
+            leadW, w: wordW, boxH, textHeight: measuredTextHeight,
+            emojiInfo: null, emojiAscender: 0, emojiLeadW: 0,
+            padL: 0, padR: 0, padT: 0, padB: 0, border: 0, borderPaint: null, radius: 0, bg: null,
+          });
+          continue;
+        }
+        // Token sin espacios más ancho que la línea: se parte por caracteres
+        // medidos (overflow-wrap: break-word) en fragmentos que quepan en el
+        // ancho disponible, SIN hueco visible entre ellos, y cada fragmento
+        // arranca en una línea propia cuando la anterior ya está llena.
+        let seg = '';
+        let sw = 0;
+        const pushFragment = () => {
+          const fw = doc.widthOfString(seg, { characterSpacing: letterSpacing });
+          if (current.pieces.length && current.width + current.leads + (pendingSpace || 0) + fw > contentWidth) {
+            flushLine();
+            leadW = 0;
+          }
+          pushPiece({
+            run, styles: s, text: seg, inlineBox: false, size,
+            glyphSize, vShift, letterSpacing, wordSpacing,
+            leadW, w: fw, boxH, textHeight: measuredTextHeight,
+            emojiInfo: null, emojiAscender: 0, emojiLeadW: 0,
+            padL: 0, padR: 0, padT: 0, padB: 0, border: 0, borderPaint: null, radius: 0, bg: null,
+          });
+          leadW = 0;
+          pendingSpace = 0;
+        };
+        for (const ch of word) {
+          const cw = doc.widthOfString(ch, { characterSpacing: letterSpacing });
+          if (seg && sw + cw > contentWidth) {
+            pushFragment();
+            seg = ch;
+            sw = cw;
+          } else {
+            seg += ch;
+            sw += cw;
+          }
+        }
+        if (seg) pushFragment();
       }
     }
   }
@@ -553,7 +626,8 @@ async function renderNodeImpl(node, ctx) {
     const gap = lineGapFor(size, {}, 'div');
     const textAlignValue = ctx.inheritedAlign || 'left';
     selectFontForInline(doc, {}, false, false, size, text);
-    const h = doc.heightOfString(text, {
+    const wrapped = breakWideText(doc, text, layout.contentWidth());
+    const h = doc.heightOfString(wrapped, {
       width: layout.contentWidth(),
       lineGap: gap,
     });
@@ -561,7 +635,7 @@ async function renderNodeImpl(node, ctx) {
     if (!measureOnly) {
       doc.x = layout.x;
       doc.y = layout.y;
-      doc.text(text, { width: layout.contentWidth(), lineGap: gap, align: textAlignValue });
+      doc.text(wrapped, { width: layout.contentWidth(), lineGap: gap, align: textAlignValue });
     }
     layout.cursorToNextLine(h);
     return;
@@ -728,13 +802,14 @@ async function renderNodeImpl(node, ctx) {
       const blockWidth = Math.max(0, layout.contentWidth() - marginLeft - marginRight);
       const blockX = layout.x + marginLeft;
       const availableWidth = blockWidth - paddingLeft - paddingRight;
+      const wrapped = breakWideText(doc, plain, availableWidth, letterSpacing);
       selectFontForInline(doc, styles, false, false, size, plain);
       const spaces = (plain.match(/ /g) || []).length;
       const textWidth = doc.widthOfString(plain, { characterSpacing: letterSpacing }) + wordSpacing * spaces;
       const isSingleLine = textWidth <= availableWidth && !plain.includes('\n');
       const h = isSingleLine
         ? lineHeight
-        : doc.heightOfString(plain, {
+        : doc.heightOfString(wrapped, {
             width: availableWidth,
             align,
             lineGap: gap,
@@ -790,7 +865,7 @@ async function renderNodeImpl(node, ctx) {
           });
         } else if (!hasLinks && (align !== 'left' || runs.length > 1)) {
           selectFontForInline(doc, styles, false, false, size, plain);
-          doc.fillColor(color).text(plain, {
+          doc.fillColor(color).text(breakWideText(doc, plain, availableWidth, letterSpacing), {
             width: availableWidth,
             align,
             lineGap: gap,
@@ -802,7 +877,7 @@ async function renderNodeImpl(node, ctx) {
           const linkOpts = getRunLinkTextOptions(run, {
             enableInternalAnchors: ctx?.options?.enableInternalAnchors,
           });
-          doc.fillColor(styleColor(s, 'color', color)).text(run.text, {
+          doc.fillColor(styleColor(s, 'color', color)).text(breakWideText(doc, run.text, availableWidth, styleNumber(s, 'letter-spacing', 0, { baseSize: size })), {
             width: availableWidth,
             align,
             lineGap: gap,
@@ -914,7 +989,7 @@ async function renderNodeImpl(node, ctx) {
           width: layout.contentWidth(),
           measureOnly: true,
         })
-      : doc.heightOfString(text, {
+      : doc.heightOfString(breakWideText(doc, text, layout.contentWidth(), letterSpacing), {
           width: layout.contentWidth(),
           align,
           lineGap: gap,
@@ -964,7 +1039,7 @@ async function renderNodeImpl(node, ctx) {
           const linkOpts = getRunLinkTextOptions(run, {
             enableInternalAnchors: ctx?.options?.enableInternalAnchors,
           });
-          doc.fillColor(styleColor(s, 'color', color)).text(run.text, {
+          doc.fillColor(styleColor(s, 'color', color)).text(breakWideText(doc, run.text, layout.contentWidth(), letterSpacing), {
             width: layout.contentWidth(),
             align,
             lineGap: gap,
@@ -1040,7 +1115,7 @@ async function renderNodeImpl(node, ctx) {
           width: availableWidth,
           measureOnly: true,
         })
-      : doc.heightOfString(plain, {
+      : doc.heightOfString(breakWideText(doc, plain, availableWidth, letterSpacing), {
           width: availableWidth,
           align,
           lineGap: gap,
@@ -1125,7 +1200,10 @@ async function renderNodeImpl(node, ctx) {
           };
           if (ls != null) textOptions.characterSpacing = ls;
           if (ws != null) textOptions.wordSpacing = ws;
-          doc.fillColor(styleColor(s, 'color', color)).text(run.text, textOptions);
+          doc.fillColor(styleColor(s, 'color', color)).text(
+            breakWideText(doc, run.text, availableWidth, ls ?? letterSpacing),
+            textOptions,
+          );
         }
         doc.text('', { continued: false });
       }
@@ -1482,7 +1560,7 @@ async function renderNodeImpl(node, ctx) {
                   width: layout.contentWidth(),
                   measureOnly: true,
                 })
-              : doc.heightOfString(_plain, {
+              : doc.heightOfString(breakWideText(doc, _plain, layout.contentWidth(), _ls), {
                   width: layout.contentWidth(),
                   align,
                   lineGap: gap,
@@ -1535,15 +1613,15 @@ async function renderNodeImpl(node, ctx) {
                 width: layout.contentWidth(),
                 measureOnly: true,
               })
-            : singleLine
-              ? lineHeight
-              : doc.heightOfString(plain, {
-                width: layout.contentWidth(),
-                align,
-                lineGap: gap,
-                characterSpacing: letterSpacing,
-                wordSpacing,
-              });
+: singleLine
+                ? lineHeight
+                : doc.heightOfString(breakWideText(doc, plain, layout.contentWidth(), letterSpacing), {
+                  width: layout.contentWidth(),
+                  align,
+                  lineGap: gap,
+                  characterSpacing: letterSpacing,
+                  wordSpacing,
+                });
           if (debugInline && plain) {
             console.log('[inline-text]', {
               text: plain,
@@ -1577,7 +1655,7 @@ async function renderNodeImpl(node, ctx) {
               });
             } else if (hasLineBreaks && allSameStyle) {
               selectFontForInline(doc, styles, false, false, size, plain);
-              doc.text(plain, layout.x, startYInline + textOffset, {
+              doc.text(breakWideText(doc, plain, layout.contentWidth(), letterSpacing), layout.x, startYInline + textOffset, {
                 width: layout.contentWidth(),
                 align,
                 lineGap: gap,
@@ -1589,7 +1667,7 @@ async function renderNodeImpl(node, ctx) {
                 const linkOpts = getRunLinkTextOptions(run, {
                   enableInternalAnchors: ctx?.options?.enableInternalAnchors,
                 });
-                doc.fillColor(styleColor(s, 'color', '#000')).text(run.text, {
+                doc.fillColor(styleColor(s, 'color', '#000')).text(breakWideText(doc, run.text, layout.contentWidth(), letterSpacing), {
                   width: layout.contentWidth(),
                   align,
                   lineGap: singleLine ? 0 : gap,
@@ -1689,4 +1767,4 @@ async function renderNodeImpl(node, ctx) {
   applyPageBreakAfter(styles, ctx, node);
 }
 
-module.exports = { renderNode, renderInlineRunsAt };
+module.exports = { renderNode, renderInlineRunsAt, breakWideText };

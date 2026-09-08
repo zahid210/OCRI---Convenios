@@ -9,6 +9,7 @@ function liHasEmoji(doc, runs) {
 async function renderList(node, ctx, ordered = false) {
   const { doc, layout } = ctx;
   const measureOnly = !!ctx?.measureOnly;
+  const { breakWideText } = require('./render-node');
   const items = (node.children || []).filter((c) => c.type === 'element' && c.tag === 'li');
   const listStyle = String((node.styles || {})['list-style'] || '').toLowerCase();
   const listStyleType = String((node.styles || {})['list-style-type'] || '').toLowerCase();
@@ -54,7 +55,7 @@ async function renderList(node, ctx, ordered = false) {
           width: layout.contentWidth() - padL - padR,
           measureOnly: true,
         })
-      : doc.heightOfString(bullet + text, {
+      : doc.heightOfString(breakWideText(doc, bullet + text, layout.contentWidth() - padL - padR), {
           width: layout.contentWidth() - padL - padR,
           lineGap,
         });
@@ -99,11 +100,15 @@ async function renderList(node, ctx, ordered = false) {
           const linkOpts = getRunLinkTextOptions(run, {
             enableInternalAnchors: ctx?.options?.enableInternalAnchors,
           });
-          doc.fillColor(styleColor(run.styles || {}, 'color', '#000')).text(run.text, {
-            lineGap,
-            continued: true,
-            ...linkOpts,
-          });
+          doc.fillColor(styleColor(run.styles || {}, 'color', '#000')).text(
+            breakWideText(doc, run.text, layout.contentWidth() - padL - padR),
+            {
+              width: layout.contentWidth() - padL - padR,
+              lineGap,
+              continued: true,
+              ...linkOpts,
+            },
+          );
         }
         doc.text('', { continued: false });
       }
@@ -159,6 +164,7 @@ function normalizeCodeText(raw) {
 async function renderPre(node, ctx, styles) {
   const { doc, layout } = ctx;
   const measureOnly = !!ctx?.measureOnly;
+  const { breakWideText } = require('./render-node');
   const codeText = normalizeCodeText(gatherPlainText(node));
   const fs = styleNumber(styles, 'font-size', 10);
   const lineGap = 0;
@@ -167,7 +173,7 @@ async function renderPre(node, ctx, styles) {
   if (!measureOnly) doc.font('Courier').fontSize(fs).fillColor('#000');
 
   const h =
-    doc.heightOfString(codeText, {
+    doc.heightOfString(breakWideText(doc, codeText, layout.contentWidth() - padding * 2), {
       width: layout.contentWidth() - padding * 2,
       lineGap,
     }) +
@@ -180,7 +186,7 @@ async function renderPre(node, ctx, styles) {
   const w = layout.contentWidth();
 
   if (!measureOnly) {
-    doc.text(codeText, x + padding, y + padding, {
+    doc.text(breakWideText(doc, codeText, w - padding * 2), x + padding, y + padding, {
       width: w - padding * 2,
       lineGap,
     });
