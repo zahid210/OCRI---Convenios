@@ -13,6 +13,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { FLOW_ROLES } from '../auth/role-sets';
 import { DeliverablesService } from './deliverables.service';
 import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
 
@@ -38,7 +39,7 @@ export class DeliverablesController {
 
   // ─── E3 · OCRI solicita el Plan de Trabajo (inicia seguimiento) ────────────
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/request-workplan')
   requestWorkPlan(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -49,7 +50,7 @@ export class DeliverablesController {
 
   // ─── E3 · Remisión del Plan de Trabajo por los responsables ────────────────
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/submit-workplan')
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   submitWorkPlan(
@@ -66,7 +67,7 @@ export class DeliverablesController {
 
   // ─── E3 · OCRI solicita Informe (Semestral o Final) ────────────────────────
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/request-report')
   requestReport(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -87,7 +88,7 @@ export class DeliverablesController {
 
   // ─── E3 · Los responsables remiten Informe o corrección ────────────────────
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('deliverables/:id/submit')
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   submitDeliverable(
@@ -100,7 +101,7 @@ export class DeliverablesController {
 
   // ─── E3 · OCRI revisa: registra u observa solicitando correcciones ────────
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('deliverables/:id/evaluate')
   evaluateDeliverable(
     @Param('id', ParseIntPipe) id: number,
@@ -121,7 +122,7 @@ export class DeliverablesController {
 
   // ─── E3 · Conclusión manual del seguimiento ────────────────────────────────
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/complete-monitoring')
   completeMonitoring(
     @Param('agreementId', ParseIntPipe) agreementId: number,

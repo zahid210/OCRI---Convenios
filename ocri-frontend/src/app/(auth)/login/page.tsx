@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { fetchApi } from '@/lib/api';
+import { roleHome } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,7 +45,7 @@ export default function LoginPage() {
             Cookies.set('access_token', data.access_token, { expires: 1, path: '/' });
             Cookies.set('user', JSON.stringify(data.user), { expires: 1, path: '/' });
 
-            router.push('/dashboard');
+            router.push(roleHome(data.user.role));
             router.refresh();
         } catch (err: unknown) {
             if (err instanceof Error) {

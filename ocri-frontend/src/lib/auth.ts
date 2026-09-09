@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'editor' | 'viewer';
+export type UserRole = 'admin' | 'viewer' | 'asistente' | 'procesador';
 
 export interface CurrentUser {
     id: number;
@@ -31,9 +31,14 @@ export function parseUserCookie(raw: string | null | undefined): CurrentUser | n
     }
 }
 
-/** ¿Puede gestionar convenios e instituciones? (admin o editor) */
+/** ¿Puede gestionar el flujo de propuestas/convenios hasta seguimiento? (admin o procesador) */
 export function canManage(user: CurrentUser | null | undefined): boolean {
-    return user?.role === 'admin' || user?.role === 'editor';
+    return user?.role === 'admin' || user?.role === 'procesador';
+}
+
+/** ¿Puede registrar nuevas propuestas? (admin o asistente) */
+export function canCreate(user: CurrentUser | null | undefined): boolean {
+    return user?.role === 'admin' || user?.role === 'asistente';
 }
 
 /** ¿Puede eliminar registros y gestionar usuarios? (solo admin) */
@@ -41,8 +46,21 @@ export function isAdmin(user: CurrentUser | null | undefined): boolean {
     return user?.role === 'admin';
 }
 
+/** Ruta inicial por rol tras el login (y a dónde redirigir cuando no debe ver una página). */
+export const ROLE_HOMES: Record<string, string> = {
+    asistente: '/propuestas/create',
+    procesador: '/propuestas',
+    admin: '/dashboard',
+    viewer: '/dashboard',
+};
+
+export function roleHome(role: string | undefined): string {
+    return (role && ROLE_HOMES[role]) || '/dashboard';
+}
+
 export const ROLE_LABELS: Record<string, string> = {
     admin: 'Administrador',
-    editor: 'Editor',
+    procesador: 'Procesamiento de propuestas',
+    asistente: 'Registro de propuestas',
     viewer: 'Solo Lectura',
 };

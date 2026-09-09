@@ -36,8 +36,11 @@ export async function fetchApi<T>(
     );
   }
 
-  // Intercepta tokens caducados o no autorizados (401)
-  if (response.status === 401) {
+  // Intercepta tokens caducados o no autorizados (401). En el login, un 401
+  // significa "credenciales inválidas" (no sesión expirada), así que ese caso
+  // cae en el manejo normal de errores con el mensaje del backend.
+  const isLoginRequest = endpoint.startsWith("/auth/login");
+  if (response.status === 401 && !isLoginRequest) {
     if (typeof window !== "undefined") {
       // Elimina cookies de sesión expiradas
       Cookies.remove("access_token", { path: "/" });
@@ -327,6 +330,15 @@ export async function previewOficioOpinion(
 
   if (!response.ok) {
     if (response.status === 401) {
+      Cookies.remove("access_token", { path: "/" });
+      Cookies.remove("user", { path: "/" });
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login")
+      ) {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.assign(`${window.location.origin}/login`);
+      }
       throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
     }
     throw new Error(

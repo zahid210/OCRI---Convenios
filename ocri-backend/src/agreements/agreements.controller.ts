@@ -17,6 +17,7 @@ import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { FLOW_ROLES, CREATOR_ROLES } from '../auth/role-sets';
 import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
 
 @Controller('agreements')
@@ -58,7 +59,7 @@ export class AgreementsController {
    * E1 · OCRI registra la solicitud de propuesta recibida de Rectorado.
    * Adjuntos opcionales: dictamen (Dictamen) y documentos_origen (Documentos de Origen, múltiples).
    */
-  @Roles('admin', 'editor')
+  @Roles(...CREATOR_ROLES)
   @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -80,7 +81,7 @@ export class AgreementsController {
     return this.agreementsService.create(createAgreementDto, files);
   }
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,

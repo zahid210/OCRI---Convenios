@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/api";
+import { canCreate } from "@/lib/auth";
+import { useUser } from "@/components/user-provider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
@@ -60,6 +62,7 @@ interface ReportsSummaryResponse {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const user = useUser();
   const [stats, setStats] = useState({
     vigentes: 0,
     por_vencer: 0,
@@ -308,13 +311,15 @@ export default function DashboardPage() {
               Acciones Rápidas
             </h3>
             <div className="flex flex-col gap-3">
-              <Link
-                href="/propuestas/create"
-                className="flex items-center justify-center gap-2 w-full bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2.5 text-sm transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Nueva Propuesta</span>
-              </Link>
+              {canCreate(user) && (
+                <Link
+                  href="/propuestas/create"
+                  className="flex items-center justify-center gap-2 w-full bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2.5 text-sm transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Nueva Propuesta</span>
+                </Link>
+              )}
 
               <Link
                 href="/convenios"

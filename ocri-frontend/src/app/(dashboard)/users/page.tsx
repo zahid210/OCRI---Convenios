@@ -20,11 +20,12 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-const ROLES = ["admin", "editor", "viewer"];
+const ROLES = ["admin", "procesador", "asistente", "viewer"];
 
 const roleBadgeColors: Record<string, string> = {
   admin: "bg-[#094d37] text-white border-[#094d37]",
-  editor: "bg-blue-50 text-blue-700 border-blue-200",
+  procesador: "bg-blue-50 text-blue-700 border-blue-200",
+  asistente: "bg-amber-50 text-amber-700 border-amber-200",
   viewer: "bg-gray-100 text-gray-600 border-gray-200",
 };
 

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/components/user-provider';
-import { isAdmin, canManage, CurrentUser } from '@/lib/auth';
+import { isAdmin, canCreate, CurrentUser } from '@/lib/auth';
 
 type NavItem = {
     kind: 'item';
@@ -50,21 +50,32 @@ const NAV_GROUPS: NavGroup[] = [
         title: 'Resumen',
         icon: Home,
         branches: [
-            { kind: 'item', title: 'Dashboard', href: '/dashboard', icon: Home },
+            {
+                kind: 'item',
+                title: 'Dashboard',
+                href: '/dashboard',
+                icon: Home,
+                show: (user) => user?.role === 'admin' || user?.role === 'viewer',
+            },
         ],
     },
     {
         title: 'Propuestas',
         icon: FileBox,
         branches: [
-            { kind: 'header', label: 'En evaluación técnica' },
-            { kind: 'item', title: 'Bandeja de Propuestas', href: '/propuestas', icon: FileText },
+            {
+                kind: 'item',
+                title: 'Bandeja de Propuestas',
+                href: '/propuestas',
+                icon: FileText,
+                show: (user) => user?.role !== 'asistente',
+            },
             {
                 kind: 'item',
                 title: 'Nueva Propuesta',
                 href: '/propuestas/create',
                 icon: FilePlus,
-                show: canManage,
+                show: canCreate,
             },
         ],
     },
@@ -73,20 +84,40 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Shield,
         branches: [
             {
-                kind: 'header',
-                label: 'Aprobados por Rectorado',
+                kind: 'item',
+                title: 'Directorio de Convenios',
+                href: '/convenios',
+                icon: Shield,
+                show: (user) => user?.role !== 'asistente',
             },
-            { kind: 'item', title: 'Directorio de Convenios', href: '/convenios', icon: Shield },
             { kind: 'divider' },
-            { kind: 'item', title: 'Registro y Publicación', href: '/registro', icon: FileCheck },
-            { kind: 'item', title: 'Seguimiento', href: '/seguimiento', icon: ClipboardCheck },
+            {
+                kind: 'item',
+                title: 'Registro y Publicación',
+                href: '/registro',
+                icon: FileCheck,
+                show: (user) => user?.role !== 'asistente',
+            },
+            {
+                kind: 'item',
+                title: 'Seguimiento',
+                href: '/seguimiento',
+                icon: ClipboardCheck,
+                show: (user) => user?.role !== 'asistente',
+            },
         ],
     },
     {
         title: 'Gestión Institucional',
         icon: Building2,
         branches: [
-            { kind: 'item', title: 'Instituciones Aliadas', href: '/institutions', icon: Building2 },
+            {
+                kind: 'item',
+                title: 'Instituciones Aliadas',
+                href: '/institutions',
+                icon: Building2,
+                show: (user) => user?.role === 'admin' || user?.role === 'viewer',
+            },
             {
                 kind: 'item',
                 title: 'Dependencias UNCP',
@@ -107,7 +138,13 @@ const NAV_GROUPS: NavGroup[] = [
                 icon: Users,
                 show: isAdmin,
             },
-            { kind: 'item', title: 'Reportes y Estadísticas', href: '/reports', icon: BarChart3 },
+            {
+                kind: 'item',
+                title: 'Reportes y Estadísticas',
+                href: '/reports',
+                icon: BarChart3,
+                show: (user) => user?.role === 'admin' || user?.role === 'viewer',
+            },
         ],
     },
 ];
@@ -137,10 +174,10 @@ export function NavTree() {
     const visibleGroups = NAV_GROUPS.map((group) => ({
         ...group,
         branches: group.branches.filter((b) => {
-            if (b.kind !== 'item') return b.kind === 'divider';
-            return !b.show || b.show(user);
+            if (b.kind === 'item') return !b.show || b.show(user);
+            return b.kind !== 'divider';
         }),
-    }));
+    })).filter((g) => g.branches.some((b) => b.kind === 'item'));
 
     const groupHasActive = (group: NavGroup) =>
         group.branches.some((b) => b.kind === 'item' && b.href === activeHref);

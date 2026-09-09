@@ -16,6 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { FLOW_ROLES } from '../auth/role-sets';
 import { ProcessService } from './process.service';
 import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
 import type { Response } from 'express';
@@ -52,7 +53,7 @@ export class ProcessController {
 
   // ─── E1 · Opiniones de dependencias ────────────────────────────────────────
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/opinion-requests')
   generateOpinionRequests(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -77,7 +78,7 @@ export class ProcessController {
     );
   }
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('opinion-requests/:id/send')
   sendOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
@@ -93,7 +94,7 @@ export class ProcessController {
     return this.processService.sendOpinionRequest(id, body, req.user?.id);
   }
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('opinion-requests/:id/respond')
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   respondOpinionRequest(
@@ -110,7 +111,7 @@ export class ProcessController {
     );
   }
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('opinion-requests/:id/validate')
   validateOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
@@ -120,7 +121,7 @@ export class ProcessController {
     return this.processService.validateOpinionRequest(id, body, req.user?.id);
   }
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('opinion-requests/:id/cancel')
   cancelOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
@@ -129,7 +130,7 @@ export class ProcessController {
     return this.processService.cancelOpinionRequest(id, req.user?.id);
   }
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Delete('opinion-requests/:id')
   deleteOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
@@ -139,7 +140,7 @@ export class ProcessController {
   }
 
   /** Devuelve el cuerpo editable precargado del oficio de solicitud de opinión */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Get('opinion-requests/:id/oficio/template')
   getOficioOpinionTemplate(@Param('id', ParseIntPipe) id: number) {
     return this.processService.getOficioOpinionTemplate(id);
@@ -149,7 +150,7 @@ export class ProcessController {
    * Vista previa en vivo: renderiza el oficio con el MISMO motor que el PDF
    * final (html-pdf-lite + plantilla de márgenes) y lo devuelve sin persistir.
    */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('opinion-requests/:id/oficio/preview')
   async previewOficioOpinion(
     @Param('id', ParseIntPipe) _id: number,
@@ -163,7 +164,7 @@ export class ProcessController {
   }
 
   /** Genera el oficio, lo adjunta automáticamente y marca la solicitud como enviada */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post('opinion-requests/:id/oficio/generate')
   generateOficioOpinion(
     @Param('id', ParseIntPipe) id: number,
@@ -191,7 +192,7 @@ export class ProcessController {
   }
 
   /** Devuelve el cuerpo editable precargado del oficio de envío a Rectorado */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Get(':agreementId/oficio-rectorado/template')
   getOficioRectoradoTemplate(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -200,7 +201,7 @@ export class ProcessController {
   }
 
   /** Genera el oficio a Rectorado, lo adjunta automáticamente y registra el evento */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/oficio-rectorado/generate')
   generateOficioRectorado(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -224,7 +225,7 @@ export class ProcessController {
   // ─── E1 · Expediente técnico y envío a Rectorado ───────────────────────────
 
   /** Genera el expediente técnico fusionando automáticamente los oficios de respuesta */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/generate-expediente')
   generateExpediente(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -233,7 +234,7 @@ export class ProcessController {
     return this.processService.generateExpediente(agreementId, req.user?.id);
   }
 
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/documents')
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   uploadProcessDocument(
@@ -255,7 +256,7 @@ export class ProcessController {
   }
 
   /** OCRI concluye el expediente técnico con las opiniones recopiladas */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/finalize-expediente')
   finalizeExpediente(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -265,7 +266,7 @@ export class ProcessController {
   }
 
   /** Remite expediente técnico + propuesta + opinión a Rectorado (fin E1) */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/send-to-rectorado')
   sendToRectorado(
     @Param('agreementId', ParseIntPipe) agreementId: number,
@@ -281,7 +282,7 @@ export class ProcessController {
    * APPROVED = suscrito (adjunta convenio firmado) ·
    * REJECTED = no suscrito (notificación al solicitante obligatoria)
    */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/rectorate-decision')
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   rectorateDecision(
@@ -308,7 +309,7 @@ export class ProcessController {
   }
 
   /** OCRI publica el convenio suscrito (evidencia opcional) */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/publish')
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   publishConvenio(
@@ -323,7 +324,7 @@ export class ProcessController {
    * Registro institucional del convenio: resolución, vigencia, responsables
    * y convenio firmado escaneado (obligatorio). Activa el semáforo.
    */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/register-agreement')
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   registerAgreement(
@@ -400,7 +401,7 @@ export class ProcessController {
   }
 
   /** Administración de vigencia sobre convenios registrados */
-  @Roles('admin', 'editor')
+  @Roles(...FLOW_ROLES)
   @Post(':agreementId/validity')
   setValidityStatus(
     @Param('agreementId', ParseIntPipe) agreementId: number,

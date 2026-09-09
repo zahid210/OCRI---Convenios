@@ -49,8 +49,9 @@ enum process_stage {
 
 enum user_role {
   admin
-  editor
   viewer
+  asistente
+  procesador
 }
 
 enum document_direction {

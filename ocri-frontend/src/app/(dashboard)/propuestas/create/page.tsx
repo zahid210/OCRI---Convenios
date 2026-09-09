@@ -22,11 +22,13 @@ import {
 import { Institution, AgreementType } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/components/user-provider";
 import { useToast } from "@/components/ui/toast";
 
 export default function CreatePropuestaPage() {
   const router = useRouter();
   const toast = useToast();
+  const user = useUser();
   const dictamenInputRef = useRef<HTMLInputElement>(null);
   const origenInputRef = useRef<HTMLInputElement>(null);
 
@@ -169,6 +171,26 @@ export default function CreatePropuestaPage() {
     });
   };
 
+  const resetForm = () => {
+    setRectorateOficioNumber("");
+    setTramiteCode("");
+    setApplicantName("");
+    setApplicantEmail("");
+    setApplicantUnit("");
+    setTitle("");
+    setName("");
+    if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
+    setDictamenPreviewUrl(null);
+    setDictamenFile(null);
+    if (dictamenInputRef.current) dictamenInputRef.current.value = "";
+    origenPreviews.forEach((p) => {
+      if (p.url) URL.revokeObjectURL(p.url);
+    });
+    setOrigenFiles([]);
+    setOrigenPreviews([]);
+    if (origenInputRef.current) origenInputRef.current.value = "";
+  };
+
   const handleSaveInstitution = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalCountry = isCustomCountry
@@ -276,6 +298,18 @@ export default function CreatePropuestaPage() {
       toast.success(
         "Propuesta registrada correctamente. Iniciando evaluación técnica.",
       );
+
+      // El asistente no accede a la bandeja ni al detalle (su ruta es solo
+      // creación); limpiar el formulario para registrar la siguiente propuesta.
+      if (user?.role === "asistente") {
+        resetForm();
+        // El scroll está en el <main> del layout (no en la ventana)
+        const main = document.querySelector("main");
+        if (main) main.scrollTo({ top: 0, behavior: "smooth" });
+        else window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
       router.push(`/propuestas/${created.id}`);
     } catch (err) {
       toast.error(
@@ -309,13 +343,15 @@ export default function CreatePropuestaPage() {
             Recepción e Ingreso de Propuesta de Convenio
           </p>
         </div>
-        <Link
-          href="/propuestas"
-          className="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm transition-colors self-start sm:self-auto"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Volver a Bandeja</span>
-        </Link>
+        {user?.role !== "asistente" && (
+          <Link
+            href="/propuestas"
+            className="inline-flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm transition-colors self-start sm:self-auto"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Volver a Bandeja</span>
+          </Link>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -639,12 +675,14 @@ export default function CreatePropuestaPage() {
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          {user?.role !== "asistente" && (
           <Link
             href="/propuestas"
             className="px-5 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Cancelar
           </Link>
+        )}
           <button
             type="submit"
             disabled={saving}

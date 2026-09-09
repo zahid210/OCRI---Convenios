@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { InstitutionItem, InstitutionListResponse } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { useUser } from "@/components/user-provider";
-import { canManage, isAdmin } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth";
 import InstitutionModal from "@/components/agreements/InstitutionModal";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
@@ -203,7 +203,7 @@ export default function InstitutionsIndexPage() {
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
             />
           </div>
-          {canManage(user) && (
+          {isAdmin(user) && (
             <button
               type="button"
               onClick={openCreate}
@@ -310,7 +310,7 @@ export default function InstitutionsIndexPage() {
 
                     <td className="py-5 pr-10">
                       <div className="flex items-center justify-end gap-2">
-                        {canManage(user) && (
+                        {isAdmin(user) && (
                           <button
                             type="button"
                             onClick={() => openEdit(institution)}

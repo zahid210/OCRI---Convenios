@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, Loader2, FileText, Building2, X } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
+import { useUser } from "@/components/user-provider";
 
 interface AgreementSearchResult {
   id: number;
@@ -27,6 +28,9 @@ const MIN_CHARS = 2;
 const DEBOUNCE_MS = 300;
 
 export function HeaderSearch() {
+  const user = useUser();
+  const canSeeInstitutions =
+    user?.role === "admin" || user?.role === "viewer";
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,10 +60,12 @@ export function HeaderSearch() {
           `/agreements/search?q=${encodeURIComponent(term)}`,
           { signal: controller.signal },
         ),
-        fetchApi<InstitutionSearchResult[]>(
-          `/institutions/search?q=${encodeURIComponent(term)}`,
-          { signal: controller.signal },
-        ),
+        canSeeInstitutions
+          ? fetchApi<InstitutionSearchResult[]>(
+              `/institutions/search?q=${encodeURIComponent(term)}`,
+              { signal: controller.signal },
+            )
+          : Promise.resolve([]),
       ]);
       if (controller.signal.aborted) return;
       setAgreements(a);
@@ -165,7 +171,7 @@ export function HeaderSearch() {
             </p>
           ) : (
             <>
-              {institutions.length > 0 && (
+              {canSeeInstitutions && institutions.length > 0 && (
                 <div className="py-1">
                   <p className="px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
                     Instituciones

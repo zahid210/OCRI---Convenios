@@ -22,7 +22,7 @@ import { InstitutionsService } from './institutions.service';
 export class InstitutionsController {
   constructor(private readonly institutionsService: InstitutionsService) {}
 
-  @Roles('admin', 'editor')
+  @Roles('admin')
   @Post()
   create(@Body() createDto: CreateInstitutionDto) {
     return this.institutionsService.create(createDto);
@@ -48,7 +48,7 @@ export class InstitutionsController {
     return this.institutionsService.findOne(id);
   }
 
-  @Roles('admin', 'editor')
+  @Roles('admin')
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,

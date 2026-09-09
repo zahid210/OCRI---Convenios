@@ -6,8 +6,9 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { USER_ROLES } from '../../auth/role-sets';
 
-export const USER_ROLES = ['admin', 'editor', 'viewer'] as const;
+export { USER_ROLES };
 
 export class CreateUserDto {
   @IsString()

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Agreement, PaginatedResponse } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { useUser } from "@/components/user-provider";
-import { canManage } from "@/lib/auth";
+import { canCreate } from "@/lib/auth";
 import { Plus, Search, Eye, FileText, Loader2 } from "lucide-react";
 import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
 import { ClickableTableRow } from "@/components/ui/clickable-table-row";
@@ -106,7 +106,7 @@ export default function PropuestasPage() {
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
             />
           </div>
-          {canManage(user) && (
+          {canCreate(user) && (
             <Link
               href="/propuestas/create"
               className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0"
