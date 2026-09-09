@@ -40,21 +40,29 @@ docker compose logs -f backend frontend db
 
 - Acceso: `http://HOST:3000` (el puerto se ajusta con `WEB_PORT` en `.env`).
 
-### Credenciales iniciales
+### Credenciales iniciales (demo)
 
-Los usuarios que vienen en el dump conservan los hashes bcrypt actuales. Para
-restablecer la contraseña de un usuario (ej. admin `ocri@uncp.edu.pe`):
+El dump `dumps/ocri-inicio.sql` trae 3 usuarios con la contraseña común:
+`DemoOCRI-2026`.
+
+| Usuario | Rol |
+|---|---|
+| `ocri@uncp.edu.pe` | admin |
+| `jesus@uncp.edu.pe` | asistente |
+| `berna@uncp.edu.pe` | procesador |
+
+Cámbielas antes del uso real. Para restablecer la contraseña de un usuario:
 
 ```bash
 docker compose exec backend node -e "
 const bcrypt=require('bcrypt');
 console.log(bcrypt.hashSync('NuevaClave.2026',10));"
-# copiar el hash en update
+# copiar el hash en el UPDATE
 docker compose exec db mariadb -uocri -p"$DB_PASSWORD" ocri -e \
-  "UPDATE users SET password_hash='<hash>' WHERE email='ocri@uncp.edu.pe';"
+  "UPDATE users SET password='<hash>' WHERE email='ocri@uncp.edu.pe';"
 ```
 
-Cambie las contraseñas de los 3 usuarios antes de dar acceso a terceros.
+La columna del hash es `users.password`.
 
 ## Almacenamiento de archivos
 

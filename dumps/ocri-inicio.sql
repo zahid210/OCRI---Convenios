@@ -1,4 +1,9 @@
 /*M!999999\- enable the sandbox mode */ 
+-- MariaDB dump 10.19-11.8.8-MariaDB, for debian-linux-gnu (x86_64)
+--
+-- Host: localhost    Database: ocri
+-- ------------------------------------------------------
+-- Server version	11.8.8-MariaDB-0+deb13u1 from Debian
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -11,9 +16,10 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*M!100616 SET @OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY, NOTE_VERBOSITY=0 */;
 
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `ocri` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
+--
+-- Table structure for table `agreement_responsables`
+--
 
-USE `ocri`;
 DROP TABLE IF EXISTS `agreement_responsables`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -33,6 +39,10 @@ CREATE TABLE `agreement_responsables` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `agreement_responsables`
+--
+
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `agreement_responsables` WRITE;
 /*!40000 ALTER TABLE `agreement_responsables` DISABLE KEYS */;
@@ -40,6 +50,11 @@ LOCK TABLES `agreement_responsables` WRITE;
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `agreement_types`
+--
+
 DROP TABLE IF EXISTS `agreement_types`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -51,6 +66,10 @@ CREATE TABLE `agreement_types` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `agreement_types`
+--
 
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `agreement_types` WRITE;
@@ -64,6 +83,11 @@ REPLACE INTO `agreement_types` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `agreements`
+--
+
 DROP TABLE IF EXISTS `agreements`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -107,6 +131,10 @@ CREATE TABLE `agreements` (
   CONSTRAINT `agreements_institution_id_foreign` FOREIGN KEY (`institution_id`) REFERENCES `institutions` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=448 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `agreements`
+--
 
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `agreements` WRITE;
@@ -563,6 +591,11 @@ REPLACE INTO `agreements` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `app_config`
+--
+
 DROP TABLE IF EXISTS `app_config`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -574,6 +607,10 @@ CREATE TABLE `app_config` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `app_config`
+--
+
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `app_config` WRITE;
 /*!40000 ALTER TABLE `app_config` DISABLE KEYS */;
@@ -584,6 +621,11 @@ REPLACE INTO `app_config` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `deliverable_observations`
+--
+
 DROP TABLE IF EXISTS `deliverable_observations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -601,6 +643,10 @@ CREATE TABLE `deliverable_observations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `deliverable_observations`
+--
+
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `deliverable_observations` WRITE;
 /*!40000 ALTER TABLE `deliverable_observations` DISABLE KEYS */;
@@ -608,6 +654,11 @@ LOCK TABLES `deliverable_observations` WRITE;
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `deliverables`
+--
+
 DROP TABLE IF EXISTS `deliverables`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -632,6 +683,10 @@ CREATE TABLE `deliverables` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `deliverables`
+--
+
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `deliverables` WRITE;
 /*!40000 ALTER TABLE `deliverables` DISABLE KEYS */;
@@ -639,6 +694,11 @@ LOCK TABLES `deliverables` WRITE;
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `dependencias`
+--
+
 DROP TABLE IF EXISTS `dependencias`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -658,6 +718,10 @@ CREATE TABLE `dependencias` (
   KEY `dependencias_is_active_idx` (`is_active`)
 ) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dependencias`
+--
 
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `dependencias` WRITE;
@@ -733,6 +797,11 @@ REPLACE INTO `dependencias` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `document_types`
+--
+
 DROP TABLE IF EXISTS `document_types`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -746,6 +815,10 @@ CREATE TABLE `document_types` (
   UNIQUE KEY `document_types_code_key` (`code`)
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `document_types`
+--
 
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `document_types` WRITE;
@@ -772,6 +845,11 @@ REPLACE INTO `document_types` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `documents`
+--
+
 DROP TABLE IF EXISTS `documents`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -804,6 +882,10 @@ CREATE TABLE `documents` (
   CONSTRAINT `documents_uploaded_by_id_fkey` FOREIGN KEY (`uploaded_by_id`) REFERENCES `users` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=437 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `documents`
+--
 
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `documents` WRITE;
@@ -1249,6 +1331,11 @@ REPLACE INTO `documents` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `institutions`
+--
+
 DROP TABLE IF EXISTS `institutions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -1265,6 +1352,10 @@ CREATE TABLE `institutions` (
   KEY `institutions_type_index` (`type`)
 ) ENGINE=InnoDB AUTO_INCREMENT=389 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `institutions`
+--
 
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `institutions` WRITE;
@@ -1662,6 +1753,11 @@ REPLACE INTO `institutions` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `notification_acknowledgements`
+--
+
 DROP TABLE IF EXISTS `notification_acknowledgements`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -1675,6 +1771,10 @@ CREATE TABLE `notification_acknowledgements` (
   KEY `notification_acknowledgements_user_id_idx` (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1200 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notification_acknowledgements`
+--
 
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `notification_acknowledgements` WRITE;
@@ -2033,6 +2133,11 @@ REPLACE INTO `notification_acknowledgements` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `opinion_requests`
+--
+
 DROP TABLE IF EXISTS `opinion_requests`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -2064,6 +2169,10 @@ CREATE TABLE `opinion_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `opinion_requests`
+--
+
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `opinion_requests` WRITE;
 /*!40000 ALTER TABLE `opinion_requests` DISABLE KEYS */;
@@ -2071,6 +2180,11 @@ LOCK TABLES `opinion_requests` WRITE;
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `process_events`
+--
+
 DROP TABLE IF EXISTS `process_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -2092,6 +2206,10 @@ CREATE TABLE `process_events` (
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `process_events`
+--
+
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `process_events` WRITE;
 /*!40000 ALTER TABLE `process_events` DISABLE KEYS */;
@@ -2105,6 +2223,11 @@ REPLACE INTO `process_events` VALUES
 UNLOCK TABLES;
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `users`
+--
+
 DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -2122,13 +2245,17 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `users`
+--
+
 SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 REPLACE INTO `users` VALUES
-(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$10$/ASrbJBzVPUKC7ReHl2sQe5h8KNoPt1ySvQ13FGwRz.wSrnPAPXXu','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
-(20,'Jesus','jesus@uncp.edu.pe','$2b$10$iCGGsKE8qmxdmvC4r2tidOcmDghQkwN1jtifo5z99xgwjuiMX8zZy','asistente',NULL,'2026-09-09 06:04:21'),
-(21,'Bernarda','berna@uncp.edu.pe','$2b$10$xtz9ahDl2iXcAGKQMWKJ/efLdsCaNqehAkTFGX0CV0x956GMbcUKW','procesador',NULL,'2026-09-09 06:04:26');
+(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
+(20,'Jesus','jesus@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','asistente',NULL,'2026-09-09 06:04:21'),
+(21,'Bernarda','berna@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','procesador',NULL,'2026-09-09 06:04:26');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
@@ -2143,3 +2270,4 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
+-- Dump completed on 2026-09-09 11:29:40
