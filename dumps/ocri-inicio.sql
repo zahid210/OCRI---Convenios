@@ -2255,7 +2255,7 @@ LOCK TABLES `users` WRITE;
 REPLACE INTO `users` VALUES
 (1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
 (20,'Jesus','jesus@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','asistente',NULL,'2026-09-09 06:04:21'),
-(21,'Bernarda','berna@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','procesador',NULL,'2026-09-09 06:04:26');
+(21,'Berna','berna@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','procesador',NULL,'2026-09-09 06:04:26');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
@@ -2270,4 +2270,4 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2026-09-09 11:29:40
+-- Dump completed on 2026-09-09 14:33:40
