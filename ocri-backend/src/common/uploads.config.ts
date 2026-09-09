@@ -85,12 +85,22 @@ export function ensureDir(dir: string): void {
  * resultante. Se usa para que TODOS los documentos (subidos manualmente o
  * generados) queden dentro de la carpeta de su convenio.
  */
-export function moveIntoAgreementDir(
+/**
+ * Mueve un archivo que multer dejó en `uploads/` (según `safeDiskStorage`) hacia
+ * la carpeta del convenio `{año}/{código_trámite}/` y devuelve la ruta relativa
+ * resultante. Se usa para que TODOS los documentos (subidos manualmente o
+ * generados) queden dentro de la carpeta de su convenio.
+ *
+ * `onStored` es un hook opcional que se invoca tras mover el archivo con la
+ * ruta relativa final (p. ej. para reflejarlo en un S3-compatible).
+ */
+export async function moveIntoAgreementDir(
   sourceRelPath: string,
   tramiteCode: string,
   createdAt: Date | string | null,
   preferredName?: string,
-): string {
+  onStored?: (relPath: string) => Promise<void>,
+): Promise<string> {
   const subdir = agreementDir(tramiteCode, createdAt);
   const dstDir = absUploadPath(subdir);
   ensureDir(dstDir);
@@ -127,6 +137,10 @@ export function moveIntoAgreementDir(
   // "dictamen_test.pdf" original cuando multer guardó "dictamen_test(1).pdf").
   if (preferredName) {
     cleanupResidual(src, dst, preferredName);
+  }
+
+  if (onStored) {
+    await onStored(targetRel);
   }
 
   return targetRel;

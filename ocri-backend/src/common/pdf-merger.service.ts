@@ -12,6 +12,7 @@ import {
   opinionDir,
   ensureDir,
 } from './uploads.config';
+import { StorageService } from './storage/storage.service';
 
 /**
  * Normaliza el número de oficio al formato estándar `045-2026-OCRI-UNCP`.
@@ -113,7 +114,10 @@ function resizePng(png: PNG, maxWidth: number): PNG {
 export class PdfMergerService {
   private readonly logger = new Logger(PdfMergerService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   /**
    * Genera un PDF de "Oficio de Solicitud de Opinión" para una dependencia.
@@ -260,6 +264,7 @@ export class PdfMergerService {
     const outputPath = join(dir, filename);
     await fs.writeFile(outputPath, mergedBytes);
     const relPath = `${opinionDir(tramiteCode, createdAt ?? null, dependenciaName)}/${filename}`;
+    await this.storage.uploadRel(relPath);
     this.logger.log(`Oficio de solicitud generado: ${relPath}`);
     return relPath;
   }
@@ -372,7 +377,7 @@ export class PdfMergerService {
     for (const doc of orderedDocs) {
       const filePath = absUploadPath(doc.file_path);
       try {
-        const pdfBytes = await fs.readFile(filePath);
+        const pdfBytes = await this.storage.readRel(doc.file_path);
         const srcDoc = await PDFDocument.load(pdfBytes);
         const copiedPages = await mergedPdf.copyPages(
           srcDoc,
@@ -396,11 +401,14 @@ export class PdfMergerService {
     const outputPath = join(dir, filename);
     await fs.writeFile(outputPath, mergedBytes);
 
+    const relPath = `${subdir}/${filename}`;
+    await this.storage.uploadRel(relPath);
+
     this.logger.log(
       `Expediente técnico generado: ${subdir}/${filename} (${orderedDocs.length} documentos PDF fusionados, en parejas por opinión)`,
     );
 
-    return `${subdir}/${filename}`;
+    return relPath;
   }
 
   /**
@@ -597,6 +605,7 @@ export class PdfMergerService {
     await fs.writeFile(outputPath, pdfBuffer);
 
     const relPath = subdir ? `${subdir}/${filename}` : filename;
+    await this.storage.uploadRel(relPath);
     this.logger.log(`Oficio de solicitud de opinión generado: ${relPath}`);
 
     return relPath;

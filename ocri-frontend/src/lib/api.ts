@@ -1,6 +1,10 @@
 import Cookies from "js-cookie";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// Base del API. En desarrollo vuela localhost:3000 por defecto; en producción suele
+// usarse el mismo origen (NEXT_PUBLIC_API_URL="" o "/"), donde Next proxea al
+// backend (rewrites beforeFiles). "" permite llamadas relativas: `/agreements`, etc.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+const API_URL = API_BASE.trim().replace(/\/+$/, "");
 
 export async function fetchApi<T>(
   endpoint: string,

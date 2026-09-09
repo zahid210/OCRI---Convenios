@@ -15,6 +15,7 @@ import { DocumentTypesModule } from './document-types/document-types.module';
 import { AppConfigModule } from './app-config/app-config.module';
 import { ProcessModule } from './process/process.module';
 import { DeliverablesModule } from './deliverables/deliverables.module';
+import { StorageModule } from './common/storage/storage.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -33,6 +34,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     AppConfigModule,
     ProcessModule,
     DeliverablesModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,0 +1,79 @@
+name: ocri
+
+services:
+  # ─── MariaDB ───────────────────────────────────────────────────────────────
+  # Sobre el primer arranque (volumen vacío) ejecuta ./dumps/*.sql, que crea la
+  # base y carga datos iniciales (catálogos + 447 convenios históricos).
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-ocri}
+      MARIADB_USER: ${DB_USER:-ocri}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en .env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Defina DB_ROOT_PASSWORD en .env}
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./dumps:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # ─── Backend (solo red interna) ────────────────────────────────────────────
+  backend:
+    build: ./ocri-backend
+    restart: unless-stopped
+    environment:
+      PORT: "4000"
+      # El puerto no se expone al host: lo consume el frontend por la red interna.
+      DATABASE_URL: mariadb://${DB_USER:-ocri}:${DB_PASSWORD}@db:3306/${DB_NAME:-ocri}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET en .env (mínimo 32 caracteres)}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_REGION: ${S3_REGION:-LA-SANTIAGO}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      S3_PRESIGN_TTL: ${S3_PRESIGN_TTL:-300}
+      S3_PREFIX: ${S3_PREFIX:-OCRI_convenios}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads-data:/app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+
+  # ─── Frontend (único puerto público) ───────────────────────────────────────
+  # Next standalone sirve la UI y proxea /auth, /agreements, /process, etc. al
+  # backend por /health ... ver rewrites en ocri-frontend/next.config.ts.
+  frontend:
+    build:
+      context: ./ocri-frontend
+      args:
+        NEXT_PUBLIC_API_URL: ""
+        API_PROXY_URL: http://backend:4000
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+
+volumes:
+  db-data:
+  uploads-data:

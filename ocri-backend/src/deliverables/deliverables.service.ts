@@ -14,6 +14,7 @@ import {
   moveIntoAgreementDir,
   normalizeUploadName,
 } from '../common/uploads.config';
+import { StorageService } from '../common/storage/storage.service';
 
 const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
   PLAN_DE_TRABAJO: 'PLAN_DE_TRABAJO',
@@ -23,7 +24,10 @@ const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
 
 @Injectable()
 export class DeliverablesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   private async getAgreementOrThrow(agreementId: number) {
     const agreement = await this.prisma.agreements.findUnique({
@@ -310,17 +314,20 @@ export class DeliverablesService {
 
       const nextVersion = deliverable.version + 1;
 
+      const relPath = await moveIntoAgreementDir(
+        file.filename ?? originalName,
+        deliverable.agreements?.tramite_code ?? '',
+        deliverable.agreements?.created_at ?? null,
+        originalName,
+        (rel) => this.storage.uploadRel(rel),
+      );
+
       await tx.documents.create({
         data: {
           agreements: { connect: { id: deliverable.agreement_id } },
           deliverables: { connect: { id: deliverable.id } },
           name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
-          file_path: moveIntoAgreementDir(
-            file.filename ?? originalName,
-            deliverable.agreements?.tramite_code ?? '',
-            deliverable.agreements?.created_at ?? null,
-            originalName,
-          ),
+          file_path: relPath,
           original_name: originalName,
           extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
           document_types: docType ? { connect: { id: docType.id } } : undefined,

@@ -13,6 +13,7 @@ import { join, normalize } from 'path';
 import { existsSync } from 'fs';
 import { Public } from '../auth/decorators/public.decorator';
 import { UPLOADS_DIR } from '../common/uploads.config';
+import { StorageService } from '../common/storage/storage.service';
 
 /**
  * Repositorio institucional de documentos (protegido).
@@ -28,7 +29,10 @@ import { UPLOADS_DIR } from '../common/uploads.config';
  */
 @Controller('resoluciones')
 export class FilesController {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly storage: StorageService,
+  ) {}
 
   private resolveRelativePath(rawPath: string): string {
     const decoded = (() => {
@@ -88,6 +92,18 @@ export class FilesController {
     const relPath = this.resolveRelativePath(
       req.path.replace(/^\/resoluciones\/?/, ''),
     );
+
+    // Si el storage S3-compatible está configurado, se sirve con una URL
+    // prefirmada (TTL S3_PRESIGN_TTL) vía redirección 302. El JWT se sigue
+    // validando aquí: la URL prefirmada solo se emite a usuarios autenticados.
+    const rawName = req.query.name;
+    const downloadName =
+      typeof rawName === 'string' && rawName.length > 0 ? rawName : undefined;
+    const presigned = await this.storage.presignGetUrl(relPath, downloadName);
+    if (presigned) {
+      return res.redirect(302, presigned);
+    }
+
     const filePath = join(UPLOADS_DIR, relPath);
 
     if (!existsSync(filePath)) {

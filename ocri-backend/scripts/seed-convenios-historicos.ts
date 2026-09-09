@@ -23,6 +23,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import {
+  S3Client,
+  HeadObjectCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3';
 
 type Row = [
   code: string, // 0 resolución / código del convenio (001-2021)
@@ -39,6 +44,59 @@ type Row = [
 const PDFS_ROOT =
   process.env.HISTORIC_PDFS_ROOT || '/home/mato5/Documents/pdfs';
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+
+// ─── Sincronización opcional a S3-compatible (idempotente) ──────────────────
+// Si S3_* está configurado en .env, copia también el PDF al bucket bajo
+// S3_PREFIX/. Si no, todo sigue en almacenamiento local (uploads/).
+let s3Client: S3Client | null = null;
+
+function getS3(): S3Client | null {
+  if (!process.env.S3_BUCKET?.trim() || !process.env.S3_ENDPOINT?.trim()) {
+    return null;
+  }
+  if (!s3Client) {
+    s3Client = new S3Client({
+      region: process.env.S3_REGION?.trim() || 'LA-SANTIAGO',
+      endpoint: process.env.S3_ENDPOINT.trim(),
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID?.trim() ?? '',
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY?.trim() ?? '',
+      },
+      forcePathStyle: (process.env.S3_FORCE_PATH_STYLE ?? 'false') === 'true',
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    });
+  }
+  return s3Client;
+}
+
+async function uploadToS3IfConfigured(relPath: string): Promise<void> {
+  const s3 = getS3();
+  if (!s3) return;
+  const bucket = process.env.S3_BUCKET!.trim();
+  const prefix = (process.env.S3_PREFIX ?? '').replace(/\/+$/, '');
+  const key = prefix ? `${prefix}/${relPath}` : relPath;
+  const destAbs = path.join(UPLOADS_DIR, relPath);
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return; // ya existe en el bucket
+  } catch {
+    /* no existe, se procede a subir */
+  }
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: fs.readFileSync(destAbs),
+        ContentType: 'application/pdf',
+      }),
+    );
+    console.log(`  [S3] subido ${key}`);
+  } catch (e) {
+    console.warn(`  [S3] no se pudo subir ${key}: ${(e as Error).message}`);
+  }
+}
 
 // ─── Datos provenientes de los seeders del sistema anterior ─────────────────
 // Estructura: [código, institución, tipo institución, título, inicio, fin, país]
@@ -4273,6 +4331,7 @@ async function run() {
         if (!fs.existsSync(destPath)) {
           fs.copyFileSync(sourcePdf, destPath);
         }
+        await uploadToS3IfConfigured(destName);
 
         const target = existing
           ? await prisma.agreements.findUnique({ where: { id: existing.id } })

@@ -21,14 +21,13 @@ import {
   DOC_TYPE_EXTENSIONS,
   normalizeUploadName,
   storePath,
-  absUploadPath,
   moveIntoAgreementDir,
 } from '../common/uploads.config';
 import {
   PdfMergerService,
   normalizeOficioNumber,
 } from '../common/pdf-merger.service';
-import * as fs from 'fs/promises';
+import { StorageService } from '../common/storage/storage.service';
 
 interface ActorEventOptions {
   actorUserId?: number;
@@ -46,6 +45,7 @@ export class ProcessService {
     private readonly prisma: PrismaService,
     private readonly appConfig: AppConfigService,
     private readonly pdfMerger: PdfMergerService,
+    private readonly storage: StorageService,
   ) {}
 
   private async logEvent(
@@ -565,7 +565,7 @@ export class ProcessService {
             });
             for (const oldDoc of oldDocs) {
               try {
-                await fs.unlink(absUploadPath(oldDoc.file_path));
+                await this.storage.removeRel(oldDoc.file_path);
               } catch (err) {
                 const e = err as NodeJS.ErrnoException;
                 if (e.code !== 'ENOENT') {
@@ -582,17 +582,20 @@ export class ProcessService {
             where: { code: 'OFICIO_RESPUESTA_OPINION' },
           });
 
+          const relPath = await moveIntoAgreementDir(
+            (file as UploadedFileLike & { filename?: string }).filename ??
+              normalizeUploadName(file.originalname),
+            request.agreements.tramite_code,
+            request.agreements.created_at,
+            normalizeUploadName(file.originalname),
+            (rel) => this.storage.uploadRel(rel),
+          );
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: request.agreement_id } },
               name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
-              file_path: moveIntoAgreementDir(
-                (file as UploadedFileLike & { filename?: string }).filename ??
-                  normalizeUploadName(file.originalname),
-                request.agreements.tramite_code,
-                request.agreements.created_at,
-                normalizeUploadName(file.originalname),
-              ),
+              file_path: relPath,
               original_name: normalizeUploadName(file.originalname),
               extension:
                 normalizeUploadName(file.originalname)
@@ -902,7 +905,7 @@ export class ProcessService {
     // para no dejar huérfanos. El borrado físico es best-effort.
     for (const doc of request.documents) {
       try {
-        await fs.unlink(absUploadPath(doc.file_path));
+        await this.storage.removeRel(doc.file_path);
       } catch (e) {
         if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
           this.logger?.warn?.(
@@ -1170,7 +1173,9 @@ export class ProcessService {
   /** Vista previa en vivo del oficio de solicitud de opinión (sin persistir) */
   async renderOficioOpinionPreview(bodyHtml: string): Promise<Buffer> {
     if (!bodyHtml || !bodyHtml.trim()) {
-      throw new BadRequestException('El contenido del oficio no puede estar vacío.');
+      throw new BadRequestException(
+        'El contenido del oficio no puede estar vacío.',
+      );
     }
     return this.pdfMerger.renderOficioOpinionPreview(bodyHtml);
   }
@@ -1308,7 +1313,7 @@ export class ProcessService {
     } catch (err) {
       // Si falla la transacción, elimina el PDF generado para no dejar archivos huérfanos.
       try {
-        await fs.unlink(absUploadPath(filename));
+        await this.storage.removeRel(filename);
       } catch {
         // el archivo ya no existe o no se pudo borrar: se ignora.
       }
@@ -1407,7 +1412,7 @@ export class ProcessService {
       return serializeBigInt({ id: BigInt(agreementId), ok: true });
     } catch (err) {
       try {
-        await fs.unlink(absUploadPath(filename));
+        await this.storage.removeRel(filename);
       } catch {
         // el archivo ya no existe o no se pudo borrar: se ignora.
       }
@@ -1447,18 +1452,21 @@ export class ProcessService {
       );
     }
 
+    const relPath = await moveIntoAgreementDir(
+      file.filename ?? originalName,
+      agreement.tramite_code,
+      agreement.created_at,
+      originalName,
+      (rel) => this.storage.uploadRel(rel),
+    );
+
     const document = await this.prisma.$transaction(
       async (tx) => {
         const doc = await tx.documents.create({
           data: {
             agreements: { connect: { id: BigInt(agreementId) } },
             name: docType.name,
-            file_path: moveIntoAgreementDir(
-              file.filename ?? originalName,
-              agreement.tramite_code,
-              agreement.created_at,
-              originalName,
-            ),
+            file_path: relPath,
             original_name: originalName,
             extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
             document_types: { connect: { id: docType.id } },
@@ -1536,9 +1544,9 @@ export class ProcessService {
     });
 
     if (existDoc) {
-      // Evita dejar huérfano el PDF previo en disco al regenerar el expediente.
+      // Evita dejar huérfano el PDF previo al regenerar el expediente.
       try {
-        await fs.unlink(absUploadPath(existDoc.file_path));
+        await this.storage.removeRel(existDoc.file_path);
       } catch (e) {
         if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
           this.logger?.warn?.(
@@ -1902,16 +1910,19 @@ export class ProcessService {
 
           const originalName = normalizeUploadName(file.originalname);
 
+          const relPath = await moveIntoAgreementDir(
+            file.filename ?? originalName,
+            agreement.tramite_code,
+            agreement.created_at,
+            originalName,
+            (rel) => this.storage.uploadRel(rel),
+          );
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? code,
-              file_path: moveIntoAgreementDir(
-                file.filename ?? originalName,
-                agreement.tramite_code,
-                agreement.created_at,
-                originalName,
-              ),
+              file_path: relPath,
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
@@ -1982,16 +1993,19 @@ export class ProcessService {
 
           const originalName = normalizeUploadName(file.originalname);
 
+          const relPath = await moveIntoAgreementDir(
+            file.filename ?? originalName,
+            agreement.tramite_code,
+            agreement.created_at,
+            originalName,
+            (rel) => this.storage.uploadRel(rel),
+          );
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: docType?.name ?? 'Publicación del Convenio',
-              file_path: moveIntoAgreementDir(
-                file.filename ?? originalName,
-                agreement.tramite_code,
-                agreement.created_at,
-                originalName,
-              ),
+              file_path: relPath,
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType
@@ -2155,16 +2169,19 @@ export class ProcessService {
 
           const originalName = normalizeUploadName(file.originalname);
 
+          const relPath = await moveIntoAgreementDir(
+            file.filename ?? originalName,
+            agreement.tramite_code,
+            agreement.created_at,
+            originalName,
+            (rel) => this.storage.uploadRel(rel),
+          );
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: 'Convenio Firmado Escaneado',
-              file_path: moveIntoAgreementDir(
-                file.filename ?? originalName,
-                agreement.tramite_code,
-                agreement.created_at,
-                originalName,
-              ),
+              file_path: relPath,
               original_name: originalName,
               extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
               document_types: docType

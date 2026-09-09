@@ -4,11 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  absUploadPath,
   UploadedFileLike,
   normalizeUploadName,
   moveIntoAgreementDir,
@@ -22,6 +20,7 @@ import {
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
+import { StorageService } from '../common/storage/storage.service';
 
 const agreementIncludes: Prisma.agreementsInclude = {
   institutions: true,
@@ -30,11 +29,10 @@ const agreementIncludes: Prisma.agreementsInclude = {
 
 @Injectable()
 export class AgreementsService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  private getAbsolutePath(filePath: string): string {
-    return absUploadPath(filePath);
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   private async deletePhysicalFiles(agreementId: bigint): Promise<void> {
     const documents = await this.prisma.documents.findMany({
@@ -43,14 +41,7 @@ export class AgreementsService {
 
     for (const doc of documents) {
       if (!doc.file_path) continue;
-      const absolutePath = this.getAbsolutePath(doc.file_path);
-      if (fs.existsSync(absolutePath)) {
-        try {
-          fs.unlinkSync(absolutePath);
-        } catch (e) {
-          console.error(`Error al borrar archivo: ${absolutePath}`, e);
-        }
-      }
+      await this.storage.removeRel(doc.file_path);
     }
   }
 
@@ -142,7 +133,7 @@ export class AgreementsService {
             where: { code: spec.code },
           });
           await tx.documents.create({
-            data: this.buildDocumentData(agr.id, spec.file, {
+            data: await this.buildDocumentData(agr.id, spec.file, {
               name: docType?.name ?? spec.fallbackName,
               tramiteCode: agr.tramite_code,
               createdAt: agr.created_at,
@@ -191,7 +182,7 @@ export class AgreementsService {
     return serializeBigInt<typeof createdAgreement>(createdAgreement);
   }
 
-  private buildDocumentData(
+  private async buildDocumentData(
     agreementId: bigint,
     file: UploadedFileLike & { filename?: string },
     opts: {
@@ -205,18 +196,20 @@ export class AgreementsService {
       deliverableId?: bigint | null;
       uploadedById?: number | null;
     },
-  ): Prisma.documentsCreateInput {
+  ): Promise<Prisma.documentsCreateInput> {
     const originalName = normalizeUploadName(file.originalname);
     const ext = path.extname(originalName).slice(0, 10) || undefined;
+    const filePath = await moveIntoAgreementDir(
+      file.filename ?? originalName,
+      opts.tramiteCode,
+      opts.createdAt ?? null,
+      originalName,
+      (rel) => this.storage.uploadRel(rel),
+    );
     return {
       agreements: { connect: { id: agreementId } },
       name: opts.name,
-      file_path: moveIntoAgreementDir(
-        file.filename ?? originalName,
-        opts.tramiteCode,
-        opts.createdAt ?? null,
-        originalName,
-      ),
+      file_path: filePath,
       original_name: originalName,
       extension: ext,
       document_types: opts.documentTypeId
@@ -486,10 +479,7 @@ export class AgreementsService {
       }
 
       if (doc.file_path) {
-        const absolutePath = this.getAbsolutePath(doc.file_path);
-        if (fs.existsSync(absolutePath)) {
-          fs.unlinkSync(absolutePath);
-        }
+        await this.storage.removeRel(doc.file_path);
       }
 
       await this.prisma.documents.delete({ where: { id: BigInt(docId) } });
