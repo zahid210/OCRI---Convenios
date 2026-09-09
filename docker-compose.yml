@@ -45,14 +45,14 @@ services:
     volumes:
       - uploads-data:/app/uploads
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 15s
       timeout: 10s
       retries: 15
 
   # ─── Frontend (único puerto público) ───────────────────────────────────────
-  # Next standalone sirve la UI y proxea /auth, /agreements, /process, etc. al
-  # backend por /health ... ver rewrites en ocri-frontend/next.config.ts.
+  # Next standalone sirve la UI y proxea todo el API bajo /api (rewrite única
+  # /api/:path* → backend /api/:path*); ver ocri-frontend/next.config.ts.
   frontend:
     build:
       context: ./ocri-frontend
@@ -69,7 +69,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
       timeout: 10s
       retries: 15

@@ -83,6 +83,10 @@ async function bootstrap() {
 
   app.useGlobalFilters(new OrphanFileFilter());
 
+  // Todo el API vive bajo /api para que el proxy del frontend (rewrite /api/:path*)
+  // no colisione con las páginas de la UI (p. ej. /seguimiento, /users, /reports).
+  app.setGlobalPrefix('api');
+
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

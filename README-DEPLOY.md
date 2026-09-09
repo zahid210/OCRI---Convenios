@@ -6,11 +6,11 @@ Vector de despliegue **un solo puerto**:
 Web (host:3000)  →  Next standalone (frontend)  →  API proxy (rewrites)  →  backend :4000  →  MariaDB
 ```
 
-El frontend (`ocri-frontend`) sirve la UI y proxea al backend las rutas que empiezan
-por `/auth`, `/agreements`, `/process`, `/dependencias`, `/document-types`,
-`/institutions`, `/notifications`, `/reports`, `/resoluciones`, `/seguimiento`,
-`/config`, `/users` y `/health`. No hace falta abrir el puerto del backend en el
-firewall: solo el del frontend.
+El frontend (`ocri-frontend`) sirve la UI y proxea al backend todos los requests
+que empiezan por `/api` (el backend registra todas sus rutas bajo ese prefijo vía
+`setGlobalPrefix('api')`). Con una sola rewrite (`/api/:path*` → backend `/api/:path*`)
+no se oculta ninguna ruta de la UI (`/seguimiento`, `/users`, `/reports`, …). No
+hace falta abrir el puerto del backend en el firewall: solo el del frontend.
 
 ## Requisitos
 

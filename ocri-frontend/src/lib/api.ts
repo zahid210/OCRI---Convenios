@@ -6,6 +6,16 @@ import Cookies from "js-cookie";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const API_URL = API_BASE.trim().replace(/\/+$/, "");
 
+// Todo el backend vive bajo /api (setGlobalPrefix). Convierte un endpoint
+// relativo del frontend ("/auth/login") en la ruta del API ("/api/auth/login").
+function apiPath(endpoint: string): string {
+  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+    return endpoint;
+  }
+  if (endpoint === "/api" || endpoint.startsWith("/api/")) return endpoint;
+  return `${endpoint}`.startsWith("/") ? `/api${endpoint}` : `/api/${endpoint}`;
+}
+
 export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -28,7 +38,7 @@ export async function fetchApi<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${endpoint}`, {
+    response = await fetch(`${API_URL}${apiPath(endpoint)}`, {
       ...options,
       headers,
     });
@@ -117,7 +127,7 @@ export function getFileUrl(filePath: string | null | undefined): string {
 
   const storageBaseUrl = process.env.NEXT_PUBLIC_STORAGE_URL || API_URL;
 
-  return `${storageBaseUrl}/resoluciones/${relativePath}`;
+  return `${storageBaseUrl}${apiPath(`/resoluciones/${relativePath}`)}`;
 }
 
 /**
@@ -182,7 +192,7 @@ export async function downloadFile(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, { headers });
+  const response = await fetch(`${API_URL}${apiPath(endpoint)}`, { headers });
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -324,7 +334,7 @@ export async function previewOficioOpinion(
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const response = await fetch(
-    `${API_URL}/process/opinion-requests/${requestId}/oficio/preview`,
+    `${API_URL}${apiPath(`/process/opinion-requests/${requestId}/oficio/preview`)}`,
     {
       method: "POST",
       headers,

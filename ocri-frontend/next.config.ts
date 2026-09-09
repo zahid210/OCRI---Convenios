@@ -1,34 +1,17 @@
 import type { NextConfig } from "next";
 
-// Prefijos de rutas que pertenecen al backend. El frontend los proxea al API
-// (mismo origen) cuando `API_PROXY_URL` está definido (producción/Docker).
-// Algunos prefijos (~dashboard) solo existen en la UI: no están en esta lista.
-const API_PROXY_PREFIXES = [
-  "auth",
-  "agreements",
-  "config",
-  "dependencias",
-  "document-types",
-  "institutions",
-  "notifications",
-  "process",
-  "reports",
-  "resoluciones",
-  "seguimiento",
-  "users",
-];
+// Todo el API del backend vive bajo el prefijo /api (setGlobalPrefix en el
+// backend). El frontend lo proxea por el mismo origen cuando `API_PROXY_URL`
+// está definido (producción/Docker) con UNA sola rewrite: así las páginas de la
+// UI (/seguimiento, /users, /reports, /institutions, /dependencias, …) nunca
+// colisionan con las rutas del API, que antes las secuestraban.
 
 async function apiRewrites() {
   const target = process.env.API_PROXY_URL?.trim().replace(/\/+$/, "");
   if (!target) return [];
 
-  const toBackend = (path: string) => `${target}/${path}`;
   return [
-    { source: "/health", destination: toBackend("health") },
-    ...API_PROXY_PREFIXES.flatMap((prefix) => [
-      { source: `/${prefix}`, destination: toBackend(prefix) },
-      { source: `/${prefix}/:path*`, destination: toBackend(`${prefix}/:path*`) },
-    ]),
+    { source: "/api/:path*", destination: `${target}/api/:path*` },
   ];
 }
 

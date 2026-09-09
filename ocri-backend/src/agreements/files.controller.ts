@@ -90,7 +90,7 @@ export class FilesController {
     }
 
     const relPath = this.resolveRelativePath(
-      req.path.replace(/^\/resoluciones\/?/, ''),
+      req.path.replace(/^\/(?:api\/)?resoluciones\/?/, ''),
     );
 
     // Si el storage S3-compatible está configurado, se sirve con una URL
