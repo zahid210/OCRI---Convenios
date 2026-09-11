@@ -93,26 +93,52 @@ export class FilesController {
       req.path.replace(/^\/(?:api\/)?resoluciones\/?/, ''),
     );
 
-    // Si el storage S3-compatible está configurado, se sirve con una URL
-    // prefirmada (TTL S3_PRESIGN_TTL) vía redirección 302. El JWT se sigue
-    // validando aquí: la URL prefirmada solo se emite a usuarios autenticados.
     const rawName = req.query.name;
     const downloadName =
       typeof rawName === 'string' && rawName.length > 0 ? rawName : undefined;
-    const presigned = await this.storage.presignGetUrl(relPath, downloadName);
 
-    // Modo ?url=1: devuelve la URL prefirmada como JSON en lugar de redirigir.
-    // Algunos clientes (vista previa en pestaña nueva, descarga por ancla) no
-    // pueden leer el cuerpo de un fetch cross-origin al bucket si este no
-    // define cabeceras CORS; navegar/descargar sobre la URL del bucket no
-    // necesita CORS. Los archivos locales (sin storage) responden {mode:'local'}
-    // para que el frontend use la ruta blob autenticada.
+    // ?url=1 -> URL prefirmada como JSON (descarga directa al bucket, sin CORS).
+    // Los archivos locales (sin storage) responden {mode:'local'} para que el
+    // frontend use la ruta blob autenticada.
     const wantsUrl = req.query.url === '1';
-    if (presigned) {
-      if (wantsUrl) {
-        return res.json({ mode: 'presigned', url: presigned });
+    if (wantsUrl) {
+      const presigned = await this.storage.presignGetUrl(relPath, downloadName);
+
+      if (!presigned) {
+        if (!existsSync(absUploadPath(relPath))) {
+          throw new NotFoundException(`El archivo "${relPath}" no existe.`);
+        }
+        return res.json({ mode: 'local' });
       }
-      return res.redirect(302, presigned);
+      return res.json({ mode: 'presigned', url: presigned });
+    }
+
+    // Modo normal: los bytes se sirven a través del backend con el JWT por
+    // header. Cuando el objeto está en S3/OBS se hace streaming (sin 302):
+    // OBS ignora el override Content-Disposition:inline si el objeto fue subido
+    // con metadata de descarga y requiere CORS para leer bytes con fetch, así
+    // que redirigir al bucket rompería la vista previa (descargaría en vez de
+    // mostrar el PDF). Los PDF se sirven inline; el resto fuerza descarga.
+    const remote = await this.storage.getObjectStream(relPath);
+    const setDisposition = (disposition: string) =>
+      res.setHeader('Content-Disposition', disposition);
+    if (remote) {
+      res.setHeader('Content-Type', remote.contentType);
+      if (downloadName) {
+        setDisposition(
+          `attachment; filename="${downloadName.replace(/["\\]/g, '_')}"`,
+        );
+      } else if (extname(relPath).toLowerCase() === '.pdf') {
+        setDisposition('inline');
+      } else {
+        setDisposition(
+          `attachment; filename="${basename(relPath).replace(/["\\]/g, '_')}"`,
+        );
+      }
+      if (remote.length) {
+        res.setHeader('Content-Length', String(remote.length));
+      }
+      return remote.stream.pipe(res);
     }
 
     const filePath = absUploadPath(relPath);
@@ -121,19 +147,12 @@ export class FilesController {
       throw new NotFoundException(`El archivo "${relPath}" no existe.`);
     }
 
-    if (wantsUrl) {
-      return res.json({ mode: 'local' });
-    }
-
     // Solo los PDF se sirven inline (vista previa del navegador); el resto se
     // descarga forzada para no ejecutar contenido activo embebido si un archivo
     // malicioso llegó a guardarse como imagen/ofimática.
     if (extname(relPath).toLowerCase() !== '.pdf') {
       const name = basename(relPath);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${name.replace(/["\\]/g, '_')}"`,
-      );
+      setDisposition(`attachment; filename="${name.replace(/["\\]/g, '_')}"`);
     }
 
     return res.sendFile(relPath, { root: UPLOADS_DIR });

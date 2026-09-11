@@ -99,6 +99,10 @@ export class StorageService {
     return CONTENT_TYPES[`.${ext}`] ?? 'application/octet-stream';
   }
 
+  private isPdf(relPath: string): boolean {
+    return join(relPath).toLowerCase().endsWith('.pdf');
+  }
+
   /** Ruta absoluta local del espejo. */
   localPath(relPath: string): string {
     return join(UPLOADS_DIR, relPath);
@@ -220,14 +224,50 @@ export class StorageService {
     const command = new GetObjectCommand({
       Bucket: c.bucket,
       Key: key,
-      ...(downloadName
-        ? {
-            ResponseContentDisposition: dispositionHeader(downloadName),
-            ResponseContentType: this.contentTypeFor(relPath),
-          }
-        : {}),
+      // Se fuerza el Content-Type y la disposition en cada presign: el objeto
+      // puede haberse subido con metadatos por defecto (application/octet-stream)
+      // y entonces el navegador trataría la vista previa como descarga.
+      ResponseContentType: this.contentTypeFor(relPath),
+      ResponseContentDisposition: downloadName
+        ? dispositionHeader(downloadName)
+        : this.isPdf(relPath)
+          ? 'inline'
+          : 'attachment',
     });
     return getSignedUrl(s3, command, { expiresIn: c.presignTtl });
+  }
+
+  /**
+   * Devuelve un stream legible del objeto en S3/OBS (si existe) para servirlo
+   * a través del backend sin redirigir al bucket. Necesario para la vista
+   * previa inline: OBS ignora el override Content-Disposition:inline si el
+   * objeto fue subido con metadata de descarga y además evita depender de que
+   * el bucket tenga cabeceras CORS para leer los bytes con fetch.
+   */
+  async getObjectStream(
+    relPath: string,
+  ): Promise<{
+    stream: NodeJS.ReadableStream;
+    contentType: string;
+    length?: number;
+  } | null> {
+    const s3 = this.s3();
+    if (!s3) return null;
+    const c = this.cfg();
+    const key = this.keyFor(relPath);
+    try {
+      const obj = await s3.send(
+        new GetObjectCommand({ Bucket: c.bucket, Key: key }),
+      );
+      if (!obj.Body) return null;
+      return {
+        stream: obj.Body as unknown as NodeJS.ReadableStream,
+        contentType: this.contentTypeFor(relPath),
+        length: obj.ContentLength,
+      };
+    } catch {
+      return null;
+    }
   }
 
   /** Verificación de conectividad y configuración para el healthcheck. */

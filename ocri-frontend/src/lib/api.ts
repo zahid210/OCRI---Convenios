@@ -234,22 +234,17 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
 }
 
 /**
- * Abre un archivo del repositorio en una pestaña nueva como vista previa, sin
- * exponer el token en la URL. Si el storage está en S3/OBS se abren la URL
- * prefirmada directo (la vista previa del bucket no requiere CORS); si es
- * local se descargan los bytes autenticados y se abren como blob.
+ * Abre un archivo del repositorio en una pestaña nueva como vista previa. Los
+ * bytes se obtienen con el JWT por header y el backend los sirve con
+ * Content-Disposition:inline, por lo que el blob siempre se muestra en el
+ * visor (independientemente de metadatos o CORS del bucket). Nunca se expone
+ * el token en la URL.
  */
 export async function openFilePreview(
   filePath: string | null | undefined,
 ): Promise<void> {
   if (!filePath) return;
   if (typeof window === "undefined") return;
-
-  const info = await resolveFileUrl(filePath);
-  if (info.mode === "presigned" && info.url) {
-    window.open(info.url, "_blank", "noopener,noreferrer");
-    return;
-  }
 
   const blob = await fetchFileBlob(filePath);
   const url = URL.createObjectURL(blob);
