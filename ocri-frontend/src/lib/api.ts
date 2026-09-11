@@ -130,6 +130,73 @@ export function getFileUrl(filePath: string | null | undefined): string {
   return `${storageBaseUrl}${apiPath(`/resoluciones/${relativePath}`)}`;
 }
 
+// El JWT solo se adjunta a orígenes que controla la app: el de la propia
+// interfaz o el del API backend (API_URL). En dev el frontend corre en un
+// puerto distinto del backend (3001 vs 3000), así que "mismo origen" no
+// basta: si getFileUrl devuelve una URL absoluta cuyo origen NO es la app ni
+// el API (p. ej. un presigned de S3/OBS), se ignora el token y nunca se
+// exfiltra el Bearer hacia orígenes externos.
+function isTrustedUrl(u: string): boolean {
+  if (!/^https?:\/\//i.test(u)) return true; // relativa: mismo origen
+  try {
+    const target = new URL(u).origin;
+    if (typeof window !== "undefined" && target === window.location.origin)
+      return true;
+    if (/^https?:\/\//i.test(API_URL || "")) {
+      return target === new URL(API_URL).origin;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resuelve cómo servirá un archivo del repositorio. Cuando el storage
+ * S3-compatible está configurado, el backend devuelve {mode:'presigned', url}
+ * (URL prefirmada) en lugar de redirigir: navegar o descargar sobre esa URL el
+ * bucket no necesita cabeceras CORS, a diferencia de leer los bytes vía fetch.
+ * Si no hay storage, responde {mode:'local'} y el cliente usa la ruta blob.
+ * El JWT viaja solo por header (nunca en la URL), como en el resto del módulo.
+ */
+export async function resolveFileUrl(
+  filePath: string,
+  name?: string,
+): Promise<{ mode: "local" } | { mode: "presigned"; url: string }> {
+  const url = getFileUrl(filePath);
+  if (!url) throw new Error("Ruta de archivo vacía.");
+
+  const token = Cookies.get("access_token");
+  const headers: Record<string, string> = {};
+  if (token && isTrustedUrl(url)) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const sep = url.includes("?") ? "&" : "?";
+  const query = `${sep}url=1${name ? `&name=${encodeURIComponent(name)}` : ""}`;
+  const response = await fetch(`${url}${query}`, { headers });
+
+  if (response.status === 401) {
+    Cookies.remove("access_token", { path: "/" });
+    Cookies.remove("user", { path: "/" });
+    if (
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/login")
+    ) {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign(`${window.location.origin}/login`);
+    }
+    throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
+  }
+  if (!response.ok) {
+    throw new Error(`No se pudo obtener el archivo (HTTP ${response.status}).`);
+  }
+
+  return (await response.json()) as
+    | { mode: "local" }
+    | { mode: "presigned"; url: string };
+}
+
 /**
  * Descarga los bytes de un archivo del repositorio protegido (/resoluciones)
  * adjuntando el JWT por header (nunca en la URL). Devuelve un Blob o lanza error.
@@ -141,20 +208,8 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
   const token = Cookies.get("access_token");
   const headers: Record<string, string> = {};
 
-  // El JWT solo se adjunta a URLs del mismo origen que la app (o relativas).
-  // Si getFileUrl devolviera una URL absoluta foránea, se ignora el token:
-  // nunca se exfiltra el Bearer hacia orígenes que no controla la app.
-  if (token) {
-    const foreign = (() => {
-      if (typeof window === "undefined") return false;
-      if (!/^https?:\/\//i.test(url)) return false;
-      try {
-        return new URL(url).origin !== window.location.origin;
-      } catch {
-        return true;
-      }
-    })();
-    if (!foreign) headers["Authorization"] = `Bearer ${token}`;
+  if (token && isTrustedUrl(url)) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const response = await fetch(url, { headers });
@@ -179,15 +234,24 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
 }
 
 /**
- * Abre un archivo del repositorio en una pestaña nueva como vista previa,
- * autenticado con el header Bearer (sin exponer el token en la URL).
+ * Abre un archivo del repositorio en una pestaña nueva como vista previa, sin
+ * exponer el token en la URL. Si el storage está en S3/OBS se abren la URL
+ * prefirmada directo (la vista previa del bucket no requiere CORS); si es
+ * local se descargan los bytes autenticados y se abren como blob.
  */
 export async function openFilePreview(
   filePath: string | null | undefined,
 ): Promise<void> {
   if (!filePath) return;
-  const blob = await fetchFileBlob(filePath);
   if (typeof window === "undefined") return;
+
+  const info = await resolveFileUrl(filePath);
+  if (info.mode === "presigned" && info.url) {
+    window.open(info.url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const blob = await fetchFileBlob(filePath);
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");
 }
@@ -200,6 +264,36 @@ export async function downloadFile(
   endpoint: string,
   filename: string,
 ): Promise<void> {
+  // Documentos del repositorio (storage S3/OBS): se descargan con el enlace
+  // prefirmado (el backend fija Content-Disposition: attachment). Navegar al
+  // enlace del bucket no exige CORS. Si es local o algo falla, se cae al blob.
+  if (endpoint.startsWith("/resoluciones/")) {
+    try {
+      // Los callers pasan el path ya percent-encoded; getFileUrl re-codifica
+      // cada segmento, así que primero se decodifica para no duplicar escapes.
+      const encodedPath = endpoint.slice("/resoluciones/".length);
+      let rawPath: string;
+      try {
+        rawPath = decodeURIComponent(encodedPath);
+      } catch {
+        rawPath = encodedPath;
+      }
+      const info = await resolveFileUrl(rawPath, filename);
+      if (info.mode === "presigned" && info.url) {
+        const a = document.createElement("a");
+        a.href = info.url;
+        a.rel = "noopener noreferrer";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+    } catch {
+      // Cae al flujo blob autenticado clásico
+    }
+  }
+
   const token = Cookies.get("access_token");
 
   const headers: Record<string, string> = {};

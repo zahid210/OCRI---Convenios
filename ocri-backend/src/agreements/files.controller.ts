@@ -100,7 +100,18 @@ export class FilesController {
     const downloadName =
       typeof rawName === 'string' && rawName.length > 0 ? rawName : undefined;
     const presigned = await this.storage.presignGetUrl(relPath, downloadName);
+
+    // Modo ?url=1: devuelve la URL prefirmada como JSON en lugar de redirigir.
+    // Algunos clientes (vista previa en pestaña nueva, descarga por ancla) no
+    // pueden leer el cuerpo de un fetch cross-origin al bucket si este no
+    // define cabeceras CORS; navegar/descargar sobre la URL del bucket no
+    // necesita CORS. Los archivos locales (sin storage) responden {mode:'local'}
+    // para que el frontend use la ruta blob autenticada.
+    const wantsUrl = req.query.url === '1';
     if (presigned) {
+      if (wantsUrl) {
+        return res.json({ mode: 'presigned', url: presigned });
+      }
       return res.redirect(302, presigned);
     }
 
@@ -108,6 +119,10 @@ export class FilesController {
 
     if (!existsSync(filePath)) {
       throw new NotFoundException(`El archivo "${relPath}" no existe.`);
+    }
+
+    if (wantsUrl) {
+      return res.json({ mode: 'local' });
     }
 
     // Solo los PDF se sirven inline (vista previa del navegador); el resto se
