@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsNumber,
   IsDateString,
+  Matches,
+  MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -25,6 +27,11 @@ export class CreateAgreementDto {
   @IsOptional()
   @IsString()
   @Transform(trim)
+  @MaxLength(30, { message: 'tramite_code no debe exceder 30 caracteres' })
+  @Matches(/^\d+-\d{4}$/, {
+    message:
+      'tramite_code debe tener el formato institucional NNN-YYYY (ej. 013-2021)',
+  })
   tramite_code?: string;
 
   /** Entidad Solicitante que remitió la propuesta a Rectorado */
