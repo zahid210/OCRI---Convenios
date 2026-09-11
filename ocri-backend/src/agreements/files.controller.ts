@@ -9,10 +9,10 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Request, Response } from 'express';
-import { join, normalize } from 'path';
+import { extname, basename, normalize } from 'path';
 import { existsSync } from 'fs';
 import { Public } from '../auth/decorators/public.decorator';
-import { UPLOADS_DIR } from '../common/uploads.config';
+import { absUploadPath, UPLOADS_DIR } from '../common/uploads.config';
 import { StorageService } from '../common/storage/storage.service';
 
 /**
@@ -104,10 +104,21 @@ export class FilesController {
       return res.redirect(302, presigned);
     }
 
-    const filePath = join(UPLOADS_DIR, relPath);
+    const filePath = absUploadPath(relPath);
 
     if (!existsSync(filePath)) {
       throw new NotFoundException(`El archivo "${relPath}" no existe.`);
+    }
+
+    // Solo los PDF se sirven inline (vista previa del navegador); el resto se
+    // descarga forzada para no ejecutar contenido activo embebido si un archivo
+    // malicioso llegó a guardarse como imagen/ofimática.
+    if (extname(relPath).toLowerCase() !== '.pdf') {
+      const name = basename(relPath);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${name.replace(/["\\]/g, '_')}"`,
+      );
     }
 
     return res.sendFile(relPath, { root: UPLOADS_DIR });

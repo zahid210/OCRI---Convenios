@@ -1,8 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { OrphanFileFilter } from './common/orphan-file.filter';
+import { MAX_TOTAL_UPLOAD_BYTES } from './common/uploads.config';
 
 // Extensión tipada de BigInt para serialización JSON segura
 declare global {
@@ -24,6 +27,31 @@ async function bootstrap() {
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ extended: true, limit: '10mb' }));
 
+  // Límite agregado por petición multipart: multer limita cada archivo, pero no
+  // la suma del lote. Este guard imperial Content-Length, de modo que un body
+  // > MAX_TOTAL_UPLOAD_BYTES se rechaza antes de escribir parciales en disco.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (
+      req.method === 'POST' &&
+      req.headers['content-type']?.includes('multipart/form-data') &&
+      Number(req.headers['content-length'] || 0) > MAX_TOTAL_UPLOAD_BYTES
+    ) {
+      res.status(413).json({
+        statusCode: 413,
+        message: 'El cuerpo de la petición supera el límite permitido.',
+      });
+      return;
+    }
+    next();
+  });
+
+  // Cabeceras de seguridad básicas (CSP, nosniff, X-Frame-Options, etc.).
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'same-origin' },
+    }),
+  );
+
   // CORS restringido al origen del frontend.
   // FRONTEND_ORIGIN admite varios orígenes separados por coma (ej.
   // "http://localhost:3001,https://ocri.dominio.gob.pe"). Si no está definido,
@@ -39,18 +67,16 @@ async function bootstrap() {
       .map((o) => o.trim())
       .filter(Boolean) ?? [];
 
-  if (!configuredFrontendOrigins.length) {
-    console.warn(
-      '[CORS] FRONTEND_ORIGIN no definido. Se usarán los orígenes locales por defecto.',
-    );
-  }
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Orígenes localhost por defecto solo en desarrollo/preview. En producción se
+  // exige FRONTEND_ORIGIN explícito: de lo contrario no se habilita CORS alguno.
+  const baseOrigins = isProduction
+    ? []
+    : ['http://localhost:3001', 'http://127.0.0.1:3001'];
 
   const allowedOrigins = new Set<string>();
-  for (const raw of [
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    ...configuredFrontendOrigins,
-  ]) {
+  for (const raw of [...baseOrigins, ...configuredFrontendOrigins]) {
     let origin: URL;
     try {
       origin = new URL(raw);

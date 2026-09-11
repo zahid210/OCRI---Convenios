@@ -13,6 +13,7 @@ import {
   ensureDir,
 } from './uploads.config';
 import { StorageService } from './storage/storage.service';
+import { sanitizeOficioHtml } from './sanitize-oficio-html';
 
 /**
  * Normaliza el número de oficio al formato estándar `045-2026-OCRI-UNCP`.
@@ -548,7 +549,10 @@ export class PdfMergerService {
    */
   async renderOficioOpinionPreview(bodyHtml: string): Promise<Buffer> {
     const template = await this.readOficioOpinionTemplate();
-    const fullHtml = template.replace('{{CUERPO}}', bodyHtml);
+    const fullHtml = template.replace(
+      '{{CUERPO}}',
+      sanitizeOficioHtml(bodyHtml),
+    );
     // 1mm = 72/25.4 pt. Los cuatro lados de la plantilla original: 30mm izq.
     const mmToPt = (mm: number) => (mm * 72) / 25.4;
     return renderPdfFromHtml(fullHtml, {
@@ -582,7 +586,10 @@ export class PdfMergerService {
     createdAt?: Date | string | null,
   ): Promise<string> {
     const template = await this.readOficioOpinionTemplate();
-    const fullHtml = template.replace('{{CUERPO}}', bodyHtml);
+    const fullHtml = template.replace(
+      '{{CUERPO}}',
+      sanitizeOficioHtml(bodyHtml),
+    );
 
     // 1mm = 72/25.4 pt. Los cuatro lados de la plantilla original: 30mm izq.
     const mmToPt = (mm: number) => (mm * 72) / 25.4;

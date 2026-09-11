@@ -9,7 +9,7 @@ describe('AppController', () => {
     getHealth: jest.fn().mockResolvedValue({
       status: 'ok',
       database: 'connected',
-      totalUsers: 1,
+      storage: { configured: false, ok: true },
     }),
   };
 
@@ -32,7 +32,7 @@ describe('AppController', () => {
       await expect(appController.getHealth()).resolves.toEqual({
         status: 'ok',
         database: 'connected',
-        totalUsers: 1,
+        storage: { configured: false, ok: true },
       });
     });
   });
