@@ -11,7 +11,6 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  ClipboardList,
   Eye,
 } from "lucide-react";
 import {

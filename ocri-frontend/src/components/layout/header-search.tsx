@@ -78,7 +78,7 @@ export function HeaderSearch() {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, []);
+  }, [canSeeInstitutions]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { getProcessStatus } from "@/lib/api";
-import { AlertTriangle, ArrowLeft, Clock, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import { ProcessStatusResponse } from "@/types/agreements";
 import { useUser } from "@/components/user-provider";
 import { canManage } from "@/lib/auth";
