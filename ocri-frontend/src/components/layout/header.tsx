@@ -106,7 +106,7 @@ export function Header() {
                         <div className="py-1 bg-gray-50">
                             <DropdownMenuItem
                                 onClick={handleLogout}
-                                className="px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-none cursor-pointer font-medium border-l-2 border-transparent hover:border-red-600 transition-all"
+                                className="px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-none cursor-pointer font-medium border-l-2 border-transparent hover:border-red-600 transition-all"
                             >
                                 <LogOut className="mr-2.5 h-4 w-4" />
                                 <span>Cerrar sesión</span>

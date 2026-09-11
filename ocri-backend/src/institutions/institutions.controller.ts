@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CREATOR_ROLES } from '../auth/role-sets';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
@@ -22,7 +23,8 @@ import { InstitutionsService } from './institutions.service';
 export class InstitutionsController {
   constructor(private readonly institutionsService: InstitutionsService) {}
 
-  @Roles('admin')
+  // El asistente registra instituciones aliadas desde /propuestas/create.
+  @Roles(...CREATOR_ROLES)
   @Post()
   create(@Body() createDto: CreateInstitutionDto) {
     return this.institutionsService.create(createDto);

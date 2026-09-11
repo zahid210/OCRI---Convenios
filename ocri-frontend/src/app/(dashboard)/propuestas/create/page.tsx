@@ -250,7 +250,12 @@ export default function CreatePropuestaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!institutionId || !agreementTypeId || !title.trim()) {
+    if (
+      !institutionId ||
+      !agreementTypeId ||
+      !title.trim() ||
+      !applicantUnit.trim()
+    ) {
       toast.warning(
         "Por favor, completa los campos obligatorios del expediente.",
       );
@@ -465,10 +470,11 @@ export default function CreatePropuestaPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold uppercase text-gray-600">
-                  Unidad Solicitante
+                  Unidad Solicitante <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  required
                   value={applicantUnit}
                   onChange={(e) => setApplicantUnit(e.target.value)}
                   placeholder="EJ: FACULTAD DE INGENIERÍA / DIRECCIÓN DE RELACIONES INSTITUCIONALES"
