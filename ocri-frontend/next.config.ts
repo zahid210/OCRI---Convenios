@@ -20,6 +20,51 @@ const nextConfig: NextConfig = {
   // necesita node para servir toda la app (un solo puerto).
   output: "standalone",
 
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      // Next inyecta el runtime y el payload RSC en <script> inline sin nonce;
+      // 'unsafe-inline' es la contrapartida de no usar nonces (proxy). El resto
+      // de la política bloquea orígenes externos, frames y objectos embebidos.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      // connect-src permite https: porque el storage S3-compatible emite URLs
+      // prefirmadas en dominios externos para las descargas.
+      "connect-src 'self' http://localhost:3000 http://localhost:3001 https:",
+      "worker-src 'self' blob:",
+      "child-src 'self' blob:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+    ].join("; ");
+
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          // Solo se envía por HTTPS en despliegues reales; aquí el valor es
+          // seguro incluso en dev (no activa nada si la conexión es HTTP).
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+          },
+          { key: "Content-Security-Policy", value: csp },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+        ],
+      },
+    ];
+  },
+
   async rewrites() {
     // beforeFiles: el proxy del API precede a redirects, rutas de fs y dinámicas,
     // para que /agreements, /process, etc. siempre lleguen al backend y nunca a

@@ -140,7 +140,22 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
 
   const token = Cookies.get("access_token");
   const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  // El JWT solo se adjunta a URLs del mismo origen que la app (o relativas).
+  // Si getFileUrl devolviera una URL absoluta foránea, se ignora el token:
+  // nunca se exfiltra el Bearer hacia orígenes que no controla la app.
+  if (token) {
+    const foreign = (() => {
+      if (typeof window === "undefined") return false;
+      if (!/^https?:\/\//i.test(url)) return false;
+      try {
+        return new URL(url).origin !== window.location.origin;
+      } catch {
+        return true;
+      }
+    })();
+    if (!foreign) headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const response = await fetch(url, { headers });
 

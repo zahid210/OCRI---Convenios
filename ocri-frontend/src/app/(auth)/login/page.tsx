@@ -42,8 +42,15 @@ export default function LoginPage() {
                 throw new Error('El servidor no devolvió un token de acceso válido.');
             }
 
-            Cookies.set('access_token', data.access_token, { expires: 1, path: '/' });
-            Cookies.set('user', JSON.stringify(data.user), { expires: 1, path: '/' });
+            const cookieOptions = {
+                expires: 1,
+                path: '/',
+                sameSite: 'lax' as const,
+                secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
+            };
+
+            Cookies.set('access_token', data.access_token, cookieOptions);
+            Cookies.set('user', JSON.stringify(data.user), cookieOptions);
 
             router.push(roleHome(data.user.role));
             router.refresh();
