@@ -152,52 +152,6 @@ function isTrustedUrl(u: string): boolean {
 }
 
 /**
- * Resuelve cómo servirá un archivo del repositorio. Cuando el storage
- * S3-compatible está configurado, el backend devuelve {mode:'presigned', url}
- * (URL prefirmada) en lugar de redirigir: navegar o descargar sobre esa URL el
- * bucket no necesita cabeceras CORS, a diferencia de leer los bytes vía fetch.
- * Si no hay storage, responde {mode:'local'} y el cliente usa la ruta blob.
- * El JWT viaja solo por header (nunca en la URL), como en el resto del módulo.
- */
-export async function resolveFileUrl(
-  filePath: string,
-  name?: string,
-): Promise<{ mode: "local" } | { mode: "presigned"; url: string }> {
-  const url = getFileUrl(filePath);
-  if (!url) throw new Error("Ruta de archivo vacía.");
-
-  const token = Cookies.get("access_token");
-  const headers: Record<string, string> = {};
-  if (token && isTrustedUrl(url)) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const sep = url.includes("?") ? "&" : "?";
-  const query = `${sep}url=1${name ? `&name=${encodeURIComponent(name)}` : ""}`;
-  const response = await fetch(`${url}${query}`, { headers });
-
-  if (response.status === 401) {
-    Cookies.remove("access_token", { path: "/" });
-    Cookies.remove("user", { path: "/" });
-    if (
-      typeof window !== "undefined" &&
-      !window.location.pathname.startsWith("/login")
-    ) {
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.assign(`${window.location.origin}/login`);
-    }
-    throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
-  }
-  if (!response.ok) {
-    throw new Error(`No se pudo obtener el archivo (HTTP ${response.status}).`);
-  }
-
-  return (await response.json()) as
-    | { mode: "local" }
-    | { mode: "presigned"; url: string };
-}
-
-/**
  * Descarga los bytes de un archivo del repositorio protegido (/resoluciones)
  * adjuntando el JWT por header (nunca en la URL). Devuelve un Blob o lanza error.
  */
@@ -259,36 +213,11 @@ export async function downloadFile(
   endpoint: string,
   filename: string,
 ): Promise<void> {
-  // Documentos del repositorio (storage S3/OBS): se descargan con el enlace
-  // prefirmado (el backend fija Content-Disposition: attachment). Navegar al
-  // enlace del bucket no exige CORS. Si es local o algo falla, se cae al blob.
-  if (endpoint.startsWith("/resoluciones/")) {
-    try {
-      // Los callers pasan el path ya percent-encoded; getFileUrl re-codifica
-      // cada segmento, así que primero se decodifica para no duplicar escapes.
-      const encodedPath = endpoint.slice("/resoluciones/".length);
-      let rawPath: string;
-      try {
-        rawPath = decodeURIComponent(encodedPath);
-      } catch {
-        rawPath = encodedPath;
-      }
-      const info = await resolveFileUrl(rawPath, filename);
-      if (info.mode === "presigned" && info.url) {
-        const a = document.createElement("a");
-        a.href = info.url;
-        a.rel = "noopener noreferrer";
-        a.style.display = "none";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        return;
-      }
-    } catch {
-      // Cae al flujo blob autenticado clásico
-    }
-  }
-
+  // Descarga SOLO el archivo (nunca lo abre): los bytes se obtienen con el
+  // JWT por header y se dispara la descarga con un blob local + atributo
+  // download. No depende de CORS ni metadatos del bucket (OBS adjunta su
+  // Content-Disposition si se navega al presigned y algunos navegadores abren
+  // el PDF en vez de descargarlo).
   const token = Cookies.get("access_token");
 
   const headers: Record<string, string> = {};

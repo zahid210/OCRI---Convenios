@@ -97,22 +97,6 @@ export class FilesController {
     const downloadName =
       typeof rawName === 'string' && rawName.length > 0 ? rawName : undefined;
 
-    // ?url=1 -> URL prefirmada como JSON (descarga directa al bucket, sin CORS).
-    // Los archivos locales (sin storage) responden {mode:'local'} para que el
-    // frontend use la ruta blob autenticada.
-    const wantsUrl = req.query.url === '1';
-    if (wantsUrl) {
-      const presigned = await this.storage.presignGetUrl(relPath, downloadName);
-
-      if (!presigned) {
-        if (!existsSync(absUploadPath(relPath))) {
-          throw new NotFoundException(`El archivo "${relPath}" no existe.`);
-        }
-        return res.json({ mode: 'local' });
-      }
-      return res.json({ mode: 'presigned', url: presigned });
-    }
-
     // Modo normal: los bytes se sirven a través del backend con el JWT por
     // header. Cuando el objeto está en S3/OBS se hace streaming (sin 302):
     // OBS ignora el override Content-Disposition:inline si el objeto fue subido

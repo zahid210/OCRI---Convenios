@@ -3,11 +3,9 @@ import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
-  HeadObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
 } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { readFile, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import { UPLOADS_DIR } from '../uploads.config';
@@ -97,10 +95,6 @@ export class StorageService {
   private contentTypeFor(relPath: string): string {
     const ext = join(relPath).split('.').pop()?.toLowerCase();
     return CONTENT_TYPES[`.${ext}`] ?? 'application/octet-stream';
-  }
-
-  private isPdf(relPath: string): boolean {
-    return join(relPath).toLowerCase().endsWith('.pdf');
   }
 
   /** Ruta absoluta local del espejo. */
@@ -204,40 +198,6 @@ export class StorageService {
   }
 
   /**
-   * Genera una URL prefirmada de descarga GET con TTL `S3_PRESIGN_TTL`.
-   * Devuelve null si S3 no está configurado o si el objeto no existe (para
-   * poder hacer fallback al asociado local).
-   */
-  async presignGetUrl(
-    relPath: string,
-    downloadName?: string,
-  ): Promise<string | null> {
-    const s3 = this.s3();
-    if (!s3) return null;
-    const c = this.cfg();
-    const key = this.keyFor(relPath);
-    try {
-      await s3.send(new HeadObjectCommand({ Bucket: c.bucket, Key: key }));
-    } catch {
-      return null;
-    }
-    const command = new GetObjectCommand({
-      Bucket: c.bucket,
-      Key: key,
-      // Se fuerza el Content-Type y la disposition en cada presign: el objeto
-      // puede haberse subido con metadatos por defecto (application/octet-stream)
-      // y entonces el navegador trataría la vista previa como descarga.
-      ResponseContentType: this.contentTypeFor(relPath),
-      ResponseContentDisposition: downloadName
-        ? dispositionHeader(downloadName)
-        : this.isPdf(relPath)
-          ? 'inline'
-          : 'attachment',
-    });
-    return getSignedUrl(s3, command, { expiresIn: c.presignTtl });
-  }
-
-  /**
    * Devuelve un stream legible del objeto en S3/OBS (si existe) para servirlo
    * a través del backend sin redirigir al bucket. Necesario para la vista
    * previa inline: OBS ignora el override Content-Disposition:inline si el
@@ -335,11 +295,4 @@ async function streamToBuffer(body: unknown): Promise<Buffer> {
     return Buffer.concat(chunks);
   }
   return Buffer.from([]);
-}
-
-function dispositionHeader(downloadName: string): string {
-  const ascii = downloadName
-    .replace(/[^\x20-\x7E]/g, '_')
-    .replace(/[\\"]/g, '_');
-  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`;
 }
