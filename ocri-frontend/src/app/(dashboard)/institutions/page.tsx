@@ -200,14 +200,14 @@ export default function InstitutionsIndexPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre, país o tipo..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
           </div>
           {isAdmin(user) && (
             <button
               type="button"
               onClick={openCreate}
-              className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold-dark text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>Nueva Institución</span>
@@ -220,7 +220,7 @@ export default function InstitutionsIndexPage() {
         <div className="overflow-x-auto min-h-[350px]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#f8f9fa] border-b border-gray-200">
+              <tr className="bg-surface border-b border-gray-200">
                 <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider pl-10">
                   Institución
                 </th>
@@ -242,7 +242,7 @@ export default function InstitutionsIndexPage() {
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+                      <Loader2 className="h-5 w-5 animate-spin text-gold" />
                       <span className="text-sm">Cargando instituciones...</span>
                     </div>
                   </td>
@@ -314,7 +314,7 @@ export default function InstitutionsIndexPage() {
                           <button
                             type="button"
                             onClick={() => openEdit(institution)}
-                            className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
                           >
                             <Pencil className="h-4 w-4" />
                             Editar
@@ -347,7 +347,7 @@ export default function InstitutionsIndexPage() {
         </div>
 
         {data && (
-          <div className="px-10 py-4 bg-[#f8f9fa] border-t border-gray-200">
+          <div className="px-10 py-4 bg-surface border-t border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
               <div className="flex items-center gap-2">
                 <span>Mostrar</span>
@@ -359,7 +359,7 @@ export default function InstitutionsIndexPage() {
                       setPerPage(Number(e.target.value));
                       setPage(1);
                     }}
-                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-gold"
                   >
                     {[12, 24, 48, 100].map((count) => (
                       <option key={count} value={count}>

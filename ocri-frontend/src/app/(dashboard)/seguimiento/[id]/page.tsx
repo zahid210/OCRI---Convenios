@@ -81,7 +81,7 @@ export default function SeguimientoDetailPage({
                 </p>
                 <button
                     onClick={() => router.back()}
-                    className="text-[#0b6e4f] underline"
+                    className="text-primary underline"
                 >
                     Volver
                 </button>
@@ -92,7 +92,7 @@ export default function SeguimientoDetailPage({
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-[#df9f1f]" />
+                <Loader2 className="h-8 w-8 animate-spin text-gold" />
             </div>
         );
     }
@@ -106,7 +106,7 @@ export default function SeguimientoDetailPage({
                 </p>
                 <button
                     onClick={() => router.back()}
-                    className="text-[#0b6e4f] underline"
+                    className="text-primary underline"
                 >
                     Volver
                 </button>
@@ -121,7 +121,7 @@ export default function SeguimientoDetailPage({
             <div className="flex items-center gap-2">
                 <button
                     onClick={() => router.push("/seguimiento")}
-                    className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0b6e4f] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors cursor-pointer"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Volver a Bandeja de Seguimiento

@@ -66,7 +66,7 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="relative min-h-screen w-full flex items-center justify-center bg-[#0b5a41] overflow-hidden font-sans p-6">
+        <main className="relative min-h-screen w-full flex items-center justify-center bg-primary-hover overflow-hidden font-sans p-6">
             {/* Animación de resplandor suave opaco circular moviéndose por todo el background */}
             <div className="absolute -top-40 -left-40 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none animate-[pulse_8s_ease-in-out_infinite]" />
             <div className="absolute -bottom-40 -right-40 w-[30rem] h-[30rem] bg-emerald-400/10 rounded-full blur-3xl pointer-events-none animate-[pulse_10s_ease-in-out_infinite]" />
@@ -77,7 +77,7 @@ export default function LoginPage() {
 
                 {/* Cabecera / Branding */}
                 <div className="space-y-3 text-center mb-8">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center bg-[#0b5a41] text-white font-bold text-base shadow-md">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center bg-primary-hover text-white font-bold text-base shadow-md">
                         OC
                     </div>
                     <div>
@@ -111,7 +111,7 @@ export default function LoginPage() {
                                 placeholder="usuario@uncp.edu.pe"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="pl-9 h-10 rounded-none bg-gray-50 border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-1 focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
+                                className="pl-9 h-10 rounded-none bg-gray-50 border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-1 focus-visible:ring-gold focus-visible:border-gold"
                                 required
                             />
                         </div>
@@ -131,7 +131,7 @@ export default function LoginPage() {
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="pl-9 h-10 rounded-none bg-gray-50 border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-1 focus-visible:ring-[#df9f1f] focus-visible:border-[#df9f1f]"
+                                className="pl-9 h-10 rounded-none bg-gray-50 border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-1 focus-visible:ring-gold focus-visible:border-gold"
                                 required
                             />
                         </div>
@@ -139,7 +139,7 @@ export default function LoginPage() {
 
                     <Button
                         type="submit"
-                        className="w-full h-10 rounded-none font-medium bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors duration-150 flex items-center justify-center gap-2 group mt-2 text-xs"
+                        className="w-full h-10 rounded-none font-medium bg-gold hover:bg-gold-dark text-white transition-colors duration-150 flex items-center justify-center gap-2 group mt-2 text-xs"
                         disabled={loading}
                     >
                         {loading ? (

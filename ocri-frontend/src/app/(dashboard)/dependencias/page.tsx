@@ -196,7 +196,7 @@ export default function DependenciasPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre o código..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
           </div>
           <button
@@ -205,7 +205,7 @@ export default function DependenciasPage() {
               resetForm();
               setShowForm(true);
             }}
-            className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0"
+            className="inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold-dark text-white px-4 py-2 text-sm transition-colors shrink-0"
           >
             <Plus className="h-4 w-4" />
             <span>Nueva Dependencia</span>
@@ -219,7 +219,7 @@ export default function DependenciasPage() {
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="flex justify-center items-center gap-2">
-                <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+                <Loader2 className="h-5 w-5 animate-spin text-gold" />
                 <span className="text-sm text-gray-500">
                   Cargando registros...
                 </span>
@@ -232,7 +232,7 @@ export default function DependenciasPage() {
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#f8f9fa] border-b border-gray-200">
+                <tr className="bg-surface border-b border-gray-200">
                   <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider pl-10">
                     Código
                   </th>
@@ -293,7 +293,7 @@ export default function DependenciasPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEdit(dep)}
-                          className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                          className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                         >
                           <Pencil className="h-4 w-4" />
                           Editar
@@ -324,8 +324,8 @@ export default function DependenciasPage() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white border border-gray-200 shadow-xl max-w-lg w-full mx-4">
-            <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-              <Network className="h-4 w-4 text-[#df9f1f]" />
+            <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+              <Network className="h-4 w-4 text-gold" />
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
                 {editingId ? "Editar Dependencia" : "Nueva Dependencia"}
               </h2>
@@ -339,7 +339,7 @@ export default function DependenciasPage() {
                 <input
                   value={formCode}
                   onChange={(e) => setFormCode(e.target.value)}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   placeholder="Ej: VIC_INV"
                 />
               </div>
@@ -356,7 +356,7 @@ export default function DependenciasPage() {
                           "RECTORADO" | "OCRI" | "UNIDAD_ORGANICA",
                       )
                     }
-                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   >
                     <option value="RECTORADO">Rectorado</option>
                     <option value="OCRI">OCRI</option>
@@ -372,7 +372,7 @@ export default function DependenciasPage() {
                 <input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   placeholder="Nombre completo de la dependencia"
                 />
               </div>
@@ -383,7 +383,7 @@ export default function DependenciasPage() {
                 <input
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   type="email"
                   placeholder="correo@uncp.edu.pe"
                 />
@@ -395,7 +395,7 @@ export default function DependenciasPage() {
                 <input
                   value={formSortOrder}
                   onChange={(e) => setFormSortOrder(Number(e.target.value))}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   type="number"
                 />
               </div>
@@ -416,7 +416,7 @@ export default function DependenciasPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa]">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-surface">
               <button
                 onClick={() => {
                   setShowForm(false);
@@ -429,7 +429,7 @@ export default function DependenciasPage() {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {editingId ? "Guardar Cambios" : "Crear Dependencia"}

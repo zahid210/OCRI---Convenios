@@ -264,7 +264,7 @@ export default function ReportsPage() {
   ];
 
   const filterSelectClass =
-    "appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]";
+    "appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold";
 
   return (
     <div className="space-y-6 pb-12 font-sans text-gray-700">
@@ -282,7 +282,7 @@ export default function ReportsPage() {
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold-dark text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer disabled:opacity-50"
         >
           {exporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -408,7 +408,7 @@ export default function ReportsPage() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 bg-[#094d37] hover:bg-[#073c2c] text-white px-4 py-2 text-sm transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 bg-primary-active hover:bg-primary-deep text-white px-4 py-2 text-sm transition-colors cursor-pointer"
           >
             Aplicar Filtros
           </button>
@@ -417,7 +417,7 @@ export default function ReportsPage() {
 
       {loading ? (
         <div className="flex justify-center items-center py-16 text-gray-500">
-          <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+          <Loader2 className="h-5 w-5 animate-spin text-gold" />
           <span className="ml-2 text-sm">Cargando reportes...</span>
         </div>
       ) : error ? (
@@ -447,7 +447,7 @@ export default function ReportsPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-[#f8f9fa]">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Convenios por Estado
                 </span>
@@ -475,7 +475,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-[#f8f9fa]">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Instituciones con más convenios
                 </span>
@@ -498,7 +498,7 @@ export default function ReportsPage() {
                       </span>
                       <div className="flex-1 bg-gray-100 h-5">
                         <div
-                          className="h-5 bg-[#df9f1f]"
+                          className="h-5 bg-gold"
                           style={{
                             width: `${(row.cantidad / maxInstitutionCount) * 100}%`,
                           }}
@@ -516,7 +516,7 @@ export default function ReportsPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-[#f8f9fa]">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Por País
                 </span>
@@ -537,7 +537,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-[#f8f9fa]">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Por Tipo de Convenio
                 </span>
@@ -551,7 +551,7 @@ export default function ReportsPage() {
                     </span>
                     <div className="flex-1 bg-gray-100 h-5">
                       <div
-                        className="h-5 bg-[#094d37]"
+                        className="h-5 bg-primary-active"
                         style={{
                           width: `${(row.cantidad / maxByType) * 100}%`,
                         }}
@@ -566,7 +566,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-[#f8f9fa]">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Por Institución
                 </span>
@@ -599,7 +599,7 @@ export default function ReportsPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-[#f8f9fa] flex items-center justify-between">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Próximos a Vencer
                 </span>
@@ -609,7 +609,7 @@ export default function ReportsPage() {
               </div>
               <div className="overflow-x-auto max-h-[380px] overflow-y-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-[#f8f9fa]">
+                  <thead className="sticky top-0 bg-surface">
                     <tr className="border-b border-gray-200">
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
                         Código
@@ -663,7 +663,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-[#f8f9fa] flex items-center justify-between">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Vencidos
                 </span>
@@ -673,7 +673,7 @@ export default function ReportsPage() {
               </div>
               <div className="overflow-x-auto max-h-[380px] overflow-y-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-[#f8f9fa]">
+                  <thead className="sticky top-0 bg-surface">
                     <tr className="border-b border-gray-200">
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
                         Código

@@ -28,7 +28,7 @@ export function PagePagination({
 }: PagePaginationProps) {
   return (
     <div
-      className={`px-12 py-4 bg-[#f8f9fa] border-t border-gray-200 ${className ?? ""}`}
+      className={`px-12 py-4 bg-surface border-t border-gray-200 ${className ?? ""}`}
     >
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
         <div className="flex items-center gap-2">
@@ -42,7 +42,7 @@ export function PagePagination({
                     onPerPageChange(Number(e.target.value));
                     onPageChange(1);
                   }}
-                  className="appearance-none w-full bg-white border border-gray-300 pl-3 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
+                  className="appearance-none w-full bg-white border border-gray-300 pl-3 pr-10 py-1 text-xs focus:outline-none focus:border-gold"
                 >
                   {[10, 15, 25, 50, 100].map((count) => (
                     <option key={count} value={count}>

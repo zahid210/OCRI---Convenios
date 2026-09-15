@@ -23,7 +23,7 @@ import {
 const ROLES = ["admin", "procesador", "asistente", "viewer"];
 
 const roleBadgeColors: Record<string, string> = {
-  admin: "bg-[#094d37] text-white border-[#094d37]",
+  admin: "bg-primary-active text-white border-primary-active",
   procesador: "bg-blue-50 text-blue-700 border-blue-200",
   asistente: "bg-amber-50 text-amber-700 border-amber-200",
   viewer: "bg-gray-100 text-gray-600 border-gray-200",
@@ -209,7 +209,7 @@ export default function UsersPage() {
   };
 
   const inputClass =
-    "w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800";
+    "w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800";
 
   return (
     <div className="space-y-6 pb-12 font-sans text-gray-700">
@@ -236,13 +236,13 @@ export default function UsersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre o correo..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
           </div>
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center justify-center gap-2 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold-dark text-white px-4 py-2 text-sm transition-colors shrink-0 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Nuevo Usuario</span>
@@ -254,7 +254,7 @@ export default function UsersPage() {
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#f8f9fa] border-b border-gray-200">
+              <tr className="bg-surface border-b border-gray-200">
                 <th className="py-4 pl-10 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   Usuario
                 </th>
@@ -276,7 +276,7 @@ export default function UsersPage() {
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+                      <Loader2 className="h-5 w-5 animate-spin text-gold" />
                       <span className="text-sm">Cargando usuarios...</span>
                     </div>
                   </td>
@@ -350,7 +350,7 @@ export default function UsersPage() {
                           <button
                             type="button"
                             onClick={() => openEdit(user)}
-                            className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
                           >
                             <Pencil className="h-4 w-4" />
                             Editar
@@ -379,7 +379,7 @@ export default function UsersPage() {
         </div>
 
         {data && (
-          <div className="px-10 py-4 bg-[#f8f9fa] border-t border-gray-200">
+          <div className="px-10 py-4 bg-surface border-t border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
               <div className="flex items-center gap-2">
                 <span>Mostrar</span>
@@ -390,7 +390,7 @@ export default function UsersPage() {
                       setPerPage(Number(e.target.value));
                       setPage(1);
                     }}
-                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-gold"
                   >
                     {[10, 15, 25, 50].map((count) => (
                       <option key={count} value={count}>
@@ -524,7 +524,7 @@ export default function UsersPage() {
                       setForm((f) => ({ ...f, role: e.target.value }))
                     }
                     disabled={editingUser?.id === currentUser?.id}
-                    className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f] disabled:opacity-50"
+                    className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold disabled:opacity-50"
                   >
                     {ROLES.map((role) => (
                       <option key={role} value={role}>
@@ -551,7 +551,7 @@ export default function UsersPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-gold hover:bg-gold-dark text-white disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {saving ? (
                     <>

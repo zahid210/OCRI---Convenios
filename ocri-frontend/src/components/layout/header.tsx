@@ -37,13 +37,13 @@ export function Header() {
 
             {/* Menú Móvil (Sincronizado con el estilo del Sidebar) */}
             <Sheet>
-                <SheetTrigger className={cn(buttonVariants({ variant: "outline", size: "icon" }), "shrink-0 md:hidden rounded-none border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#0b5a41] transition-colors")}>
+                <SheetTrigger className={cn(buttonVariants({ variant: "outline", size: "icon" }), "shrink-0 md:hidden rounded-none border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-primary-hover transition-colors")}>
                     <Menu className="h-5 w-5" />
                     <span className="sr-only">Toggle navigation menu</span>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex w-72 flex-col bg-[#0b5a41] text-white border-r border-[#08422f] p-0 rounded-none shadow-lg">
-                    <div className="flex h-18 items-center gap-3 px-6 border-b border-[#08422f] bg-[#094d37]">
-                        <div className="flex h-10 w-10 items-center justify-center bg-white text-[#0b5a41] font-bold text-sm">
+                <SheetContent side="left" className="flex w-72 flex-col bg-primary-hover text-white border-r border-primary-ink p-0 rounded-none shadow-lg">
+                    <div className="flex h-18 items-center gap-3 px-6 border-b border-primary-ink bg-primary-active">
+                        <div className="flex h-10 w-10 items-center justify-center bg-white text-primary-hover font-bold text-sm">
                             OC
                         </div>
                         <div className="flex flex-col">
@@ -77,12 +77,12 @@ export function Header() {
                     <DropdownMenuTrigger className="flex items-center gap-3 rounded-none focus:outline-none p-1 transition-colors group border border-transparent">
                         {/* Avatar en círculo */}
                         <Avatar className="h-10 w-10 rounded-full border border-gray-200 shadow-sm">
-                            <AvatarFallback className="bg-[#0b5a41] text-white font-bold rounded-full text-sm">
+                            <AvatarFallback className="bg-primary-hover text-white font-bold rounded-full text-sm">
                                 OC
                             </AvatarFallback>
                         </Avatar>
                         <div className="hidden lg:flex flex-col text-left pr-3">
-                            <span className="text-xs font-bold text-gray-800 group-hover:text-[#0b5a41] transition-colors">
+                            <span className="text-xs font-bold text-gray-800 group-hover:text-primary-hover transition-colors">
                                 {currentUser?.name || 'OCRI'}
                             </span>
                             <span className="text-[10px] text-gray-500 font-medium">

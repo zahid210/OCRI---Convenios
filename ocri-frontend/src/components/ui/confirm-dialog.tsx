@@ -51,7 +51,7 @@ function ConfirmDialog({
             <span
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-full",
-                options?.destructive ? "bg-red-100 text-red-600" : "bg-amber-100 text-[#df9f1f]"
+                options?.destructive ? "bg-red-100 text-red-600" : "bg-amber-100 text-gold"
               )}
             >
               <TriangleAlert className="size-5" aria-hidden="true" />
@@ -70,7 +70,7 @@ function ConfirmDialog({
           <div className="mt-5 flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
             <AlertDialog.Close
               onClick={() => onResolve(false)}
-              className="cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-[#df9f1f] focus-visible:outline-none"
+              className="cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
             >
               {options?.cancelLabel ?? "Cancelar"}
             </AlertDialog.Close>
@@ -78,8 +78,8 @@ function ConfirmDialog({
               type="button"
               onClick={() => onResolve(true)}
               className={cn(
-                "cursor-pointer px-4 py-2 text-sm font-semibold text-white transition-colors focus-visible:ring-2 focus-visible:ring-[#df9f1f] focus-visible:outline-none",
-                options?.destructive ? "bg-red-600 hover:bg-red-700" : "bg-[#df9f1f] hover:bg-[#c98e1a]"
+                "cursor-pointer px-4 py-2 text-sm font-semibold text-white transition-colors focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none",
+                options?.destructive ? "bg-red-600 hover:bg-red-700" : "bg-gold hover:bg-gold-dark"
               )}
             >
               {options?.confirmLabel ?? "Confirmar"}

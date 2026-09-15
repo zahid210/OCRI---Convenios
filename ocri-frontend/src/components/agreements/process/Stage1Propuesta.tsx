@@ -607,7 +607,7 @@ export default function Stage1Propuesta({
                   <button
                     onClick={handleGenerateExpediente}
                     disabled={isGeneratingExpediente}
-                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 shrink-0"
+                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 shrink-0"
                   >
                     {isGeneratingExpediente ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -648,7 +648,7 @@ export default function Stage1Propuesta({
                 ) : (
                   <button
                     onClick={() => openGenerateOficioRectoradoModal()}
-                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
                   >
                     <FileText className="h-3.5 w-3.5" />
                     Generar Oficio
@@ -685,7 +685,7 @@ export default function Stage1Propuesta({
                       setUploadTypeCode("PROPUESTA_CONVENIO_FIRMA");
                       setShowUploadModal(true);
                     }}
-                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     Cargar Propuesta (.docx)
@@ -783,7 +783,7 @@ export default function Stage1Propuesta({
                 setSelectedDeps([]);
                 setShowGenerateModal(true);
               }}
-              className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
             >
               <Plus className="h-4 w-4" />
               Solicitar
@@ -810,7 +810,7 @@ export default function Stage1Propuesta({
                         tabIndex={0}
                         aria-expanded={expandedRequest === req.id}
                         aria-controls={`opinion-${req.id}`}
-                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#df9f1f]"
+                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                         onClick={() =>
                           setExpandedRequest(
                             expandedRequest === req.id ? null : req.id,
@@ -857,7 +857,7 @@ export default function Stage1Propuesta({
                                 e.stopPropagation();
                                 openGenerateOficioModal(req.id);
                               }}
-                              className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                             >
                               <FileText className="h-4 w-4" />
                               Generar Oficio
@@ -869,7 +869,7 @@ export default function Stage1Propuesta({
                                 e.stopPropagation();
                                 openRespondModal(req.id);
                               }}
-                              className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                             >
                               <FileText className="h-4 w-4" />
                               Adjuntar Respuesta
@@ -881,7 +881,7 @@ export default function Stage1Propuesta({
                                 e.stopPropagation();
                                 openRespondModal(req.id);
                               }}
-                              className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                             >
                               <FileText className="h-4 w-4" />
                               Adjuntar Corrección
@@ -910,7 +910,7 @@ export default function Stage1Propuesta({
                       {expandedRequest === req.id && (
                         <div
                           id={`opinion-${req.id}`}
-                          className="mt-3 ml-6 p-4 bg-[#f8f9fa] border border-gray-200 text-sm space-y-2"
+                          className="mt-3 ml-6 p-4 bg-surface border border-gray-200 text-sm space-y-2"
                         >
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -972,7 +972,7 @@ export default function Stage1Propuesta({
                         tabIndex={0}
                         aria-expanded={expandedRequest === req.id}
                         aria-controls={`opinion-${req.id}`}
-                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#df9f1f]"
+                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                         onClick={() =>
                           setExpandedRequest(
                             expandedRequest === req.id ? null : req.id,
@@ -1070,7 +1070,7 @@ export default function Stage1Propuesta({
                                 e.stopPropagation();
                                 openRespondModal(req.id);
                               }}
-                              className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                             >
                               <FileText className="h-4 w-4" />
                               Adjuntar Corrección
@@ -1087,7 +1087,7 @@ export default function Stage1Propuesta({
                       {expandedRequest === req.id && (
                         <div
                           id={`opinion-${req.id}`}
-                          className="mt-3 ml-6 p-4 bg-[#f8f9fa] border border-gray-200 text-sm space-y-2"
+                          className="mt-3 ml-6 p-4 bg-surface border border-gray-200 text-sm space-y-2"
                         >
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1170,7 +1170,7 @@ export default function Stage1Propuesta({
           <div className="overflow-x-auto -m-6">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#f8f9fa] border-b border-gray-200">
+                <tr className="bg-surface border-b border-gray-200">
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Nombre
                   </th>
@@ -1214,7 +1214,7 @@ export default function Stage1Propuesta({
                         <button
                           type="button"
                           onClick={() => openFilePreview(doc.file_path)}
-                          className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
                           title="Ver documento"
                         >
                           Ver
@@ -1226,7 +1226,7 @@ export default function Stage1Propuesta({
                       <button
                         type="button"
                         onClick={() => handleDownloadDocument(doc)}
-                        className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
                         title="Descargar documento"
                       >
                         Descargar
@@ -1257,7 +1257,7 @@ export default function Stage1Propuesta({
               <button
                 onClick={handleGenerateRequests}
                 disabled={isGenerating || selectedDeps.length === 0}
-                className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
                 Solicitar ({selectedDeps.length})
@@ -1332,7 +1332,7 @@ export default function Stage1Propuesta({
                   showSendModal !== null && handleGenerateOficio(showSendModal)
                 }
                 disabled={isSending || isLoadingTemplate}
-                className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isSending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <FileText className="h-4 w-4" />
@@ -1350,7 +1350,7 @@ export default function Stage1Propuesta({
                 type="button"
                 onClick={() => setShowOficioEditor(true)}
                 disabled={isLoadingTemplate}
-                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-[#df9f1f] hover:text-[#df9f1f] transition-colors disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
               >
                 {isLoadingTemplate ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1373,7 +1373,7 @@ export default function Stage1Propuesta({
                   <select
                     value={sendVia}
                     onChange={(e) => setSendVia(e.target.value)}
-                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   >
                     <option value="ADESA">ADESA</option>
                     <option value="CORREO">Correo</option>
@@ -1390,7 +1390,7 @@ export default function Stage1Propuesta({
                   <input
                     value={adesaNumber}
                     onChange={(e) => setAdesaNumber(e.target.value)}
-                    className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                    className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                     placeholder="Ej: 355431"
                   />
                 </div>
@@ -1402,7 +1402,7 @@ export default function Stage1Propuesta({
                 <input
                   value={oficioNumber}
                   onChange={(e) => setOficioNumber(e.target.value)}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   placeholder="Ej: 045-2026-OCRI"
                 />
               </div>
@@ -1414,8 +1414,8 @@ export default function Stage1Propuesta({
       {showSendModal !== null && showOficioEditor && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 sm:p-6">
           <div className="bg-white border border-gray-200 shadow-xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden">
-            <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#df9f1f]" />
+            <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gold" />
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
                 Previsualizar y editar oficio
               </h2>
@@ -1436,7 +1436,7 @@ export default function Stage1Propuesta({
                 renderPdf={(html) => previewOficioOpinion(showSendModal, html)}
               />
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa]">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-surface">
               <button
                 onClick={() => setShowOficioEditor(false)}
                 className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
@@ -1467,7 +1467,7 @@ export default function Stage1Propuesta({
               <button
                 onClick={() => handleGenerateOficioRectorado()}
                 disabled={rectoradoSending || rectoradoLoading}
-                className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {rectoradoSending && (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1487,7 +1487,7 @@ export default function Stage1Propuesta({
                 type="button"
                 onClick={() => setShowRectoradoEditor(true)}
                 disabled={rectoradoLoading}
-                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-[#df9f1f] hover:text-[#df9f1f] transition-colors disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
               >
                 {rectoradoLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1509,7 +1509,7 @@ export default function Stage1Propuesta({
                 <input
                   value={rectoradoOficioNumber}
                   onChange={(e) => setRectoradoOficioNumber(e.target.value)}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f]"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   placeholder="Ej: 045-2026-OCRI"
                 />
               </div>
@@ -1521,8 +1521,8 @@ export default function Stage1Propuesta({
       {showRectoradoModal && showRectoradoEditor && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 sm:p-6">
           <div className="bg-white border border-gray-200 shadow-xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden">
-            <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#df9f1f]" />
+            <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gold" />
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
                 Previsualizar y editar oficio a Rectorado
               </h2>
@@ -1542,7 +1542,7 @@ export default function Stage1Propuesta({
                 onChange={setRectoradoHtml}
               />
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa]">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-surface">
               <button
                 onClick={() => setShowRectoradoEditor(false)}
                 className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
@@ -1576,7 +1576,7 @@ export default function Stage1Propuesta({
                   showRespondModal !== null && handleRespond(showRespondModal)
                 }
                 disabled={isResponding || !respondDate || !respondFile}
-                className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isResponding && <Loader2 className="h-4 w-4 animate-spin" />}
                 <FileCheck className="h-4 w-4" />
@@ -1601,7 +1601,7 @@ export default function Stage1Propuesta({
               <input
                 type="file"
                 onChange={(e) => setRespondFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-[#df9f1f]"
+                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
               />
               {respondFile && (
                 <p className="mt-1 text-xs text-gray-500 truncate">
@@ -1617,7 +1617,7 @@ export default function Stage1Propuesta({
                 type="date"
                 value={respondDate}
                 onChange={(e) => setRespondDate(e.target.value)}
-                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
               />
             </div>
             <div>
@@ -1628,7 +1628,7 @@ export default function Stage1Propuesta({
                 value={respondObs}
                 onChange={(e) => setRespondObs(e.target.value)}
                 rows={3}
-                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
+                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
                 placeholder="Observaciones de la dependencia (opcional)..."
               />
             </div>
@@ -1685,7 +1685,7 @@ export default function Stage1Propuesta({
                   value={validateObs}
                   onChange={(e) => setValidateObs(e.target.value)}
                   rows={3}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
                   placeholder="Describa las observaciones..."
                 />
               </div>
@@ -1717,7 +1717,7 @@ export default function Stage1Propuesta({
               <button
                 onClick={handleUploadDocument}
                 disabled={isUploading || !uploadFile}
-                className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Upload className="h-4 w-4" />
@@ -1739,7 +1739,7 @@ export default function Stage1Propuesta({
                       setUploadTypeCode(e.target.value);
                       setUploadFile(null);
                     }}
-                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   >
                     {Object.entries(DOCUMENT_TYPE_LABELS).map(
                       ([code, label]) => (
@@ -1761,7 +1761,7 @@ export default function Stage1Propuesta({
                 type="file"
                 accept={DOC_TYPE_ACCEPT[uploadTypeCode] || undefined}
                 onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-[#df9f1f]"
+                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
               />
               {uploadFile && (
                 <p className="mt-1 text-xs text-gray-500 truncate">

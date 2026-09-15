@@ -57,7 +57,7 @@ export default function RegistroDetailPage({
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <AlertTriangle className="h-12 w-12 text-red-500" />
                 <p className="text-red-600">Identificador de registro inválido.</p>
-                <button onClick={() => router.back()} className="text-[#0b6e4f] underline">
+                <button onClick={() => router.back()} className="text-primary underline">
                     Volver
                 </button>
             </div>
@@ -67,7 +67,7 @@ export default function RegistroDetailPage({
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-[#df9f1f]" />
+                <Loader2 className="h-8 w-8 animate-spin text-gold" />
             </div>
         );
     }
@@ -77,7 +77,7 @@ export default function RegistroDetailPage({
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <AlertTriangle className="h-12 w-12 text-red-500" />
                 <p className="text-red-600">{error || 'No se pudo cargar el registro'}</p>
-                <button onClick={() => router.back()} className="text-[#0b6e4f] underline">
+                <button onClick={() => router.back()} className="text-primary underline">
                     Volver
                 </button>
             </div>
@@ -91,7 +91,7 @@ export default function RegistroDetailPage({
             <div className="flex items-center gap-2">
                 <button
                     onClick={() => router.push('/registro')}
-                    className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0b6e4f] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors cursor-pointer"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Volver a Bandeja de Registro
@@ -101,7 +101,7 @@ export default function RegistroDetailPage({
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="space-y-1">
                         <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2 min-w-0" title={agreement.title}>
-                            <Clock className="h-5 w-5 text-[#df9f1f] shrink-0" />
+                            <Clock className="h-5 w-5 text-gold shrink-0" />
                             <span className="line-clamp-2">{agreement.title}</span>
                         </h1>
                         <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
@@ -125,7 +125,7 @@ export default function RegistroDetailPage({
                             className={`inline-flex items-center px-2.5 py-0.5 text-xs border font-semibold ${
                                 agreement.process_status === 'ENVIADO_A_RECTORADO'
                                     ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-[#0b6e4f] text-white border-[#0b6e4f]'
+                                    : 'bg-primary text-white border-primary'
                             }`}
                         >
                             {agreement.process_status === 'ENVIADO_A_RECTORADO'

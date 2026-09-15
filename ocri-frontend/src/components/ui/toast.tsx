@@ -31,9 +31,9 @@ function useToastContext() {
 }
 
 const VARIANT_STYLE: Record<ToastVariant, { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; rootClass: string }> = {
-  success: { icon: CheckCircle2, rootClass: "bg-[#0b6e4f]" },
+  success: { icon: CheckCircle2, rootClass: "bg-primary" },
   error: { icon: CircleAlert, rootClass: "bg-red-600" },
-  warning: { icon: TriangleAlert, rootClass: "bg-[#df9f1f]" },
+  warning: { icon: TriangleAlert, rootClass: "bg-gold" },
   info: { icon: Info, rootClass: "bg-sky-600" },
 }
 

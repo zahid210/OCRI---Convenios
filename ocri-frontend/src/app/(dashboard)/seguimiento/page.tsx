@@ -38,7 +38,7 @@ const ENTREGABLE_COLORS: Record<string, string> = {
 
 const progressColor = (p: number) => {
   if (p >= 100) return "bg-green-600";
-  if (p >= 50) return "bg-[#df9f1f]";
+  if (p >= 50) return "bg-gold";
   return "bg-red-500";
 };
 
@@ -126,12 +126,12 @@ export default function SeguimientoPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por expediente, institución o título..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
           </div>
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 bg-[#094d37] hover:bg-[#073c2c] text-white px-4 py-2 text-sm transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 bg-primary-active hover:bg-primary-deep text-white px-4 py-2 text-sm transition-colors cursor-pointer"
           >
             Buscar
           </button>
@@ -142,7 +142,7 @@ export default function SeguimientoPage() {
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#f8f9fa] border-b border-gray-200">
+              <tr className="bg-surface border-b border-gray-200">
                 <th className="py-4 px-5 w-[30%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   Título / Código
                 </th>
@@ -167,7 +167,7 @@ export default function SeguimientoPage() {
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+                      <Loader2 className="h-5 w-5 animate-spin text-gold" />
                       <span className="text-sm">Cargando seguimiento...</span>
                     </div>
                   </td>
@@ -240,7 +240,7 @@ export default function SeguimientoPage() {
                                 {row.titulo}
                               </div>
                               {row.tramite_code && (
-                                <div className="text-[11px] font-mono text-[#0b5a41] font-semibold">
+                                <div className="text-[11px] font-mono text-primary-hover font-semibold">
                                   {row.tramite_code}
                                 </div>
                               )}
@@ -306,7 +306,7 @@ export default function SeguimientoPage() {
                           <div className="flex items-center justify-end gap-2">
                             <Link
                               href={`/seguimiento/${row.id}`}
-                              className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                             >
                               <Eye className="h-4 w-4" />
                               Ver Seguimiento
@@ -315,7 +315,7 @@ export default function SeguimientoPage() {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr className="bg-[#fcfbf7]">
+                        <tr className="bg-surface-warm">
                           <td colSpan={6} className="px-10 py-4">
                             {historicoConcluido ? (
                               <p className="text-sm text-green-700">
@@ -378,7 +378,7 @@ export default function SeguimientoPage() {
         </div>
 
         {data && (
-          <div className="px-10 py-4 bg-[#f8f9fa] border-t border-gray-200">
+          <div className="px-10 py-4 bg-surface border-t border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
               <div className="flex items-center gap-2">
                 <span>Mostrar</span>
@@ -389,7 +389,7 @@ export default function SeguimientoPage() {
                       setPerPage(Number(e.target.value));
                       setPage(1);
                     }}
-                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-gold"
                   >
                     {[10, 15, 25, 50].map((count) => (
                       <option key={count} value={count}>

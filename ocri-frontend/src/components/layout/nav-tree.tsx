@@ -219,13 +219,13 @@ export function NavTree() {
                         <button
                             type="button"
                             onClick={() => toggleGroup(group.title)}
-                            className="flex w-full items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-[#094d37] hover:text-white transition-all cursor-pointer"
+                            className="flex w-full items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-300 border-l-4 border-transparent hover:bg-primary-active hover:text-white transition-all cursor-pointer"
                         >
-                            <group.icon className="h-4 w-4 text-[#82b8a2]" />
+                            <group.icon className="h-4 w-4 text-primary-soft" />
                             <span className="flex-1 text-left">{group.title}</span>
                             <ChevronDown
                                 className={cn(
-                                    'h-4 w-4 text-[#82b8a2] transition-transform duration-150',
+                                    'h-4 w-4 text-primary-soft transition-transform duration-150',
                                     open && 'rotate-180',
                                 )}
                             />
@@ -237,7 +237,7 @@ export function NavTree() {
                                         return (
                                             <div
                                                 key={`div-${idx}`}
-                                                className="mx-6 my-1.5 h-px bg-[#0f6b4e]"
+                                                className="mx-6 my-1.5 h-px bg-primary"
                                             />
                                         );
                                     }
@@ -245,7 +245,7 @@ export function NavTree() {
                                         return (
                                             <div
                                                 key={branch.label}
-                                                className="border-l-4 border-[#0f6b4e] px-[26px] pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider text-[#82b8a2]"
+                                                className="border-l-4 border-primary px-[26px] pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider text-primary-soft"
                                             >
                                                 {branch.label}
                                             </div>
@@ -259,16 +259,16 @@ export function NavTree() {
                                             className={cn(
                                                 'flex items-center gap-3 border-l-4 py-2 pl-10 pr-6 text-[13px] font-medium transition-all duration-150',
                                                 isActive
-                                                    ? 'border-[#df9f1f] bg-[#08422f] text-white'
-                                                    : 'border-[#0f6b4e] text-gray-400 hover:bg-[#094d37] hover:text-white',
+                                                    ? 'border-gold bg-primary-ink text-white'
+                                                    : 'border-primary text-gray-400 hover:bg-primary-active hover:text-white',
                                             )}
                                         >
                                             <branch.icon
                                                 className={cn(
                                                     'h-3.5 w-3.5',
                                                     isActive
-                                                        ? 'text-[#df9f1f]'
-                                                        : 'text-[#82b8a2]',
+                                                        ? 'text-gold'
+                                                        : 'text-primary-soft',
                                                 )}
                                             />
                                             <span>{branch.title}</span>

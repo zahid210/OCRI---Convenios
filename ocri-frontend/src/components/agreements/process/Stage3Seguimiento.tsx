@@ -91,7 +91,7 @@ function DeliverableCard({
         tabIndex={0}
         aria-expanded={expanded}
         aria-controls={`deliverable-${deliverable.id}`}
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#df9f1f]"
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
         onClick={() => setExpanded(!expanded)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -150,7 +150,7 @@ function DeliverableCard({
                   <button
                     type="button"
                     onClick={() => openFilePreview(doc.file_path)}
-                    className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline shrink-0"
+                    className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
                     title="Ver documento"
                   >
                     Ver
@@ -159,7 +159,7 @@ function DeliverableCard({
                   <button
                     type="button"
                     onClick={() => handleDownloadDocument(doc)}
-                    className="inline-flex items-center gap-1 text-[#0b6e4f] hover:underline shrink-0"
+                    className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
                     title="Descargar documento"
                   >
                     Descargar
@@ -417,7 +417,7 @@ export default function Stage3Seguimiento({
 
       {isLoadingDeliverables ? (
         <div className="py-8 text-center">
-          <Loader2 className="h-6 w-6 animate-spin text-[#df9f1f] mx-auto" />
+          <Loader2 className="h-6 w-6 animate-spin text-gold mx-auto" />
         </div>
       ) : deliverables.length === 0 ? (
         <div className="py-12 text-center text-sm text-gray-500">
@@ -478,7 +478,7 @@ export default function Stage3Seguimiento({
                         e.target.value as "INFORME_SEMESTRAL" | "INFORME_FINAL",
                       )
                     }
-                    className="appearance-none border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   >
                     <option value="INFORME_SEMESTRAL">Informe Semestral</option>
                     <option value="INFORME_FINAL">Informe Final</option>
@@ -490,13 +490,13 @@ export default function Stage3Seguimiento({
                     value={reportPeriod}
                     onChange={(e) => setReportPeriod(e.target.value)}
                     placeholder="Periodo (ej: 2026-I)"
-                    className="border border-gray-300 px-3 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] w-40"
+                    className="border border-gray-300 px-3 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold w-40"
                   />
                 )}
                 <button
                   onClick={handleRequestReport}
                   disabled={isRequestingReport}
-                  className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
                 >
                   {isRequestingReport ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -588,7 +588,7 @@ export default function Stage3Seguimiento({
                   value={evaluateObs}
                   onChange={(e) => setEvaluateObs(e.target.value)}
                   rows={3}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
                   placeholder="Describa las observaciones..."
                 />
               </div>

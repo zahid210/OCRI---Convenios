@@ -160,7 +160,7 @@ export default function InstitutionModal({
               value={name}
               onChange={(e) => setName(e.target.value.toUpperCase())}
               placeholder="EJ. UNIVERSIDAD NACIONAL DE INGENIERÍA"
-              className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+              className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
             />
           </div>
 
@@ -185,7 +185,7 @@ export default function InstitutionModal({
                 <select
                   value={selectedCountry}
                   onChange={(e) => setSelectedCountry(e.target.value)}
-                  className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                  className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
                 >
                   {countries.map((c) => (
                     <option key={c} value={c}>
@@ -202,7 +202,7 @@ export default function InstitutionModal({
                 value={customCountry}
                 onChange={(e) => setCustomCountry(e.target.value.toUpperCase())}
                 placeholder="EJ. ARGENTINA"
-                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
               />
             )}
           </div>
@@ -215,7 +215,7 @@ export default function InstitutionModal({
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                className="appearance-none w-full h-10 pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
               >
                 <option value="Universidad Nacional">
                   Universidad Nacional
@@ -244,7 +244,7 @@ export default function InstitutionModal({
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-gold hover:bg-gold-dark text-white disabled:opacity-50 transition-colors cursor-pointer"
             >
               {loading ? (
                 <>

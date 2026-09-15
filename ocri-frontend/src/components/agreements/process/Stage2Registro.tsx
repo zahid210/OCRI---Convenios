@@ -287,7 +287,7 @@ export default function Stage2Registro({
                                         setPublishFile(null);
                                         setShowPublishModal(true);
                                     }}
-                                    className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                                 >
                                     <FileCheck className="h-4 w-4" />
                                     Publicar Convenio
@@ -297,7 +297,7 @@ export default function Stage2Registro({
                                 <button
                                     onClick={handleStartSeguimiento}
                                     disabled={isStartingSeguimiento}
-                                    className="inline-flex items-center gap-1.5 bg-[#0b6e4f] hover:bg-[#095a41] text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
                                 >
                                     {isStartingSeguimiento ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -324,7 +324,7 @@ export default function Stage2Registro({
                 )}
 
                 {decision === 'APPROVED' && processStatus === 'SUSCRITO' && (
-                    <div className="mb-6 bg-[#eefaf4] border border-[#b5e3d0] p-4 text-sm text-[#0b6e4f] flex items-start gap-2">
+                    <div className="mb-6 bg-primary-wash border border-primary-tint p-4 text-sm text-primary flex items-start gap-2">
                         <div>
                             <p className="font-semibold">
                                 Rectorado aprobó
@@ -339,7 +339,7 @@ export default function Stage2Registro({
                 )}
 
                 {processStatus === 'PUBLICADO' && (
-                    <div className="mb-6 bg-[#f0fbf6] border border-[#b5e3d0] p-4 text-sm text-[#0b6e4f] flex items-start gap-2">
+                    <div className="mb-6 bg-primary-wash border border-primary-tint p-4 text-sm text-primary flex items-start gap-2">
                         <div>
                             <p className="font-semibold">Convenio publicado</p>
                             <p className="mt-1 text-xs">
@@ -483,7 +483,7 @@ export default function Stage2Registro({
                                 value={rejectMessage}
                                 onChange={(e) => setRejectMessage(e.target.value)}
                                 rows={3}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
+                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
                                 placeholder="Motivo del rechazo para la Entidad Solicitante..."
                             />
                         </div>
@@ -506,7 +506,7 @@ export default function Stage2Registro({
                             <button
                                 onClick={handlePublish}
                                 disabled={isPublishing}
-                                className="px-4 py-2 text-sm bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
                             >
                                 {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
                                 <FileCheck className="h-4 w-4" />
@@ -528,7 +528,7 @@ export default function Stage2Registro({
                             <input
                                 type="file"
                                 onChange={(e) => setPublishFile(e.target.files?.[0] ?? null)}
-                                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-[#df9f1f]"
+                                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
                             />
                             {publishFile && (
                                 <p className="mt-1 text-xs text-gray-500 truncate">
@@ -591,7 +591,7 @@ export default function Stage2Registro({
                                         ? `Código del convenio: ${tramiteCode}`
                                         : 'EJ: R.R. N° 0124-2026-UNCP'
                                 }
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f] uppercase"
+                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold uppercase"
                             />
                             {tramiteCode && (
                                 <p className="text-xs text-gray-400 mt-1">
@@ -614,7 +614,7 @@ export default function Stage2Registro({
                                         type="date"
                                         value={regStartDate}
                                         onChange={(e) => setRegStartDate(e.target.value)}
-                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                                     />
                                 </div>
                                 <div>
@@ -625,7 +625,7 @@ export default function Stage2Registro({
                                         type="date"
                                         value={regEndDate}
                                         onChange={(e) => setRegEndDate(e.target.value)}
-                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                                     />
                                 </div>
                             </div>
@@ -672,7 +672,7 @@ export default function Stage2Registro({
                                                 onChange={(e) =>
                                                     updateResponsable(idx, { name: e.target.value })
                                                 }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
                                                 placeholder="Nombre completo"
                                             />
                                         </div>
@@ -685,7 +685,7 @@ export default function Stage2Registro({
                                                 onChange={(e) =>
                                                     updateResponsable(idx, { role: e.target.value })
                                                 }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
                                                 placeholder="Coordinador"
                                             />
                                         </div>
@@ -701,7 +701,7 @@ export default function Stage2Registro({
                                                             side: e.target.value as 'UNCP' | 'CONTRAPARTE',
                                                         })
                                                     }
-                                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
                                                 >
                                                     <option value="UNCP">UNCP</option>
                                                     <option value="CONTRAPARTE">Contraparte</option>
@@ -721,7 +721,7 @@ export default function Stage2Registro({
                                                         email: e.target.value,
                                                     })
                                                 }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
                                             />
                                         </div>
                                         <div className="col-span-3 sm:col-span-2">
@@ -735,7 +735,7 @@ export default function Stage2Registro({
                                                         phone: e.target.value,
                                                     })
                                                 }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
                                             />
                                         </div>
                                         <div className="col-span-4 sm:col-span-1">
@@ -769,7 +769,7 @@ export default function Stage2Registro({
                                             { ...EMPTY_RESPONSABLE },
                                         ])
                                     }
-                                    className="text-xs text-[#df9f1f] hover:underline flex items-center gap-1"
+                                    className="text-xs text-gold hover:underline flex items-center gap-1"
                                 >
                                     <Plus className="h-3 w-3" /> Agregar responsable
                                 </button>
@@ -784,7 +784,7 @@ export default function Stage2Registro({
                                 value={regObservations}
                                 onChange={(e) => setRegObservations(e.target.value)}
                                 rows={2}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#df9f1f] resize-none"
+                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
                                 placeholder="Observaciones del registro (opcional)..."
                             />
                         </div>

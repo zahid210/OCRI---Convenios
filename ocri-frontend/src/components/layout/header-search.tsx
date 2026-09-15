@@ -140,7 +140,7 @@ export function HeaderSearch() {
             if (e.key === "Escape") setOpen(false);
           }}
           placeholder="Buscar expedientes, convenios..."
-          className="w-full h-10 pl-10 pr-9 rounded-none bg-gray-50 border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#df9f1f] focus:ring-1 focus:ring-[#df9f1f] focus:bg-white transition-all"
+          className="w-full h-10 pl-10 pr-9 rounded-none bg-gray-50 border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold focus:bg-white transition-all"
           aria-label="Buscar convenios e instituciones"
         />
         {query && !loading && (
@@ -157,7 +157,7 @@ export function HeaderSearch() {
           </button>
         )}
         {loading && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[#df9f1f]" />
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gold" />
         )}
       </div>
 

@@ -132,7 +132,7 @@ export default function ConveniosPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Resolución, título, institución..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 placeholder-gray-400"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
           </div>
         </form>
@@ -186,7 +186,7 @@ export default function ConveniosPage() {
         <div className="overflow-x-auto min-h-[350px]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#f8f9fa] border-b border-gray-200">
+              <tr className="bg-surface border-b border-gray-200">
                 <th className="py-4 px-5 w-[34%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   <span className="ml-10">Título / Código</span>
                 </th>
@@ -211,7 +211,7 @@ export default function ConveniosPage() {
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+                      <Loader2 className="h-5 w-5 animate-spin text-gold" />
                       <span className="text-sm">Cargando registros...</span>
                     </div>
                   </td>
@@ -257,7 +257,7 @@ export default function ConveniosPage() {
                               {item.title || `Convenio #${item.id}`}
                             </div>
                             {item.tramite_code && (
-                              <div className="text-[11px] font-mono text-[#0b5a41] font-semibold">
+                              <div className="text-[11px] font-mono text-primary-hover font-semibold">
                                 {item.tramite_code}
                               </div>
                             )}
@@ -320,7 +320,7 @@ export default function ConveniosPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/convenios/${item.id}`}
-                            className="inline-flex items-center gap-1.5 bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-3 py-1.5 text-sm transition-colors"
+                            className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Eye className="h-4 w-4" />

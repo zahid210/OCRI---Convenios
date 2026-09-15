@@ -174,12 +174,12 @@ export function HeaderNotifications() {
           setOpen(next);
           if (next) load({ silent: true, epoch: mutationEpochRef.current });
         }}
-        className="relative cursor-pointer border border-transparent p-2.5 text-gray-600 transition-colors hover:text-[#0b5a41]"
+        className="relative cursor-pointer border border-transparent p-2.5 text-gray-600 transition-colors hover:text-primary-hover"
         aria-label={`Notificaciones (${total})`}
       >
         <Bell className="h-4 w-4" />
         {total > 0 && (
-          <span className="absolute right-1 top-1 flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#df9f1f] px-0.5 text-[9px] font-bold text-white ring-2 ring-white">
+          <span className="absolute right-1 top-1 flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-gold px-0.5 text-[9px] font-bold text-white ring-2 ring-white">
             {badge}
           </span>
         )}
@@ -197,26 +197,26 @@ export function HeaderNotifications() {
                   type="button"
                   onClick={resetRead}
                   disabled={acknowledging}
-                  className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 transition-colors hover:text-[#0b5a41] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 transition-colors hover:text-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <RotateCcw className="h-3 w-3" />
                   Restablecer
                 </button>
               )}
               {total > 0 && (
-                <span className="text-[10px] font-semibold text-[#df9f1f]">
+                <span className="text-[10px] font-semibold text-gold">
                   {total} pendiente(s)
                 </span>
               )}
               {acknowledging && (
-                <Loader2 className="h-3 w-3 animate-spin text-[#0b5a41]" />
+                <Loader2 className="h-3 w-3 animate-spin text-primary-hover" />
               )}
             </div>
           </div>
 
           {loading && !data ? (
             <div className="flex items-center justify-center gap-2 py-8 text-xs text-gray-500">
-              <Loader2 className="h-4 w-4 animate-spin text-[#df9f1f]" />
+              <Loader2 className="h-4 w-4 animate-spin text-gold" />
               <span>Cargando...</span>
             </div>
           ) : error ? (
@@ -269,7 +269,7 @@ export function HeaderNotifications() {
                       aria-label="Marcar como leída"
                       onClick={() => acknowledge([n.id])}
                       disabled={acknowledging}
-                      className="mt-0.5 shrink-0 rounded-none border border-[#0b5a41]/30 bg-[#0b5a41]/5 p-1 text-[#0b5a41] transition-colors hover:bg-[#0b5a41] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="mt-0.5 shrink-0 rounded-none border border-primary-hover/30 bg-primary-hover/5 p-1 text-primary-hover transition-colors hover:bg-primary-hover hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <CheckCheck className="h-3.5 w-3.5" />
                     </button>

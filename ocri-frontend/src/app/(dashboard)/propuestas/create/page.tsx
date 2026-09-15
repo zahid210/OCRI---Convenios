@@ -330,7 +330,7 @@ export default function CreatePropuestaPage() {
   if (loading) {
     return (
       <div className="flex h-64 w-full items-center justify-center gap-3 text-sm text-gray-500">
-        <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+        <Loader2 className="h-5 w-5 animate-spin text-gold" />
         <span>Cargando formulario...</span>
       </div>
     );
@@ -361,9 +361,9 @@ export default function CreatePropuestaPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FolderInput className="h-4 w-4 text-[#df9f1f]" />
+              <FolderInput className="h-4 w-4 text-gold" />
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
                 Datos Generales
               </h2>
@@ -386,7 +386,7 @@ export default function CreatePropuestaPage() {
                     value={rectorateOficioNumber}
                     onChange={(e) => setRectorateOficioNumber(e.target.value)}
                     placeholder="EJ: DICTAMEN N° 02236-2024-R-UNCP"
-                    className="flex-1 px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                    className="flex-1 px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
                   />
                   <input
                     ref={dictamenInputRef}
@@ -402,7 +402,7 @@ export default function CreatePropuestaPage() {
                     className={cn(
                       "inline-flex items-center gap-1.5 px-3 py-2 text-sm border transition-colors shrink-0 cursor-pointer",
                       dictamenFile
-                        ? "border-[#0b6e4f] text-[#0b6e4f] bg-[#0b6e4f]/5 hover:bg-[#0b6e4f]/10"
+                        ? "border-primary text-primary bg-primary/5 hover:bg-primary/10"
                         : "border-red-300 text-red-600 bg-red-50 hover:bg-red-100",
                     )}
                   >
@@ -422,7 +422,7 @@ export default function CreatePropuestaPage() {
                       required
                       value={institutionId}
                       onChange={(e) => setInstitutionId(e.target.value)}
-                      className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                      className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
                     >
                       {institutions.map((inst) => (
                         <option key={`inst-create-${inst.id}`} value={inst.id}>
@@ -435,7 +435,7 @@ export default function CreatePropuestaPage() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(true)}
-                    className="h-10 px-3 bg-[#df9f1f] hover:bg-[#c98e1a] text-white flex items-center justify-center gap-1.5 text-sm transition-colors shrink-0 cursor-pointer"
+                    className="h-10 px-3 bg-gold hover:bg-gold-dark text-white flex items-center justify-center gap-1.5 text-sm transition-colors shrink-0 cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                     Registrar
@@ -454,7 +454,7 @@ export default function CreatePropuestaPage() {
                   <Eye className="h-3.5 w-3.5" />
                   Visualizar
                 </button>
-                <span className="text-[#0b6e4f] font-medium truncate max-w-[220px]">
+                <span className="text-primary font-medium truncate max-w-[220px]">
                   {dictamenFile.name}
                 </span>
                 <button
@@ -478,7 +478,7 @@ export default function CreatePropuestaPage() {
                   value={applicantUnit}
                   onChange={(e) => setApplicantUnit(e.target.value)}
                   placeholder="EJ: FACULTAD DE INGENIERÍA / DIRECCIÓN DE RELACIONES INSTITUCIONALES"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
               </div>
 
@@ -492,7 +492,7 @@ export default function CreatePropuestaPage() {
                     required
                     value={agreementTypeId}
                     onChange={(e) => setAgreementTypeId(e.target.value)}
-                    className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
                   >
                     {types.map((type) => (
                       <option key={`type-${type.id}`} value={type.id}>
@@ -515,7 +515,7 @@ export default function CreatePropuestaPage() {
                   value={applicantName}
                   onChange={(e) => setApplicantName(e.target.value)}
                   placeholder="EJ: DR. CARLOS ALARCÓN (RECTOR / DIRECTOR)"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
                 />
               </div>
 
@@ -528,7 +528,7 @@ export default function CreatePropuestaPage() {
                   value={applicantEmail}
                   onChange={(e) => setApplicantEmail(e.target.value)}
                   placeholder="contacto@institucion.edu.pe"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800"
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
                 />
               </div>
             </div>
@@ -536,8 +536,8 @@ export default function CreatePropuestaPage() {
         </div>
 
         <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-            <Tag className="h-4 w-4 text-[#df9f1f]" />
+          <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+            <Tag className="h-4 w-4 text-gold" />
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
               Objeto de la Propuesta de Convenio
             </h2>
@@ -555,7 +555,7 @@ export default function CreatePropuestaPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="EJ: PROPUESTA CONVENIO MARCO UNCP - ESSALUD"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
               </div>
 
@@ -569,7 +569,7 @@ export default function CreatePropuestaPage() {
                   value={tramiteCode}
                   onChange={(e) => setTramiteCode(e.target.value)}
                   placeholder="EJ: 001-2026"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
                 <p className="text-xs text-gray-400">
                   Código único del convenio. Será también el n° de resolución.
@@ -586,15 +586,15 @@ export default function CreatePropuestaPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="DESCRIPCIÓN DEL PROPÓSITO DEL CONVENIO, ÁREAS DE COOPERACIÓN, MOVILIDAD ACADÉMICA, INVESTIGACIÓN CONJUNTA..."
-                className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase resize-none"
+                className="w-full p-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase resize-none"
               />
             </div>
           </div>
         </div>
 
         <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-            <Paperclip className="h-4 w-4 text-[#df9f1f]" />
+          <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
+            <Paperclip className="h-4 w-4 text-gold" />
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
               Documentos de Origen
             </h2>
@@ -618,8 +618,8 @@ export default function CreatePropuestaPage() {
               onClick={() => origenInputRef.current?.click()}
               className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed transition-colors cursor-pointer px-6 py-12 text-center ${
                 isDraggingOrigen
-                  ? "border-[#df9f1f] bg-amber-50"
-                  : "border-gray-300 bg-gray-50 hover:border-[#df9f1f] hover:bg-amber-50/40"
+                  ? "border-gold bg-amber-50"
+                  : "border-gray-300 bg-gray-50 hover:border-gold hover:bg-amber-50/40"
               }`}
             >
               <input
@@ -630,7 +630,7 @@ export default function CreatePropuestaPage() {
                 onChange={handleOrigenChange}
                 className="hidden"
               />
-              <div className="p-3 rounded-full bg-amber-100 text-[#df9f1f]">
+              <div className="p-3 rounded-full bg-amber-100 text-gold">
                 <UploadCloud className="h-8 w-8" />
               </div>
               <p className="text-sm font-semibold text-gray-700">
@@ -692,7 +692,7 @@ export default function CreatePropuestaPage() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white transition-colors disabled:opacity-60 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-60 cursor-pointer"
           >
             {saving ? (
               <>
@@ -742,7 +742,7 @@ export default function CreatePropuestaPage() {
                   value={newInstName}
                   onChange={(e) => setNewInstName(e.target.value)}
                   placeholder="Ej. UNIVERSIDAD NACIONAL DE INGENIERÍA"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
               </div>
 
@@ -767,7 +767,7 @@ export default function CreatePropuestaPage() {
                     <select
                       value={selectedCountry}
                       onChange={(e) => setSelectedCountry(e.target.value)}
-                      className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                      className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
                     >
                       {countries.map((c) => (
                         <option key={c} value={c}>
@@ -784,7 +784,7 @@ export default function CreatePropuestaPage() {
                     value={customCountry}
                     onChange={(e) => setCustomCountry(e.target.value)}
                     placeholder="Ej. ARGENTINA"
-                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-[#df9f1f] text-gray-800 uppercase"
+                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                   />
                 )}
               </div>
@@ -798,7 +798,7 @@ export default function CreatePropuestaPage() {
                     required
                     value={newInstType}
                     onChange={(e) => setNewInstType(e.target.value)}
-                    className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-[#df9f1f]"
+                    className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
                   >
                     <option value="Universidad Nacional">
                       Universidad Nacional
@@ -829,7 +829,7 @@ export default function CreatePropuestaPage() {
                 <button
                   type="submit"
                   disabled={savingInst}
-                  className="px-4 py-2 text-xs font-semibold bg-[#df9f1f] hover:bg-[#c98e1a] text-white disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold bg-gold hover:bg-gold-dark text-white disabled:opacity-50 cursor-pointer"
                 >
                   {savingInst ? "Guardando..." : "Guardar y Seleccionar"}
                 </button>
@@ -844,7 +844,7 @@ export default function CreatePropuestaPage() {
           <div className="bg-white border border-gray-200 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-xl">
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
               <div className="flex items-center gap-2 min-w-0">
-                <Gavel className="h-4 w-4 text-[#df9f1f] shrink-0" />
+                <Gavel className="h-4 w-4 text-gold shrink-0" />
                 <h3 className="text-sm font-semibold text-gray-800 truncate">
                   Vista Previa del Dictamen
                 </h3>

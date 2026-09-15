@@ -178,7 +178,7 @@ export default function DashboardPage() {
           <div className="overflow-x-auto flex-1 p-4">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#f8f9fa] border-y border-gray-200">
+                <tr className="bg-surface border-y border-gray-200">
                   <th className="py-3 px-4 text-sm font-medium text-gray-600">
                     Código
                   </th>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-gray-500">
                       <div className="flex justify-center items-center gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin text-[#df9f1f]" />
+                        <Loader2 className="h-5 w-5 animate-spin text-gold" />
                         <span className="text-sm">Cargando registros...</span>
                       </div>
                     </td>
@@ -275,7 +275,7 @@ export default function DashboardPage() {
                             className={`inline-block px-2 py-1 text-xs border font-medium ${
                               isProposal
                                 ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : "bg-[#0b6e4f] text-white border-[#0b6e4f]"
+                                : "bg-primary text-white border-primary"
                             }`}
                           >
                             {isProposal ? "Propuesta" : "Convenio"}
@@ -314,7 +314,7 @@ export default function DashboardPage() {
               {canCreate(user) && (
                 <Link
                   href="/propuestas/create"
-                  className="flex items-center justify-center gap-2 w-full bg-[#df9f1f] hover:bg-[#c98e1a] text-white px-4 py-2.5 text-sm transition-colors"
+                  className="flex items-center justify-center gap-2 w-full bg-gold hover:bg-gold-dark text-white px-4 py-2.5 text-sm transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Nueva Propuesta</span>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
                     Trámite Documentario
                   </span>
                 </div>
-                <ExternalLink className="h-3 w-3 text-gray-400 group-hover:text-[#df9f1f] transition-colors" />
+                <ExternalLink className="h-3 w-3 text-gray-400 group-hover:text-gold transition-colors" />
               </a>
 
               {/* Enlace Excel en OneDrive */}
@@ -379,7 +379,7 @@ export default function DashboardPage() {
                     Excel en OneDrive
                   </span>
                 </div>
-                <ExternalLink className="h-3 w-3 text-gray-400 group-hover:text-[#df9f1f] transition-colors" />
+                <ExternalLink className="h-3 w-3 text-gray-400 group-hover:text-gold transition-colors" />
               </a>
             </div>
           </div>

@@ -192,7 +192,7 @@ export function FlowTimeline({ current }: { current: ProcessStatus }) {
                 const dotCls = isRejectedNode
                     ? 'bg-red-500 ring-4 ring-red-100'
                     : isCurrent
-                      ? 'bg-[#df9f1f] ring-4 ring-amber-100'
+                      ? 'bg-gold ring-4 ring-amber-100'
                       : done
                         ? 'bg-green-500'
                         : 'bg-gray-300';
@@ -244,9 +244,9 @@ export function SectionCard({
 }) {
     return (
         <div className="border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
-            <div className="bg-[#f8f9fa] border-b border-gray-200 px-6 py-4 flex items-center justify-between gap-3">
+            <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-[#df9f1f]" />
+                    <Icon className="h-4 w-4 text-gold" />
                     {title}
                 </h2>
                 {action}
@@ -283,7 +283,7 @@ export function ModalShell({
             ? 'bg-red-50 border-red-200'
             : tone === 'green'
               ? 'bg-green-50 border-green-200'
-              : 'bg-[#f8f9fa] border-gray-200';
+              : 'bg-surface border-gray-200';
 
     const titleCls =
         tone === 'red'
@@ -297,7 +297,7 @@ export function ModalShell({
             ? 'h-4 w-4 text-red-600'
             : tone === 'green'
               ? 'h-4 w-4 text-green-600'
-              : 'h-4 w-4 text-[#df9f1f]';
+              : 'h-4 w-4 text-gold';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -311,7 +311,7 @@ export function ModalShell({
                     </h2>
                 </div>
                 <div className="overflow-y-auto flex-1">{children}</div>
-                <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-[#f8f9fa] shrink-0">
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-surface shrink-0">
                     {footer}
                 </div>
             </div>

@@ -99,7 +99,7 @@ function ToolbarButton({
       title={label}
       onClick={onClick}
       className={`p-1.5 rounded transition-colors ${
-        active ? "bg-[#df9f1f] text-white" : "text-gray-600 hover:bg-gray-100"
+        active ? "bg-gold text-white" : "text-gray-600 hover:bg-gray-100"
       }`}
     >
       {children}
@@ -354,7 +354,7 @@ export default function OficioEditor({
               onClick={() => setView("edit")}
               className={`flex items-center gap-1 px-2 py-1 transition-colors ${
                 view === "edit"
-                  ? "bg-[#df9f1f] text-white"
+                  ? "bg-gold text-white"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
@@ -366,7 +366,7 @@ export default function OficioEditor({
               onClick={() => setView("preview")}
               className={`flex items-center gap-1 px-2 py-1 transition-colors ${
                 view === "preview"
-                  ? "bg-[#df9f1f] text-white"
+                  ? "bg-gold text-white"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
@@ -379,7 +379,7 @@ export default function OficioEditor({
           value={blockStyle}
           onChange={(e) => exec("formatBlock", e.target.value)}
           title="Estilo de párrafo"
-          className="border border-gray-300 text-xs text-gray-700 focus:outline-none focus:border-[#df9f1f] px-1.5 py-1 bg-white"
+          className="border border-gray-300 text-xs text-gray-700 focus:outline-none focus:border-gold px-1.5 py-1 bg-white"
         >
           <option value="p">Párrafo</option>
           <option value="h2">Título</option>
