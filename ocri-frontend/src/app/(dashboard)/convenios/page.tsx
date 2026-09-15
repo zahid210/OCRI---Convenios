@@ -11,31 +11,35 @@ import { Search, Eye, FileText, Loader2 } from "lucide-react";
 
 const VIGENCIA_CONFIG: Record<
   string,
-  { label: string; color: string; bg: string; border: string }
+  { label: string; color: string; bg: string; border: string; solid: string }
 > = {
   VIGENTE: {
     label: "Vigente",
     color: "text-green-700",
     bg: "bg-green-50",
     border: "border-green-200",
+    solid: "bg-green-700 text-white border-green-700",
   },
   POR_VENCER: {
     label: "Por Vencer",
     color: "text-amber-700",
     bg: "bg-amber-50",
     border: "border-amber-200",
+    solid: "bg-amber-500 text-white border-amber-500",
   },
   VENCIDO: {
     label: "Vencido",
     color: "text-red-700",
     bg: "bg-red-50",
     border: "border-red-200",
+    solid: "bg-red-700 text-white border-red-700",
   },
   SIN_FECHA: {
     label: "Sin Fecha",
     color: "text-gray-500",
     bg: "bg-gray-50",
     border: "border-gray-200",
+    solid: "bg-gray-600 text-white border-gray-600",
   },
 };
 
@@ -148,6 +152,7 @@ export default function ConveniosPage() {
                   color: "text-gray-700",
                   bg: "bg-gray-100",
                   border: "border-gray-300",
+                  solid: "bg-gray-700 text-white border-gray-700",
                 }
               : VIGENCIA_CONFIG[key];
           const isActive = filter === key;
@@ -160,19 +165,21 @@ export default function ConveniosPage() {
               }}
               className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border transition-colors ${
                 isActive
-                  ? `${cfg.bg} ${cfg.color} ${cfg.border}`
-                  : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                  ? `${cfg.solid}`
+                  : `${cfg.bg} ${cfg.color} ${cfg.border} hover:brightness-95`
               }`}
             >
               <span
                 className={`inline-block h-2 w-2 rounded-full ${
-                  key === "ALL"
-                    ? "bg-gray-400"
-                    : key === "VIGENTE"
-                      ? "bg-green-500"
-                      : key === "POR_VENCER"
-                        ? "bg-amber-500"
-                        : "bg-red-500"
+                  isActive
+                    ? "bg-white"
+                    : key === "ALL"
+                      ? "bg-gray-400"
+                      : key === "VIGENTE"
+                        ? "bg-green-500"
+                        : key === "POR_VENCER"
+                          ? "bg-amber-500"
+                          : "bg-red-500"
                 }`}
               />
               {cfg.label} ({counts[key]})
