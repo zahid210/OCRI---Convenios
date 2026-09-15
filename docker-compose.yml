@@ -39,6 +39,9 @@ services:
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
       S3_PRESIGN_TTL: ${S3_PRESIGN_TTL:-300}
       S3_PREFIX: ${S3_PREFIX:-OCRI_convenios}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-ocri@uncp.edu.pe}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy

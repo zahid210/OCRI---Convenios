@@ -2253,9 +2253,12 @@ SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 REPLACE INTO `users` VALUES
-(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
-(20,'Jesus','jesus@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','asistente',NULL,'2026-09-09 06:04:21'),
-(21,'Berna','berna@uncp.edu.pe','$2b$10$zQsfITFUhqco0KMB5JbxAuAOEuT3..BOfS1.cgW/LTm1hefHo5ugC','procesador',NULL,'2026-09-09 06:04:26');
+-- Los hashes son contraseñas desconocibles (placeholder). En cada arranque el
+-- backend las reemplaza con SEED_ADMIN_PASSWORD / SEED_DEMO_PASSWORD del env
+-- (SeedUsersService), de modo que el repo no fija credenciales operativas.
+(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$12$LqEOxbJUtrb1yZxRiuPebeIgU9xQDbmQ/1W5RIG/iZytx5UuY8e4i','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
+(20,'Jesus','jesus@uncp.edu.pe','$2b$12$LqEOxbJUtrb1yZxRiuPebeIgU9xQDbmQ/1W5RIG/iZytx5UuY8e4i','asistente',NULL,'2026-09-09 06:04:21'),
+(21,'Berna','berna@uncp.edu.pe','$2b$12$LqEOxbJUtrb1yZxRiuPebeIgU9xQDbmQ/1W5RIG/iZytx5UuY8e4i','procesador',NULL,'2026-09-09 06:04:26');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;

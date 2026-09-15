@@ -1,11 +1,20 @@
 ﻿import mysql from 'mysql2/promise';
 
+const password = process.env.DB_PASSWORD;
+if (!password) {
+  console.error(
+    'DB_PASSWORD no definida. Exportar la credencial del despliegue antes de ejecutar, p. ej.:\n' +
+      '  DB_PASSWORD="$DB_PASSWORD" node scripts/clean-all.mjs',
+  );
+  process.exit(1);
+}
+
 const conn = await mysql.createConnection({
-  host: '127.0.0.1',
-  port: 3306,
-  user: 'ocri',
-  password: 'OcriDB@Coop2025',
-  database: 'ocri',
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER || 'ocri',
+  password,
+  database: process.env.DB_NAME || 'ocri',
 });
 
 try {

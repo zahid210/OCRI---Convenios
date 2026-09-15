@@ -40,18 +40,20 @@ docker compose logs -f backend frontend db
 
 - Acceso: `http://HOST:3000` (el puerto se ajusta con `WEB_PORT` en `.env`).
 
-### Credenciales iniciales (demo)
+### Credenciales iniciales
 
-El dump `dumps/ocri-inicio.sql` trae 3 usuarios con la contraseña común:
-`DemoOCRI-2026`.
+El dump `dumps/ocri-inicio.sql` solo trae la **estructura y los datos históricos**
+(usuarios con hashes no operativos). En cada arranque el backend reescribe las
+contraseñas de los usuarios por defecto con las variables de entorno `.env`:
 
-| Usuario | Rol |
-|---|---|
-| `ocri@uncp.edu.pe` | admin |
-| `jesus@uncp.edu.pe` | asistente |
-| `berna@uncp.edu.pe` | procesador |
+| Variable | Usuario | Rol por defecto |
+|---|---|---|
+| `SEED_ADMIN_PASSWORD` | `ocri@uncp.edu.pe` | admin |
+| `SEED_DEMO_PASSWORD` | `jesus@uncp.edu.pe` | asistente |
+| `SEED_DEMO_PASSWORD` | `berna@uncp.edu.pe` | procesador |
 
-Cámbielas antes del uso real. Para restablecer la contraseña de un usuario:
+Si se dejan vacías, el backend **no** modifica las contraseñas existentes. Para
+restablecer manualmente la contraseña de cualquier usuario:
 
 ```bash
 docker compose exec backend node -e "
@@ -68,7 +70,9 @@ La columna del hash es `users.password`.
 
 - **Con S3/OBS configurado** (`S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`,
   `S3_ENDPOINT`): los documentos se persisten en el bucket bajo `S3_PREFIX/`
-  (`OCRI_convenios/…`) y se sirven con URLs prefirmadas (302 desde `/resoluciones/…`).
+  (`OCRI_convenios/…`) y se sirven en **streaming** por `/api/resoluciones/…`
+  (el endpoint valida el JWT por header, sin redirecciones 302; un redirect
+  rompería la vista previa en línea del frontend).
   El volumen `uploads-data` solo guarda un espejo.
 - **Sin S3**: todo queda en el volumen `uploads-data`; `/resoluciones/…` responde
   el archivo local. Si el contenido subido ya existía localmente (históricos), no
