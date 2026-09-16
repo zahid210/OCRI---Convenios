@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NotificationsService } from './notifications.service';
+import { AcknowledgeNotificationsDto } from './dto/acknowledge-notifications.dto';
 
 interface AuthenticatedRequest {
   user?: {
@@ -8,10 +9,6 @@ interface AuthenticatedRequest {
     email: string;
     role: string;
   };
-}
-
-interface AcknowledgeBody {
-  keys: string[];
 }
 
 @UseGuards(JwtAuthGuard)
@@ -25,7 +22,10 @@ export class NotificationsController {
   }
 
   @Post('acknowledge')
-  acknowledge(@Body() body: AcknowledgeBody, @Req() req: AuthenticatedRequest) {
+  acknowledge(
+    @Body() body: AcknowledgeNotificationsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.notificationsService.acknowledge(
       req.user?.id ?? 0,
       body?.keys ?? [],

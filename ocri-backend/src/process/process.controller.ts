@@ -19,6 +19,17 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { FLOW_ROLES } from '../auth/role-sets';
 import { ProcessService } from './process.service';
 import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
+import { GenerateOpinionRequestsDto } from './dto/generate-opinion-requests.dto';
+import { SendOpinionRequestDto } from './dto/send-opinion-request.dto';
+import { RespondOpinionRequestDto } from './dto/respond-opinion-request.dto';
+import { ValidateOpinionRequestDto } from './dto/validate-opinion-request.dto';
+import { OficioPreviewDto } from './dto/oficio-preview.dto';
+import { GenerateOficioOpinionDto } from './dto/generate-oficio-opinion.dto';
+import { GenerateOficioRectoradoDto } from './dto/generate-oficio-rectorado.dto';
+import { UploadProcessDocumentDto } from './dto/upload-process-document.dto';
+import { RectorateDecisionDto } from './dto/rectorate-decision.dto';
+import { RegisterAgreementDto } from './dto/register-agreement.dto';
+import { SetValidityDto } from './dto/set-validity.dto';
 import type { Response } from 'express';
 
 interface AuthenticatedRequest {
@@ -58,12 +69,7 @@ export class ProcessController {
   generateOpinionRequests(
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @Body()
-    body: {
-      dependencia_ids: number[];
-      default_days?: number;
-      oficio_number?: string;
-      directed_to?: string;
-    },
+    body: GenerateOpinionRequestsDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.processService.generateOpinionRequests(
@@ -83,12 +89,7 @@ export class ProcessController {
   sendOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
     @Body()
-    body: {
-      sent_via?: string;
-      adesa_number?: string;
-      oficio_number?: string;
-      directed_to?: string;
-    },
+    body: SendOpinionRequestDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.processService.sendOpinionRequest(id, body, req.user?.id);
@@ -99,7 +100,7 @@ export class ProcessController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   respondOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { response_date?: string; observations?: string },
+    @Body() body: RespondOpinionRequestDto,
     @UploadedFile() file?: UploadedFileLike & { filename?: string },
     @Req() req?: AuthenticatedRequest,
   ) {
@@ -115,7 +116,7 @@ export class ProcessController {
   @Post('opinion-requests/:id/validate')
   validateOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { valid: boolean; observations?: string },
+    @Body() body: ValidateOpinionRequestDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.processService.validateOpinionRequest(id, body, req.user?.id);
@@ -154,10 +155,12 @@ export class ProcessController {
   @Post('opinion-requests/:id/oficio/preview')
   async previewOficioOpinion(
     @Param('id', ParseIntPipe) _id: number,
-    @Body('bodyHtml') bodyHtml: string,
+    @Body() body: OficioPreviewDto,
     @Res() res: Response,
   ) {
-    const pdf = await this.processService.renderOficioOpinionPreview(bodyHtml);
+    const pdf = await this.processService.renderOficioOpinionPreview(
+      body.bodyHtml,
+    );
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
     res.send(pdf);
@@ -169,13 +172,7 @@ export class ProcessController {
   generateOficioOpinion(
     @Param('id', ParseIntPipe) id: number,
     @Body()
-    body: {
-      bodyHtml: string;
-      sent_via?: string;
-      adesa_number?: string;
-      oficio_number?: string;
-      directed_to?: string;
-    },
+    body: GenerateOficioOpinionDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.processService.generateOficioOpinion(
@@ -206,10 +203,7 @@ export class ProcessController {
   generateOficioRectorado(
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @Body()
-    body: {
-      bodyHtml: string;
-      oficio_number?: string;
-    },
+    body: GenerateOficioRectoradoDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.processService.generateOficioRectorado(
@@ -241,10 +235,7 @@ export class ProcessController {
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @UploadedFile() file: UploadedFileLike & { filename?: string },
     @Body()
-    body: {
-      document_type_code: string;
-      direction?: string;
-    },
+    body: UploadProcessDocumentDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.processService.uploadProcessDocument(
@@ -288,11 +279,7 @@ export class ProcessController {
   rectorateDecision(
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @Body()
-    body: {
-      decision: 'APPROVED' | 'REJECTED';
-      notification_message?: string;
-      rectorate_oficio_number?: string;
-    },
+    body: RectorateDecisionDto,
     @UploadedFile() file?: UploadedFileLike & { filename?: string },
     @Req() req?: AuthenticatedRequest,
   ) {
@@ -330,20 +317,7 @@ export class ProcessController {
   registerAgreement(
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @Body()
-    body: {
-      resolution_number?: string;
-      start_date?: string;
-      end_date?: string;
-      drive_link?: string;
-      observations?: string;
-      responsables?: Array<{
-        name: string;
-        role?: string;
-        side?: 'UNCP' | 'CONTRAPARTE';
-        email?: string;
-        phone?: string;
-      }>;
-    },
+    body: RegisterAgreementDto,
     @UploadedFile() file?: UploadedFileLike & { filename?: string },
     @Req() req?: AuthenticatedRequest,
   ) {
@@ -405,19 +379,12 @@ export class ProcessController {
   @Post(':agreementId/validity')
   setValidityStatus(
     @Param('agreementId', ParseIntPipe) agreementId: number,
-    @Body() body: { validity: string; reason?: string },
+    @Body() body: SetValidityDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    const allowed = ['VIGENTE', 'SUSPENDIDO', 'RESCINDIDO', 'VENCIDO'] as const;
-    const validity = allowed.find((v) => v === body.validity);
-    if (!validity) {
-      throw new BadRequestException(
-        `Vigencia inválida. Valores permitidos: ${allowed.join(', ')}`,
-      );
-    }
     return this.processService.setValidityStatus(
       agreementId,
-      validity,
+      body.validity,
       body.reason,
       req.user?.id,
     );

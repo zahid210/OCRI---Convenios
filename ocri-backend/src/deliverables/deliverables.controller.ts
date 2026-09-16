@@ -16,6 +16,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { FLOW_ROLES } from '../auth/role-sets';
 import { DeliverablesService } from './deliverables.service';
 import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
+import { RequestReportDto } from './dto/request-report.dto';
+import { EvaluateDeliverableDto } from './dto/evaluate-deliverable.dto';
 
 interface AuthenticatedRequest {
   user?: {
@@ -72,10 +74,7 @@ export class DeliverablesController {
   requestReport(
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @Body()
-    body: {
-      type: 'INFORME_SEMESTRAL' | 'INFORME_FINAL';
-      period?: string;
-    },
+    body: RequestReportDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.deliverablesService.requestReport(
@@ -106,10 +105,7 @@ export class DeliverablesController {
   evaluateDeliverable(
     @Param('id', ParseIntPipe) id: number,
     @Body()
-    body: {
-      decision: 'APPROVED' | 'OBSERVED';
-      observations?: string;
-    },
+    body: EvaluateDeliverableDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.deliverablesService.evaluateDeliverable(
