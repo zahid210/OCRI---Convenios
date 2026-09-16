@@ -16,6 +16,7 @@ import {
 import {
   DELIVERABLE_STATUS_LABELS,
   DELIVERABLE_TYPE_LABELS,
+  DELIVERABLE_STATUS_COLORS,
 } from "@/components/agreements/process/shared";
 
 const STATUS_META: Record<string, { label: string; classes: string }> = {
@@ -27,13 +28,6 @@ const STATUS_META: Record<string, { label: string; classes: string }> = {
     label: "Seguimiento Concluido",
     classes: "bg-gray-100 text-gray-700 border-gray-200",
   },
-};
-
-const ENTREGABLE_COLORS: Record<string, string> = {
-  SOLICITADO: "bg-gray-50 text-gray-700 border-gray-200",
-  RECIBIDO: "bg-blue-50 text-blue-700 border-blue-200",
-  OBSERVADO: "bg-red-50 text-red-700 border-red-200",
-  REGISTRADO: "bg-green-50 text-green-700 border-green-200",
 };
 
 const progressColor = (p: number) => {
@@ -206,7 +200,7 @@ export default function SeguimientoPage() {
                         row.plan_trabajo.status)
                       : "Por solicitar";
                   const planColor = row.plan_trabajo
-                    ? (ENTREGABLE_COLORS[row.plan_trabajo.status] ??
+                    ? (DELIVERABLE_STATUS_COLORS[row.plan_trabajo.status] ??
                       "bg-gray-50 text-gray-600 border-gray-200")
                     : historicoConcluido
                       ? "bg-green-50 text-green-700 border-green-200"
@@ -347,7 +341,7 @@ export default function SeguimientoPage() {
                                       {d.version}
                                     </span>
                                     <span
-                                      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase border ${ENTREGABLE_COLORS[d.status] ?? "bg-gray-50 text-gray-600 border-gray-200"}`}
+                                      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase border ${DELIVERABLE_STATUS_COLORS[d.status] ?? "bg-gray-50 text-gray-600 border-gray-200"}`}
                                     >
                                       {DELIVERABLE_STATUS_LABELS[d.status] ??
                                         d.status}
