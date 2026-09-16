@@ -177,6 +177,61 @@ export class ProcessService {
     }
   }
 
+  /**
+   * Verifica que existan solicitudes de opinión y que todas estén resueltas
+   * (VALIDADAS o CANCELADAS). `action` completa el mensaje de error, p. ej.
+   * "generar el expediente".
+   */
+  private async assertOpinionsResolved(agreementId: number, action: string) {
+    const opinionRequests = await this.prisma.opinion_requests.findMany({
+      where: { agreement_id: BigInt(agreementId) },
+    });
+
+    if (opinionRequests.length === 0) {
+      throw new BadRequestException(
+        'No hay solicitudes de opinión generadas para este trámite.',
+      );
+    }
+
+    const notCompleted = opinionRequests.filter(
+      (r) => r.status !== 'VALIDADA' && r.status !== 'CANCELADA',
+    );
+
+    if (notCompleted.length > 0) {
+      throw new BadRequestException(
+        `Hay ${notCompleted.length} opinión(es) sin validar o cancelar. No se puede ${action}.`,
+      );
+    }
+
+    return opinionRequests;
+  }
+
+  /** Códigos de tipo de documento ya cargados en el convenio. */
+  private async getUploadedDocumentCodes(agreementId: number) {
+    const documents = await this.prisma.documents.findMany({
+      where: { agreement_id: BigInt(agreementId) },
+      include: { document_types: { select: { code: true } } },
+    });
+
+    return new Set(
+      documents
+        .map((d) => d.document_types?.code)
+        .filter((code): code is string => Boolean(code)),
+    );
+  }
+
+  /** Exige que todos los códigos requeridos estén entre los documentos cargados. */
+  private assertRequiredDocuments(
+    uploadedCodes: Set<string>,
+    required: readonly string[],
+    message: string,
+  ) {
+    const missing = required.filter((code) => !uploadedCodes.has(code));
+    if (missing.length > 0) {
+      throw new BadRequestException(`${message}: ${missing.join(', ')}`);
+    }
+  }
+
   // ─── Estado del proceso ─────────────────────────────────────────────────────
 
   async getProcessStatus(agreementId: number) {
@@ -1467,25 +1522,10 @@ export class ProcessService {
       );
     }
 
-    const opinionRequests = await this.prisma.opinion_requests.findMany({
-      where: { agreement_id: BigInt(agreementId) },
-    });
-
-    if (opinionRequests.length === 0) {
-      throw new BadRequestException(
-        'No hay solicitudes de opinión generadas para este trámite.',
-      );
-    }
-
-    const notCompleted = opinionRequests.filter(
-      (r) => r.status !== 'VALIDADA' && r.status !== 'CANCELADA',
+    const opinionRequests = await this.assertOpinionsResolved(
+      agreementId,
+      'generar el expediente',
     );
-
-    if (notCompleted.length > 0) {
-      throw new BadRequestException(
-        `Hay ${notCompleted.length} opinión(es) sin validar o cancelar. No se puede generar el expediente.`,
-      );
-    }
 
     const existDoc = await this.prisma.documents.findFirst({
       where: {
@@ -1569,25 +1609,10 @@ export class ProcessService {
       );
     }
 
-    const opinionRequests = await this.prisma.opinion_requests.findMany({
-      where: { agreement_id: BigInt(agreementId) },
-    });
-
-    if (opinionRequests.length === 0) {
-      throw new BadRequestException(
-        'No hay solicitudes de opinión generadas para este trámite.',
-      );
-    }
-
-    const notCompleted = opinionRequests.filter(
-      (r) => r.status !== 'VALIDADA' && r.status !== 'CANCELADA',
+    await this.assertOpinionsResolved(
+      agreementId,
+      'concluir el expediente técnico',
     );
-
-    if (notCompleted.length > 0) {
-      throw new BadRequestException(
-        `Hay ${notCompleted.length} opinión(es) sin validar o cancelar. No se puede concluir el expediente técnico.`,
-      );
-    }
 
     const hasExpediente = await this.prisma.documents.findFirst({
       where: {
@@ -1620,27 +1645,12 @@ export class ProcessService {
       });
     }
 
-    const documents = await this.prisma.documents.findMany({
-      where: { agreement_id: BigInt(agreementId) },
-      include: { document_types: { select: { code: true } } },
-    });
-
-    const uploadedCodes = new Set(
-      documents
-        .map((d) => d.document_types?.code)
-        .filter((code): code is string => Boolean(code)),
+    const uploadedCodes = await this.getUploadedDocumentCodes(agreementId);
+    this.assertRequiredDocuments(
+      uploadedCodes,
+      ['EXPEDIENTE_TECNICO'],
+      'Faltan documentos requeridos para finalizar el expediente',
     );
-
-    const requiredForFinalize = ['EXPEDIENTE_TECNICO'];
-    const missingDocs = requiredForFinalize.filter(
-      (code) => !uploadedCodes.has(code),
-    );
-
-    if (missingDocs.length > 0) {
-      throw new BadRequestException(
-        `Faltan documentos requeridos para finalizar el expediente: ${missingDocs.join(', ')}`,
-      );
-    }
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
@@ -1675,26 +1685,12 @@ export class ProcessService {
       );
     }
 
-    const documents = await this.prisma.documents.findMany({
-      where: { agreement_id: BigInt(agreementId) },
-      include: { document_types: { select: { code: true } } },
-    });
-
-    const uploadedCodes = new Set(
-      documents
-        .map((d) => d.document_types?.code)
-        .filter((code): code is string => Boolean(code)),
+    const uploadedCodes = await this.getUploadedDocumentCodes(agreementId);
+    this.assertRequiredDocuments(
+      uploadedCodes,
+      REQUIRED_DOCS_TO_SEND_TO_RECTORADO,
+      'Faltan documentos obligatorios para remitir a Rectorado',
     );
-
-    const missing = REQUIRED_DOCS_TO_SEND_TO_RECTORADO.filter(
-      (code) => !uploadedCodes.has(code),
-    );
-
-    if (missing.length > 0) {
-      throw new BadRequestException(
-        `Faltan documentos obligatorios para remitir a Rectorado: ${missing.join(', ')}`,
-      );
-    }
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
