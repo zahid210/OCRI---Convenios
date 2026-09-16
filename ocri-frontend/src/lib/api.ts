@@ -268,17 +268,6 @@ export async function downloadFile(
  * HELPERS ESPECIFICOS PARA EL MODULO DE CONVENIOS
  * ============================================================================ */
 
-/** Actualiza campos generales del convenio (título, fechas, resolución, etc.) */
-export async function updateAgreement(
-  id: number,
-  data: Record<string, unknown>,
-) {
-  return fetchApi(`/agreements/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  });
-}
-
 /* ============================================================================
  * HELPERS PARA EL MÓDULO DE PROCESO (ETAPA 1 BIZAGI)
  * ============================================================================ */
@@ -502,18 +491,6 @@ export async function publishConvenio(agreementId: number, file?: File) {
   return fetchApi(`/process/${agreementId}/publish`, {
     method: "POST",
     body: formData,
-  });
-}
-
-/** Actualiza la vigencia del convenio registrado (semáforo manual: suspender/rescindir/etc.) */
-export async function setAgreementValidity(
-  agreementId: number,
-  validity: "VIGENTE" | "SUSPENDIDO" | "RESCINDIDO" | "VENCIDO",
-  reason?: string,
-) {
-  return fetchApi(`/process/${agreementId}/validity`, {
-    method: "POST",
-    body: JSON.stringify({ validity, reason }),
   });
 }
 

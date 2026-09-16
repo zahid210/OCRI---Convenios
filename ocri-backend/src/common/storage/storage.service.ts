@@ -131,22 +131,6 @@ export class StorageService {
   }
 
   /**
-   * Sube un buffer directamente a S3 (usado por la migración de archivos).
-   */
-  async putBuffer(relPath: string, body: Buffer): Promise<void> {
-    const s3 = this.s3();
-    if (!s3) return;
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: this.cfg().bucket,
-        Key: this.keyFor(relPath),
-        Body: body,
-        ContentType: this.contentTypeFor(relPath),
-      }),
-    );
-  }
-
-  /**
    * Elimina el objeto de S3 (si está configurado) y, además, el archivo del
    * espejo local. No lanza errores.
    */
@@ -204,9 +188,7 @@ export class StorageService {
    * objeto fue subido con metadata de descarga y además evita depender de que
    * el bucket tenga cabeceras CORS para leer los bytes con fetch.
    */
-  async getObjectStream(
-    relPath: string,
-  ): Promise<{
+  async getObjectStream(relPath: string): Promise<{
     stream: NodeJS.ReadableStream;
     contentType: string;
     length?: number;

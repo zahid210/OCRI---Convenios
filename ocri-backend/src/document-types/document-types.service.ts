@@ -40,13 +40,6 @@ export class DocumentTypesService {
     return this.serializeBigInt(docType);
   }
 
-  async findByCode(code: string) {
-    const docType = await this.prisma.document_types.findUnique({
-      where: { code },
-    });
-    return docType ? this.serializeBigInt(docType) : null;
-  }
-
   async seed() {
     const types = [
       // ─── Etapa 1: Propuesta de convenio ───────────────────────────────

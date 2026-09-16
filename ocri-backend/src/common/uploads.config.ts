@@ -3,14 +3,7 @@ import type { Request } from 'express';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { PassThrough } from 'stream';
 import { dirname, join, basename, extname, relative, isAbsolute } from 'path';
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  renameSync,
-  unlinkSync,
-  readFileSync,
-} from 'fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, unlinkSync } from 'fs';
 import { BadRequestException } from '@nestjs/common';
 
 export const UPLOADS_DIR = join(process.cwd(), 'uploads');
@@ -292,20 +285,6 @@ const MAGIC_BY_EXT: Record<string, (buf: Buffer) => boolean> = {
 };
 
 /**
- * Comprueba los magic bytes de un archivo ya escrito en disco.
- */
-export function verifyFileMagic(filePath: string, extension: string): boolean {
-  const check = MAGIC_BY_EXT[extension.toLowerCase()];
-  if (!check) return true;
-  try {
-    const fd = readFileSync(filePath);
-    return check(fd.subarray(0, SNIFF_BYTES));
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Corrige el mojibake del `originalname` de archivos subidos.
  * Multer/busboy decodifica el nombre del header Content-Disposition como
  * latin1 (ISO-8859-1). Si el cliente lo envió en UTF-8 (p. ej. "Nº"), el
@@ -482,22 +461,3 @@ export const safeMulterOptions = (): MulterOptions => ({
     fieldSize: 2 * 1024 * 1024,
   },
 });
-
-/** Valida un nombre de archivo servido desde /uploads (anti path traversal). */
-export function sanitizeRequestedFileName(raw: string): string {
-  const decoded = (() => {
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      return raw;
-    }
-  })();
-  const base = decoded.split('/').pop()!.split('\\').pop()!;
-  if (!base || base.includes('..') || base !== decoded.trim()) {
-    throw new BadRequestException('Nombre de archivo inválido');
-  }
-  if (!/^[\w.\-() º\u00A0-\u017F]+$/.test(base)) {
-    throw new BadRequestException('Nombre de archivo inválido');
-  }
-  return base;
-}
