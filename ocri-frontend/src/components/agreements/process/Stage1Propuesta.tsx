@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteOpinionRequest,
@@ -23,7 +23,7 @@ import {
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
 import OficioEditor from "./OficioEditor";
-import { AgreementDocument, Dependencia } from "@/types/agreements";
+import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
@@ -77,6 +77,79 @@ function formatDateOnly(value?: string | null) {
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
   return `${dd}/${mm}/${yyyy}`;
+}
+
+function OpinionRequestRow({
+  request,
+  expanded,
+  onToggle,
+  extraBadge,
+  subline,
+  actions,
+  detail,
+}: {
+  request: OpinionRequest;
+  expanded: boolean;
+  onToggle: () => void;
+  extraBadge?: ReactNode;
+  subline?: ReactNode;
+  actions?: ReactNode;
+  detail?: ReactNode;
+}) {
+  return (
+    <div className="py-4">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-controls={`opinion-${request.id}`}
+        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+      >
+        <StatusDot status={request.status} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm text-gray-800">
+              {request.dependencias?.name ?? "Dependencia"}
+            </span>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
+                OPINION_STATUS_COLORS[request.status] ||
+                "bg-gray-50 text-gray-700 border-gray-200"
+              }`}
+            >
+              {OPINION_STATUS_LABELS[request.status] || request.status}
+            </span>
+            {extraBadge}
+          </div>
+          {subline}
+        </div>
+        <div className="flex items-center gap-2">
+          {actions}
+          {expanded ? (
+            <ChevronUp className="h-4 w-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          )}
+        </div>
+      </div>
+
+      {expanded && (
+        <div
+          id={`opinion-${request.id}`}
+          className="mt-3 ml-6 p-4 bg-surface border border-gray-200 text-sm space-y-2"
+        >
+          {detail}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Stage1Propuesta({
@@ -804,53 +877,30 @@ export default function Stage1Propuesta({
                 </h3>
                 <div className="divide-y divide-gray-100">
                   {pendingRequests.map((req) => (
-                    <div key={req.id} className="py-4">
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={expandedRequest === req.id}
-                        aria-controls={`opinion-${req.id}`}
-                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-                        onClick={() =>
-                          setExpandedRequest(
-                            expandedRequest === req.id ? null : req.id,
-                          )
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setExpandedRequest(
-                              expandedRequest === req.id ? null : req.id,
-                            );
-                          }
-                        }}
-                      >
-                        <StatusDot status={req.status} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-gray-800">
-                              {req.dependencias?.name ?? "Dependencia"}
-                            </span>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
-                                OPINION_STATUS_COLORS[req.status] ||
-                                "bg-gray-50 text-gray-700 border-gray-200"
-                              }`}
-                            >
-                              {OPINION_STATUS_LABELS[req.status] || req.status}
-                            </span>
-                            <TemporalBadge
-                              dueAt={req.due_at}
-                              warningDays={config?.warning_days ?? 3}
-                            />
-                          </div>
-                          {req.oficio_number && (
-                            <span className="text-xs text-gray-500">
-                              Oficio: {req.oficio_number}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
+                    <OpinionRequestRow
+                      key={req.id}
+                      request={req}
+                      expanded={expandedRequest === req.id}
+                      onToggle={() =>
+                        setExpandedRequest(
+                          expandedRequest === req.id ? null : req.id,
+                        )
+                      }
+                      extraBadge={
+                        <TemporalBadge
+                          dueAt={req.due_at}
+                          warningDays={config?.warning_days ?? 3}
+                        />
+                      }
+                      subline={
+                        req.oficio_number ? (
+                          <span className="text-xs text-gray-500">
+                            Oficio: {req.oficio_number}
+                          </span>
+                        ) : null
+                      }
+                      actions={
+                        <>
                           {actionsOpen && req.status === "GENERADA" && (
                             <button
                               onClick={(e) => {
@@ -899,61 +949,50 @@ export default function Stage1Propuesta({
                               Eliminar
                             </button>
                           )}
-                          {expandedRequest === req.id ? (
-                            <ChevronUp className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                          )}
-                        </div>
-                      </div>
-
-                      {expandedRequest === req.id && (
-                        <div
-                          id={`opinion-${req.id}`}
-                          className="mt-3 ml-6 p-4 bg-surface border border-gray-200 text-sm space-y-2"
-                        >
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                Código:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.dependencias?.code}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                Vía de envío:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.sent_via || "—"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                Enviado:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.sent_at
-                                  ? new Date(req.sent_at).toLocaleDateString(
-                                      "es-PE",
-                                    )
-                                  : "—"}
-                              </span>
-                            </div>
-                            <div></div>
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                N° ADESA:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.adesa_number || "—"}
-                              </span>
-                            </div>
+                        </>
+                      }
+                      detail={
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              Código:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.dependencias?.code}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              Vía de envío:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.sent_via || "—"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              Enviado:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.sent_at
+                                ? new Date(req.sent_at).toLocaleDateString(
+                                    "es-PE",
+                                  )
+                                : "—"}
+                            </span>
+                          </div>
+                          <div></div>
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              N° ADESA:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.adesa_number || "—"}
+                            </span>
                           </div>
                         </div>
-                      )}
-                    </div>
+                      }
+                    />
                   ))}
                 </div>
               </div>
@@ -966,55 +1005,29 @@ export default function Stage1Propuesta({
                 </h3>
                 <div className="divide-y divide-gray-100">
                   {respondedRequests.map((req) => (
-                    <div key={req.id} className="py-4">
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={expandedRequest === req.id}
-                        aria-controls={`opinion-${req.id}`}
-                        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-                        onClick={() =>
-                          setExpandedRequest(
-                            expandedRequest === req.id ? null : req.id,
-                          )
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setExpandedRequest(
-                              expandedRequest === req.id ? null : req.id,
-                            );
-                          }
-                        }}
-                      >
-                        <StatusDot status={req.status} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-gray-800">
-                              {req.dependencias?.name ?? "Dependencia"}
+                    <OpinionRequestRow
+                      key={req.id}
+                      request={req}
+                      expanded={expandedRequest === req.id}
+                      onToggle={() =>
+                        setExpandedRequest(
+                          expandedRequest === req.id ? null : req.id,
+                        )
+                      }
+                      subline={
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                          {req.response_date && (
+                            <span>
+                              F. Respuesta: {formatDateOnly(req.response_date)}
                             </span>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
-                                OPINION_STATUS_COLORS[req.status] ||
-                                "bg-gray-50 text-gray-700 border-gray-200"
-                              }`}
-                            >
-                              {OPINION_STATUS_LABELS[req.status] || req.status}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                            {req.response_date && (
-                              <span>
-                                F. Respuesta:{" "}
-                                {formatDateOnly(req.response_date)}
-                              </span>
-                            )}
-                            {req.oficio_number && (
-                              <span>Oficio: {req.oficio_number}</span>
-                            )}
-                          </div>
+                          )}
+                          {req.oficio_number && (
+                            <span>Oficio: {req.oficio_number}</span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
+                      }
+                      actions={
+                        <>
                           {actionsOpen && req.status === "RESPONDIDA" && (
                             <>
                               <button
@@ -1076,80 +1089,69 @@ export default function Stage1Propuesta({
                               Adjuntar Corrección
                             </button>
                           )}
-                          {expandedRequest === req.id ? (
-                            <ChevronUp className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                        </>
+                      }
+                      detail={
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              Código:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.dependencias?.code}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              Vía de envío:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.sent_via || "—"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              Enviado:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.sent_at
+                                ? new Date(req.sent_at).toLocaleDateString(
+                                    "es-PE",
+                                  )
+                                : "—"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              Fecha respuesta:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.response_date
+                                ? formatDateOnly(req.response_date)
+                                : "—"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold uppercase text-gray-500">
+                              N° ADESA:
+                            </span>{" "}
+                            <span className="text-gray-800">
+                              {req.adesa_number || "—"}
+                            </span>
+                          </div>
+                          {req.observations && (
+                            <div className="col-span-2">
+                              <span className="text-xs font-semibold uppercase text-gray-500">
+                                Observaciones:
+                              </span>{" "}
+                              <span className="text-gray-800">
+                                {req.observations}
+                              </span>
+                            </div>
                           )}
                         </div>
-                      </div>
-
-                      {expandedRequest === req.id && (
-                        <div
-                          id={`opinion-${req.id}`}
-                          className="mt-3 ml-6 p-4 bg-surface border border-gray-200 text-sm space-y-2"
-                        >
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                Código:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.dependencias?.code}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                Vía de envío:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.sent_via || "—"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                Enviado:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.sent_at
-                                  ? new Date(req.sent_at).toLocaleDateString(
-                                      "es-PE",
-                                    )
-                                  : "—"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                Fecha respuesta:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.response_date
-                                  ? formatDateOnly(req.response_date)
-                                  : "—"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs font-semibold uppercase text-gray-500">
-                                N° ADESA:
-                              </span>{" "}
-                              <span className="text-gray-800">
-                                {req.adesa_number || "—"}
-                              </span>
-                            </div>
-                            {req.observations && (
-                              <div className="col-span-2">
-                                <span className="text-xs font-semibold uppercase text-gray-500">
-                                  Observaciones:
-                                </span>{" "}
-                                <span className="text-gray-800">
-                                  {req.observations}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      }
+                    />
                   ))}
                 </div>
               </div>
