@@ -232,6 +232,64 @@ export class ProcessService {
     }
   }
 
+  /**
+   * Mueve el archivo subido a la carpeta del convenio y lo registra como
+   * documento dentro de la transacción del llamador. Centraliza el alta de
+   * documentos usada por los distintos pasos del flujo.
+   */
+  private async persistUploadedDocument(
+    tx: Prisma.TransactionClient,
+    agreement: { tramite_code: string; created_at: Date | string | null },
+    file: UploadedFileLike & { filename?: string },
+    opts: {
+      agreementId: bigint;
+      code: string;
+      name?: string;
+      fallbackName?: string;
+      direction: string;
+      stage: string;
+      userId?: number;
+      now: Date;
+      opinionRequestId?: bigint;
+    },
+  ) {
+    const docType = await tx.document_types.findUnique({
+      where: { code: opts.code },
+    });
+
+    const originalName = normalizeUploadName(file.originalname);
+
+    const relPath = await moveIntoAgreementDir(
+      file.filename ?? originalName,
+      agreement.tramite_code,
+      agreement.created_at,
+      originalName,
+      (rel) => this.storage.uploadRel(rel),
+    );
+
+    await tx.documents.create({
+      data: {
+        agreements: { connect: { id: opts.agreementId } },
+        ...(opts.opinionRequestId != null
+          ? { opinion_requests: { connect: { id: opts.opinionRequestId } } }
+          : {}),
+        name: opts.name ?? docType?.name ?? opts.fallbackName ?? opts.code,
+        file_path: relPath,
+        original_name: originalName,
+        extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+        document_types: docType ? { connect: { id: docType.id } } : undefined,
+        direction: opts.direction as never,
+        stage: opts.stage as never,
+        uploaded_by:
+          opts.userId != null
+            ? { connect: { id: BigInt(opts.userId) } }
+            : undefined,
+        created_at: opts.now,
+        updated_at: opts.now,
+      },
+    });
+  }
+
   // ─── Estado del proceso ─────────────────────────────────────────────────────
 
   async getProcessStatus(agreementId: number) {
@@ -674,45 +732,15 @@ export class ProcessService {
             }
           }
 
-          const docType = await tx.document_types.findUnique({
-            where: { code: 'OFICIO_RESPUESTA_OPINION' },
-          });
-
-          const relPath = await moveIntoAgreementDir(
-            (file as UploadedFileLike & { filename?: string }).filename ??
-              normalizeUploadName(file.originalname),
-            request.agreements.tramite_code,
-            request.agreements.created_at,
-            normalizeUploadName(file.originalname),
-            (rel) => this.storage.uploadRel(rel),
-          );
-
-          await tx.documents.create({
-            data: {
-              agreements: { connect: { id: request.agreement_id } },
-              name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
-              file_path: relPath,
-              original_name: normalizeUploadName(file.originalname),
-              extension:
-                normalizeUploadName(file.originalname)
-                  .split('.')
-                  .pop()
-                  ?.slice(0, 10) ?? 'pdf',
-              document_types: docType
-                ? { connect: { id: docType.id } }
-                : undefined,
-              direction: 'ENTRADA',
-              stage: 'ETAPA_1_PROPUESTA',
-              opinion_requests: {
-                connect: { id: BigInt(opinionRequestId) },
-              },
-              uploaded_by:
-                userId != null
-                  ? { connect: { id: BigInt(userId) } }
-                  : undefined,
-              created_at: new Date(),
-              updated_at: new Date(),
-            },
+          await this.persistUploadedDocument(tx, request.agreements, file, {
+            agreementId: request.agreement_id,
+            code: 'OFICIO_RESPUESTA_OPINION',
+            name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
+            direction: 'ENTRADA',
+            stage: 'ETAPA_1_PROPUESTA',
+            userId,
+            now: new Date(),
+            opinionRequestId: BigInt(opinionRequestId),
           });
         }
 
@@ -1848,46 +1876,16 @@ export class ProcessService {
         }
 
         if (file) {
-          const code =
-            decision === 'APPROVED'
-              ? 'CONVENIO_FIRMADO'
-              : 'NOTIFICACION_RECHAZO';
-          const docType = await tx.document_types.findUnique({
-            where: { code },
-          });
-
-          const originalName = normalizeUploadName(file.originalname);
-
-          const relPath = await moveIntoAgreementDir(
-            file.filename ?? originalName,
-            agreement.tramite_code,
-            agreement.created_at,
-            originalName,
-            (rel) => this.storage.uploadRel(rel),
-          );
-
-          await tx.documents.create({
-            data: {
-              agreements: { connect: { id: BigInt(agreementId) } },
-              name: docType?.name ?? code,
-              file_path: relPath,
-              original_name: originalName,
-              extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-              document_types: docType
-                ? { connect: { id: docType.id } }
-                : undefined,
-              direction:
-                decision === 'APPROVED'
-                  ? ('ENTRADA' as never)
-                  : ('SALIDA' as never),
-              stage: 'ETAPA_2_REGISTRO',
-              uploaded_by:
-                userId != null
-                  ? { connect: { id: BigInt(userId) } }
-                  : undefined,
-              created_at: now,
-              updated_at: now,
-            },
+          await this.persistUploadedDocument(tx, agreement, file, {
+            agreementId: BigInt(agreementId),
+            code:
+              decision === 'APPROVED'
+                ? 'CONVENIO_FIRMADO'
+                : 'NOTIFICACION_RECHAZO',
+            direction: decision === 'APPROVED' ? 'ENTRADA' : 'SALIDA',
+            stage: 'ETAPA_2_REGISTRO',
+            userId,
+            now,
           });
         }
       },
@@ -1935,39 +1933,14 @@ export class ProcessService {
         );
 
         if (file) {
-          const docType = await tx.document_types.findUnique({
-            where: { code: 'PUBLICACION' },
-          });
-
-          const originalName = normalizeUploadName(file.originalname);
-
-          const relPath = await moveIntoAgreementDir(
-            file.filename ?? originalName,
-            agreement.tramite_code,
-            agreement.created_at,
-            originalName,
-            (rel) => this.storage.uploadRel(rel),
-          );
-
-          await tx.documents.create({
-            data: {
-              agreements: { connect: { id: BigInt(agreementId) } },
-              name: docType?.name ?? 'Publicación del Convenio',
-              file_path: relPath,
-              original_name: originalName,
-              extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-              document_types: docType
-                ? { connect: { id: docType.id } }
-                : undefined,
-              direction: 'INTERNO',
-              stage: 'ETAPA_2_REGISTRO',
-              uploaded_by:
-                userId != null
-                  ? { connect: { id: BigInt(userId) } }
-                  : undefined,
-              created_at: now,
-              updated_at: now,
-            },
+          await this.persistUploadedDocument(tx, agreement, file, {
+            agreementId: BigInt(agreementId),
+            code: 'PUBLICACION',
+            fallbackName: 'Publicación del Convenio',
+            direction: 'INTERNO',
+            stage: 'ETAPA_2_REGISTRO',
+            userId,
+            now,
           });
         }
       },
@@ -2111,39 +2084,14 @@ export class ProcessService {
             });
           }
 
-          const docType = await tx.document_types.findUnique({
-            where: { code: 'CONVENIO_FIRMADO' },
-          });
-
-          const originalName = normalizeUploadName(file.originalname);
-
-          const relPath = await moveIntoAgreementDir(
-            file.filename ?? originalName,
-            agreement.tramite_code,
-            agreement.created_at,
-            originalName,
-            (rel) => this.storage.uploadRel(rel),
-          );
-
-          await tx.documents.create({
-            data: {
-              agreements: { connect: { id: BigInt(agreementId) } },
-              name: 'Convenio Firmado Escaneado',
-              file_path: relPath,
-              original_name: originalName,
-              extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-              document_types: docType
-                ? { connect: { id: docType.id } }
-                : undefined,
-              direction: 'ENTRADA',
-              stage: 'ETAPA_2_REGISTRO',
-              uploaded_by:
-                userId != null
-                  ? { connect: { id: BigInt(userId) } }
-                  : undefined,
-              created_at: now,
-              updated_at: now,
-            },
+          await this.persistUploadedDocument(tx, agreement, file, {
+            agreementId: BigInt(agreementId),
+            code: 'CONVENIO_FIRMADO',
+            name: 'Convenio Firmado Escaneado',
+            direction: 'ENTRADA',
+            stage: 'ETAPA_2_REGISTRO',
+            userId,
+            now,
           });
 
           // ─── E3 Auto-generación de Entregables según fórmula ───
