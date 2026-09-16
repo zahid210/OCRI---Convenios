@@ -147,26 +147,49 @@ export class SeguimientoService {
 
     const where = this.buildWhere(filter);
 
-    const agreements = await this.prisma.agreements.findMany({
-      where,
-      include: {
-        institutions: { select: { name: true, country: true } },
-        deliverables: {
-          orderBy: [{ type: 'asc' }, { created_at: 'asc' }],
-        },
-      },
-      orderBy: { id: 'desc' },
-    });
-
-    let rows = agreements.map((a) => this.buildRow(a));
-
     if (filter.pendientes === 'true') {
-      rows = rows.filter((r) => r.pendiente_completar || r.sin_entregables);
+      // Equivalente al filtro en memoria (pendiente_completar || sin_entregables):
+      // sin_entregables → sin deliverables; pendiente_completar → con al menos
+      // un deliverable y algún entregable aún sin REGISTRAR.
+      const existingAnd = where.AND
+        ? Array.isArray(where.AND)
+          ? where.AND
+          : [where.AND]
+        : [];
+      where.AND = [
+        ...existingAnd,
+        {
+          OR: [
+            { deliverables: { none: {} } },
+            {
+              AND: [
+                { deliverables: { some: {} } },
+                { deliverables: { some: { status: { not: 'REGISTRADO' } } } },
+              ],
+            },
+          ],
+        },
+      ];
     }
 
-    const total = rows.length;
+    const { data, total } = await this.prisma.$transaction(async (tx) => {
+      const agreements = await tx.agreements.findMany({
+        where,
+        include: {
+          institutions: { select: { name: true, country: true } },
+          deliverables: {
+            orderBy: [{ type: 'asc' }, { created_at: 'asc' }],
+          },
+        },
+        orderBy: { id: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      });
+      const count = await tx.agreements.count({ where });
+      return { data: agreements.map((a) => this.buildRow(a)), total: count };
+    });
+
     const lastPage = Math.max(1, Math.ceil(total / perPage));
-    const data = rows.slice((page - 1) * perPage, page * perPage);
 
     return serializeBigInt({
       data,
