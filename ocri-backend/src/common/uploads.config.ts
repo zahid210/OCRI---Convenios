@@ -237,7 +237,7 @@ const ALLOWED_EXTENSIONS = new Set([
  * Si un tipo no está aquí, se permite cualquier extensión de ALLOWED_EXTENSIONS.
  */
 export const DOC_TYPE_EXTENSIONS: Record<string, Set<string>> = {
-  PROPUESTA_CONVENIO: new Set(['.docx']),
+  PROPUESTA_CONVENIO: new Set(['.docx', '.pdf']),
 };
 
 /** Número de bytes mínimo a leer del stream para validar el magic byte. */
