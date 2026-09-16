@@ -28,6 +28,7 @@ import {
   normalizeOficioNumber,
 } from '../common/pdf-merger.service';
 import { StorageService } from '../common/storage/storage.service';
+import { buildOficioRectoradoReferencia } from './oficio-html';
 
 interface ActorEventOptions {
   actorUserId?: number;
@@ -134,6 +135,46 @@ export class ProcessService {
       STATUS_STAGE[nextStatus],
       tx,
     );
+  }
+
+  /**
+   * Avanza el proceso a OPINIONES_COMPLETAS cuando todas las solicitudes de
+   * opinión quedaron resueltas (VALIDADAS o CANCELADAS). Se ejecuta dentro de
+   * la transacción del llamador y es un no-op si ya está en ese estado.
+   */
+  private async advanceToOpinionesCompletas(
+    tx: Prisma.TransactionClient,
+    agreementId: bigint,
+    description: string,
+    actorUserId?: number,
+  ) {
+    const allRequests = await tx.opinion_requests.findMany({
+      where: { agreement_id: agreementId },
+      select: { status: true },
+    });
+
+    const allValidated = allRequests.every(
+      (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
+    );
+
+    const currentStatus = await tx.agreements.findUnique({
+      where: { id: agreementId },
+      select: { process_status: true },
+    });
+
+    if (
+      allValidated &&
+      currentStatus?.process_status !== 'OPINIONES_COMPLETAS'
+    ) {
+      await this.applyTransition(
+        tx,
+        agreementId,
+        'OPINIONES_COMPLETAS',
+        'OPINIONES_COMPLETAS',
+        description,
+        { actorUserId },
+      );
+    }
   }
 
   // ─── Estado del proceso ─────────────────────────────────────────────────────
@@ -636,36 +677,16 @@ export class ProcessService {
           tx,
         );
 
-        const allRequests = await tx.opinion_requests.findMany({
-          where: { agreement_id: request.agreement_id },
-        });
-
         // Las opiniones se consideran completas solo cuando todas fueron
         // finalmente validadas (o canceladas), no cuando están simplemente
         // respondidas. Así el expediente para Rectorado recién se habilita
         // al validar la última opinión.
-        const allValidated = allRequests.every(
-          (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
+        await this.advanceToOpinionesCompletas(
+          tx,
+          request.agreement_id,
+          'Todas las opiniones fueron recibidas. OCRI coordina y recopila la información para elaborar el expediente técnico.',
+          userId,
         );
-
-        const currentStatus = await tx.agreements.findUnique({
-          where: { id: request.agreement_id },
-          select: { process_status: true },
-        });
-
-        if (
-          allValidated &&
-          currentStatus?.process_status !== 'OPINIONES_COMPLETAS'
-        ) {
-          await this.applyTransition(
-            tx,
-            request.agreement_id,
-            'OPINIONES_COMPLETAS',
-            'OPINIONES_COMPLETAS',
-            'Todas las opiniones fueron recibidas. OCRI coordina y recopila la información para elaborar el expediente técnico.',
-            { actorUserId: userId },
-          );
-        }
 
         return result;
       },
@@ -763,30 +784,12 @@ export class ProcessService {
         // Al validar la última opinión pendiente, el proceso pasa a
         // OPINIONES_COMPLETAS y se habilita el Expediente para Rectorado.
         if (dto.valid) {
-          const allRequests = await tx.opinion_requests.findMany({
-            where: { agreement_id: request.agreement_id },
-            select: { status: true },
-          });
-          const allValidated = allRequests.every(
-            (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
+          await this.advanceToOpinionesCompletas(
+            tx,
+            request.agreement_id,
+            'Todas las opiniones fueron validadas. OCRI coordina la elaboración del expediente técnico.',
+            userId,
           );
-          const currentStatus = await tx.agreements.findUnique({
-            where: { id: request.agreement_id },
-            select: { process_status: true },
-          });
-          if (
-            allValidated &&
-            currentStatus?.process_status !== 'OPINIONES_COMPLETAS'
-          ) {
-            await this.applyTransition(
-              tx,
-              request.agreement_id,
-              'OPINIONES_COMPLETAS',
-              'OPINIONES_COMPLETAS',
-              'Todas las opiniones fueron validadas. OCRI coordina la elaboración del expediente técnico.',
-              { actorUserId: userId },
-            );
-          }
         }
 
         return result;
@@ -848,30 +851,12 @@ export class ProcessService {
           tx,
         );
 
-        const allRequests = await tx.opinion_requests.findMany({
-          where: { agreement_id: request.agreement_id },
-          select: { status: true },
-        });
-        const allValidated = allRequests.every(
-          (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
+        await this.advanceToOpinionesCompletas(
+          tx,
+          request.agreement_id,
+          'Todas las solicitudes de opinión quedaron resueltas (validadas o canceladas).',
+          userId,
         );
-        const currentStatus = await tx.agreements.findUnique({
-          where: { id: request.agreement_id },
-          select: { process_status: true },
-        });
-        if (
-          allValidated &&
-          currentStatus?.process_status !== 'OPINIONES_COMPLETAS'
-        ) {
-          await this.applyTransition(
-            tx,
-            request.agreement_id,
-            'OPINIONES_COMPLETAS',
-            'OPINIONES_COMPLETAS',
-            'Todas las solicitudes de opinión quedaron resueltas (validadas o canceladas).',
-            { actorUserId: userId },
-          );
-        }
 
         return result;
       },
@@ -1067,7 +1052,7 @@ export class ProcessService {
       },
       orderBy: { id: 'asc' },
     });
-    const referencia = this.buildOficioRectoradoReferencia(documentos);
+    const referencia = buildOficioRectoradoReferencia(documentos);
 
     const asunto = `REMISI&Oacute;N DE EXPEDIENTE T&Oacute;CNICO DEL ${title} PARA SU SUSCRIPCI&Oacute;N`;
 
@@ -1130,39 +1115,6 @@ export class ProcessService {
     `;
 
     return { html, css };
-  }
-
-  /**
-   * Construye el listado de la sección "Referencia:" del oficio a Rectorado a
-   * partir de los documentos realmente procesados del convenio. Se listan los
-   * NOMBRES de los documentos (el archivo original sin extensión), en el orden
-   * en que fueron incorporados al trámite (id ascendente = cronológico).
-   */
-  private buildOficioRectoradoReferencia(
-    documentos: Array<{
-      original_name: string | null;
-      file_path: string;
-    }>,
-  ): string {
-    const nombres: string[] = [];
-
-    for (const doc of documentos) {
-      const base = doc.original_name ?? doc.file_path.split('/').pop() ?? '';
-      const nombre = base.replace(/\.[^.]+$/, '').trim();
-      if (nombre) nombres.push(nombre);
-    }
-
-    return nombres.map((n) => this.escapeHtml(n)).join(', ');
-  }
-
-  /** Escapa caracteres sensibles antes de inyectar en el HTML de la plantilla. */
-  private escapeHtml(raw: string): string {
-    return raw
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
   }
 
   /**
