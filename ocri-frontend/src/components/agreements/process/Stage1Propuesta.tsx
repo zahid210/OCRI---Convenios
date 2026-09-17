@@ -54,11 +54,9 @@ import {
   DOC_TYPE_ACCEPT,
   ModalShell,
   NEXT_STAGE_DESTINATION,
-  OPINION_STATUS_COLORS,
-  OPINION_STATUS_LABELS,
   ProcessDetail,
   SectionCard,
-  StatusDot,
+  OpinionStatusIcon,
   TemporalBadge,
 } from "./shared";
 
@@ -112,19 +110,11 @@ function OpinionRequestRow({
           }
         }}
       >
-        <StatusDot status={request.status} />
+        <OpinionStatusIcon status={request.status} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-gray-800">
               {request.dependencias?.name ?? "Dependencia"}
-            </span>
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
-                OPINION_STATUS_COLORS[request.status] ||
-                "bg-gray-50 text-gray-700 border-gray-200"
-              }`}
-            >
-              {OPINION_STATUS_LABELS[request.status] || request.status}
             </span>
             {extraBadge}
           </div>

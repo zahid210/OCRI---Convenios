@@ -1,7 +1,15 @@
 'use client';
 
 import { Fragment, ReactNode } from 'react';
-import { LucideIcon } from 'lucide-react';
+import {
+    AlertTriangle,
+    Ban,
+    Clock,
+    MessageSquare,
+    Send,
+    ShieldCheck,
+    type LucideIcon,
+} from 'lucide-react';
 import {
     Agreement,
     ProcessStage,
@@ -111,22 +119,39 @@ export const VALIDITY_LABELS: Record<string, string> = {
     VENCIDO: 'Vencido',
 };
 
-export function StatusDot({ status }: { status: string }) {
-    let color = 'bg-gray-300';
-    let pulse = '';
+/**
+ * Ícono y color por estado de solicitud de opinión, alineados con el mapa de
+ * colores del "Resumen de Solicitudes de Opinión" (Etapa 1). ENVIADA conserva
+ * la animación de pulso.
+ */
+export const OPINION_STATUS_RESUME: Record<
+    string,
+    { icon: LucideIcon; className: string }
+> = {
+    GENERADA: { icon: Clock, className: 'bg-gray-100 text-gray-600' },
+    ENVIADA: { icon: Send, className: 'bg-blue-100 text-blue-600 animate-pulse' },
+    RESPONDIDA: { icon: MessageSquare, className: 'bg-amber-100 text-amber-600' },
+    VALIDADA: { icon: ShieldCheck, className: 'bg-green-100 text-green-600' },
+    OBSERVADA: { icon: AlertTriangle, className: 'bg-red-100 text-red-600' },
+    CANCELADA: { icon: Ban, className: 'bg-gray-100 text-gray-500' },
+};
 
-    if (status === 'VALIDADA') {
-        color = 'bg-green-500';
-    } else if (status === 'OBSERVADA') {
-        color = 'bg-red-500';
-    } else if (status === 'RESPONDIDA') {
-        color = 'bg-yellow-500';
-    } else if (status === 'ENVIADA') {
-        color = 'bg-blue-500';
-        pulse = 'animate-pulse';
-    }
+/** Marca de estado de una solicitud: ícono + color, sin texto visible. */
+export function OpinionStatusIcon({ status }: { status: string }) {
+    const { icon: Icon, className } = OPINION_STATUS_RESUME[status] ?? {
+        icon: Clock,
+        className: 'bg-gray-100 text-gray-600',
+    };
 
-    return <span className={`inline-block h-3 w-3 rounded-full ${color} ${pulse}`} />;
+    return (
+        <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center ${className}`}
+            title={OPINION_STATUS_LABELS[status] || status}
+            aria-label={OPINION_STATUS_LABELS[status] || status}
+        >
+            <Icon className="h-4 w-4" />
+        </span>
+    );
 }
 
 export function TemporalBadge({
