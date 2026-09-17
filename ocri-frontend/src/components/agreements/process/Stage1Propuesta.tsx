@@ -142,6 +142,31 @@ function OpinionRequestRow({
   );
 }
 
+/**
+ * Nombre del oficio de solicitud generado (original_name sin extensión, p. ej.
+ * "12-2026-OCRI-UNCP"), tomado del documento del proceso correspondiente a la
+ * solicitud. Devuelve null si aún no se generó el oficio.
+ */
+function oficioDocumentLabel(
+  documents: readonly AgreementDocument[],
+  requestId: number,
+): string | null {
+  const doc = documents
+    .filter(
+      (d) =>
+        d.opinion_request_id === requestId &&
+        d.document_types?.code === "OFICIO_SOLICITUD_OPINION",
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime(),
+    )[0];
+  if (!doc) return null;
+  const base = fileName(doc.original_name, doc.file_path);
+  return base.replace(/\.[^.]+$/, "").trim() || null;
+}
+
 export default function Stage1Propuesta({
   agreementId,
   status,
@@ -883,9 +908,12 @@ export default function Stage1Propuesta({
                         />
                       }
                       subline={
-                        req.oficio_number ? (
+                        (oficioDocumentLabel(documents, req.id) ??
+                          req.oficio_number) ? (
                           <span className="text-xs text-gray-500">
-                            Oficio: {req.oficio_number}
+                            Oficio:{" "}
+                            {oficioDocumentLabel(documents, req.id) ??
+                              req.oficio_number}
                           </span>
                         ) : null
                       }
@@ -1011,8 +1039,13 @@ export default function Stage1Propuesta({
                               F. Respuesta: {formatDateOnly(req.response_date)}
                             </span>
                           )}
-                          {req.oficio_number && (
-                            <span>Oficio: {req.oficio_number}</span>
+                          {(oficioDocumentLabel(documents, req.id) ??
+                            req.oficio_number) && (
+                            <span>
+                              Oficio:{" "}
+                              {oficioDocumentLabel(documents, req.id) ??
+                                req.oficio_number}
+                            </span>
                           )}
                         </div>
                       }
