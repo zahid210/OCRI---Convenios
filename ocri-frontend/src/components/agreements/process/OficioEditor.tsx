@@ -155,6 +155,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
       // pero conserva tablas, clases y el posicionamiento del oficio.
       const clean = DOMPurify.sanitize(initialHtml, {
         FORBID_TAGS: ["script", "iframe", "object", "embed"],
+        ADD_ATTR: ["contenteditable"],
       });
       el.innerHTML = clean;
     }

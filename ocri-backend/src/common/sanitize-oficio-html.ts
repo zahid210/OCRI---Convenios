@@ -87,7 +87,16 @@ const ALLOWED_TAGS = new Set([
   'time',
 ]);
 
-const GENERIC_ATTRS = new Set(['class', 'style', 'title', 'id', 'align']);
+const GENERIC_ATTRS = new Set([
+  'class',
+  'style',
+  'title',
+  'id',
+  'align',
+  // Atributo inerte que el editor usa para bloquear membrete/firma: no
+  // representa ningún riesgo (no es un manejador de eventos ni recurso).
+  'contenteditable',
+]);
 
 const TABLE_ATTRS = new Set([
   ...GENERIC_ATTRS,

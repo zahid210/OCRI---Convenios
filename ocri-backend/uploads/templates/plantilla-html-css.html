@@ -128,14 +128,11 @@
             font-style: italic;
         }
 
-        /* Asunto y Referencia (grid de 2 columnas en lugar de tabla). La
-           columna de la etiqueta debe ser lo bastante ancha para que
-           "Referencia:" quepa en una sola línea (12% la partía y el dos
-           puntos pasaba a la siguiente fila). */
-        .subject-table {
-            display: grid;
-            grid-template-columns: 20% 80%;
-            margin-bottom: 12px;
+        /* Asunto y Referencia: bloques de flujo libre (sin columnas ni tabla).
+           En el editor el texto fluye en renglones normales y "Referencia:"
+           con muchos nombres se envuelve sin partirse. */
+        .subject-line {
+            margin-bottom: 10px;
             /* El bloque ASUNTO/Referencia no debe partirse entre hojas. */
             break-inside: avoid;
             page-break-inside: avoid;
@@ -144,19 +141,12 @@
             font-weight: bold;
         }
         .subject-content {
-            text-align: justify;
             font-weight: bold;
-        }
-        /* La lista de Referencia (nombres de documentos separados por coma)
-           NO debe justificarse: el renderizador de PDF reparte el ancho libre
-           entre los huecos y los nombres salen muy espaciados. */
-        .subject-content.subject-referencia {
-            text-align: left;
         }
 
         /* Cuerpo del documento */
         .body-text {
-            text-align: justify;
+            text-align: left;
             margin-bottom: 18px;
         }
         .body-text p {
@@ -165,7 +155,7 @@
 
         /* Despedida */
         .closing {
-            text-align: justify;
+            text-align: left;
             margin-bottom: 60px;
         }
 

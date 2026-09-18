@@ -1045,29 +1045,33 @@ export class ProcessService {
     ]);
 
     const html = `
-      <div class="header-table">
-        <div class="header-logo-left">${img(assets.logoIzq, 'Logo UNCP')}</div>
-        <div class="header-text">
-          <p class="univ-name">UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU</p>
-          <p class="office-name">OFICINA DE COOPERACION Y RELACIONES INTERNACIONALES</p>
+      <div contenteditable="false">
+        <div class="header-table">
+          <div class="header-logo-left">${img(assets.logoIzq, 'Logo UNCP')}</div>
+          <div class="header-text">
+            <p class="univ-name">UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU</p>
+            <p class="office-name">OFICINA DE COOPERACION Y RELACIONES INTERNACIONALES</p>
+          </div>
+          <div class="header-logo-right">${img(assets.logoDer, 'Logo OCRI')}</div>
         </div>
-        <div class="header-logo-right">${img(assets.logoDer, 'Logo OCRI')}</div>
-      </div>
-      <div class="epigraph">
-        "A&ntilde;o de la Recuperaci&oacute;n y Consolidaci&oacute;n de la Econom&iacute;a Peruana"
+        <div class="epigraph">
+          "A&ntilde;o de la Recuperaci&oacute;n y Consolidaci&oacute;n de la Econom&iacute;a Peruana"
+        </div>
       </div>
       <div class="doc-date">Huancayo, ${fecha}</div>
-      <div class="doc-number">OFICIO N&deg;${oficio}</div>
+      <div class="doc-number">OFICIO N&deg; ${oficio}</div>
       <div class="addressee">
         <p><strong>${destinatario}</strong></p>
         <p class="role">${depName}</p>
         <p><br><u>Presente</u>.</p>
       </div>
-      <div class="subject-table">
-        <div class="subject-label">ASUNTO:</div>
-        <div class="subject-content">${asunto}</div>
-        <div class="subject-label"><br>Referencia:</div>
-        <div class="subject-content"></div>
+      <div class="subject-line">
+        <span class="subject-label">ASUNTO:</span>
+        <span class="subject-content">${asunto}</span>
+      </div>
+      <div class="subject-line">
+        <span class="subject-label">Referencia:</span>
+        <span class="subject-content">&nbsp;</span>
       </div>
       <div class="body-text">
         <p>Luego de un atento y cordial saludo me dirijo a usted para comunicarle que se ha recibido de Rectorado el
@@ -1078,8 +1082,8 @@ export class ProcessService {
       <div class="closing">
         Sin otro en particular, propicio la ocasi&oacute;n para expresarle las muestras de mi consideraci&oacute;n y estima personal.
       </div>
-      <div class="signature-section">
-        <div class="signature-atentamente">Atentamente,</div>
+      <div class="signature-atentamente">Atentamente,</div>
+      <div class="signature-section" contenteditable="false">
         <div class="signature-box">
           ${firmaSello ? `<div class="signature-img">${img(firmaSello, 'Firma y sello')}</div>` : ''}
           <div class="signature-line">
@@ -1088,7 +1092,7 @@ export class ProcessService {
           </div>
         </div>
       </div>
-      <div class="footer">
+      <div class="footer" contenteditable="false">
         c.c. Archivo
       </div>
     `;
@@ -1149,29 +1153,33 @@ export class ProcessService {
     ]);
 
     const html = `
-      <div class="header-table">
-        <div class="header-logo-left">${img(assets.logoIzq, 'Logo UNCP')}</div>
-        <div class="header-text">
-          <p class="univ-name">UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU</p>
-          <p class="office-name">OFICINA DE COOPERACION Y RELACIONES INTERNACIONALES</p>
+      <div contenteditable="false">
+        <div class="header-table">
+          <div class="header-logo-left">${img(assets.logoIzq, 'Logo UNCP')}</div>
+          <div class="header-text">
+            <p class="univ-name">UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU</p>
+            <p class="office-name">OFICINA DE COOPERACION Y RELACIONES INTERNACIONALES</p>
+          </div>
+          <div class="header-logo-right">${img(assets.logoDer, 'Logo OCRI')}</div>
         </div>
-        <div class="header-logo-right">${img(assets.logoDer, 'Logo OCRI')}</div>
-      </div>
-      <div class="epigraph">
-        "A&ntilde;o de la Recuperaci&oacute;n y Consolidaci&oacute;n de la Econom&iacute;a Peruana"
+        <div class="epigraph">
+          "A&ntilde;o de la Recuperaci&oacute;n y Consolidaci&oacute;n de la Econom&iacute;a Peruana"
+        </div>
       </div>
       <div class="doc-date">Huancayo, ${fecha}</div>
-      <div class="doc-number">OFICIO N&deg;${oficio}</div>
+      <div class="doc-number">OFICIO N&deg; ${oficio}</div>
       <div class="addressee">
         <p><strong>${destinatario}</strong></p>
         <p class="role">Rector&iacute;a</p>
         <p><br><u>Presente</u>.</p>
       </div>
-      <div class="subject-table">
-        <div class="subject-label">ASUNTO:</div>
-        <div class="subject-content">${asunto}</div>
-        <div class="subject-label">Referencia:</div>
-        <div class="subject-content subject-referencia">${referencia}</div>
+      <div class="subject-line">
+        <span class="subject-label">ASUNTO:</span>
+        <span class="subject-content">${asunto}</span>
+      </div>
+      <div class="subject-line">
+        <span class="subject-label">Referencia:</span>
+        <span class="subject-content">${referencia}</span>
       </div>
       <div class="body-text">
         <p>Luego de un atento y cordial saludo me dirijo a usted, a fin de remitir el expediente t&eacute;cnico del
@@ -1182,8 +1190,8 @@ export class ProcessService {
       <div class="closing">
         Sin otro particular, propicio la ocasi&oacute;n para expresarle las muestras de mi consideraci&oacute;n y estima personal.
       </div>
-      <div class="signature-section">
-        <div class="signature-atentamente">Atentamente,</div>
+      <div class="signature-atentamente">Atentamente,</div>
+      <div class="signature-section" contenteditable="false">
         <div class="signature-box">
           ${firmaSello ? `<div class="signature-img">${img(firmaSello, 'Firma y sello')}</div>` : ''}
           <div class="signature-line">
@@ -1192,7 +1200,7 @@ export class ProcessService {
           </div>
         </div>
       </div>
-      <div class="footer">
+      <div class="footer" contenteditable="false">
         c.c. Archivo
       </div>
     `;
