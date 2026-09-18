@@ -10,7 +10,6 @@ import {
   generateOficioOpinion,
   generateOpinionRequests,
   getDefaultOpinionTargets,
-  getOficioRectoradoTemplate,
   generateOficioRectorado,
   openFilePreview,
   respondOpinionRequest,
@@ -20,8 +19,8 @@ import {
   cancelOpinionRequest,
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
-import OficioEditor from "./OficioEditor";
 import EnviarOficioOpinionModal from "./EnviarOficioOpinionModal";
+import GenerarOficioRectoradoModal from "./GenerarOficioRectoradoModal";
 import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -46,7 +45,6 @@ import {
   Trash2,
   Upload,
   Users,
-  X,
 } from "lucide-react";
 import {
   DOCUMENT_TYPE_LABELS,
@@ -237,12 +235,6 @@ export default function Stage1Propuesta({
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [showRectoradoModal, setShowRectoradoModal] = useState(false);
-  const [showRectoradoEditor, setShowRectoradoEditor] = useState(false);
-  const [rectoradoHtml, setRectoradoHtml] = useState("");
-  const [rectoradoCss, setRectoradoCss] = useState("");
-  const [rectoradoOficioNumber, setRectoradoOficioNumber] = useState("");
-  const [rectoradoLoading, setRectoradoLoading] = useState(false);
-  const [rectoradoSending, setRectoradoSending] = useState(false);
 
   const [respondDate, setRespondDate] = useState("");
   const [respondObs, setRespondObs] = useState("");
@@ -353,47 +345,18 @@ export default function Stage1Propuesta({
     }
   };
 
-  const openGenerateOficioRectoradoModal = async () => {
-    setRectoradoHtml("");
-    setRectoradoCss("");
-    setRectoradoOficioNumber("");
-    setShowRectoradoEditor(false);
+  const openGenerateOficioRectoradoModal = () => {
     setShowRectoradoModal(true);
-    setRectoradoLoading(true);
-    try {
-      const data = (await getOficioRectoradoTemplate(agreementId)) as {
-        html: string;
-        css: string;
-      };
-      setRectoradoHtml(data.html ?? "");
-      setRectoradoCss(data.css ?? "");
-    } catch {
-      toast.error("No se pudo cargar la plantilla del oficio a Rectorado.");
-      setShowRectoradoModal(false);
-    } finally {
-      setRectoradoLoading(false);
-    }
   };
 
-  const handleGenerateOficioRectorado = async () => {
-    if (!rectoradoHtml || !rectoradoHtml.trim()) {
-      toast.error("El contenido del oficio no puede estar vacío.");
-      return;
-    }
-    if (!rectoradoOficioNumber.trim()) {
-      toast.error("Debe indicar el N° de Oficio.");
-      return;
-    }
-    setRectoradoSending(true);
+  const handleGenerateOficioRectorado = async (payload: {
+    bodyHtml: string;
+    oficio_number: string;
+  }) => {
     try {
-      await generateOficioRectorado(agreementId, {
-        bodyHtml: rectoradoHtml,
-        oficio_number: rectoradoOficioNumber,
-      });
+      await generateOficioRectorado(agreementId, payload);
       toast.success("Oficio a Rectorado generado y adjuntado correctamente.");
       setShowRectoradoModal(false);
-      setShowRectoradoEditor(false);
-      setRectoradoOficioNumber("");
       await onRefresh();
     } catch (err: unknown) {
       const message =
@@ -401,8 +364,6 @@ export default function Stage1Propuesta({
           ? err.message
           : "Error al generar el oficio a Rectorado";
       toast.error(message);
-    } finally {
-      setRectoradoSending(false);
     }
   };
 
@@ -1295,109 +1256,11 @@ export default function Stage1Propuesta({
       )}
 
       {showRectoradoModal && (
-        <ModalShell
-          title="Generar Oficio a Rectorado"
-          icon={FileText}
-          footer={
-            <>
-              <button
-                onClick={() => {
-                  setShowRectoradoModal(false);
-                  setShowRectoradoEditor(false);
-                  setRectoradoOficioNumber("");
-                }}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleGenerateOficioRectorado()}
-                disabled={rectoradoSending || rectoradoLoading}
-                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                {rectoradoSending && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-                <FileText className="h-4 w-4" />
-                Generar y Adjuntar
-              </button>
-            </>
-          }
-        >
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
-                Documento a generar
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowRectoradoEditor(true)}
-                disabled={rectoradoLoading}
-                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
-              >
-                {rectoradoLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FileText className="h-4 w-4" />
-                )}
-                Previsualizar y editar
-              </button>
-              <p className="text-xs text-gray-400 mt-1">
-                Se abrirá el oficio de envío del expediente técnico a Rectorado
-                en una ventana para revisar y corregir su contenido.
-              </p>
-            </div>
-            <div className="border-t border-gray-200 pt-4">
-              <div className="mt-4">
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                  N° de Oficio <span className="text-red-500">*</span>
-                </label>
-                <input
-                  value={rectoradoOficioNumber}
-                  onChange={(e) => setRectoradoOficioNumber(e.target.value)}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
-                  placeholder="Ej: 045-2026-OCRI"
-                />
-              </div>
-            </div>
-          </div>
-        </ModalShell>
-      )}
-
-      {showRectoradoModal && showRectoradoEditor && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 sm:p-6">
-          <div className="bg-white border border-gray-200 shadow-xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden">
-            <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-gold" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                Previsualizar y editar oficio a Rectorado
-              </h2>
-              <button
-                onClick={() => setShowRectoradoEditor(false)}
-                title="Cerrar"
-                aria-label="Cerrar"
-                className="ml-auto p-1 text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 bg-gray-100 overflow-hidden">
-              <OficioEditor
-                initialHtml={rectoradoHtml}
-                css={rectoradoCss}
-                onChange={setRectoradoHtml}
-              />
-            </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-surface">
-              <button
-                onClick={() => setShowRectoradoEditor(false)}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
+        <GenerarOficioRectoradoModal
+          agreementId={agreementId}
+          onGenerate={handleGenerateOficioRectorado}
+          onCancel={() => setShowRectoradoModal(false)}
+        />
       )}
 
       {showRespondModal !== null && (
