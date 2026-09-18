@@ -33,10 +33,10 @@ import {
 import {
   DELIVERABLE_STATUS_COLORS,
   DELIVERABLE_STATUS_LABELS,
-  ModalShell,
   NEXT_STAGE_DESTINATION,
   SectionCard,
 } from "./shared";
+import EvaluarEntregableModal from "./EvaluarEntregableModal";
 
 function DeliverableCard({
   deliverable,
@@ -300,8 +300,6 @@ export default function Stage3Seguimiento({
     title: string;
     decision: "APPROVED" | "OBSERVED";
   } | null>(null);
-  const [evaluateObs, setEvaluateObs] = useState("");
-  const [isEvaluating, setIsEvaluating] = useState(false);
   const [isCompletingMonitoring, setIsCompletingMonitoring] = useState(false);
 
   const workPlans = deliverables.filter((d) => d.type === "PLAN_DE_TRABAJO");
@@ -354,33 +352,24 @@ export default function Stage3Seguimiento({
     }
   };
 
-  const handleEvaluate = async () => {
-    if (!evaluateModal) return;
-    if (evaluateModal.decision === "OBSERVED" && !evaluateObs.trim()) {
-      toast.error("Debe ingresar las observaciones.");
-      return;
-    }
-    setIsEvaluating(true);
+  const handleEvaluate = async (
+    id: number,
+    decision: "APPROVED" | "OBSERVED",
+    observations?: string,
+  ) => {
     try {
-      await evaluateDeliverable(
-        evaluateModal.id,
-        evaluateModal.decision,
-        evaluateObs || undefined,
-      );
+      await evaluateDeliverable(id, decision, observations);
       toast.success(
-        evaluateModal.decision === "APPROVED"
+        decision === "APPROVED"
           ? "Entregable aprobado y registrado."
           : "Entregable observado. Se solicitaron correcciones.",
       );
       setEvaluateModal(null);
-      setEvaluateObs("");
       await onRefresh();
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error al evaluar entregable";
       toast.error(message);
-    } finally {
-      setIsEvaluating(false);
     }
   };
 
@@ -533,68 +522,13 @@ export default function Stage3Seguimiento({
       )}
 
       {evaluateModal && (
-        <ModalShell
-          title={
-            evaluateModal.decision === "APPROVED"
-              ? "Aprobar Entregable"
-              : "Observar Entregable"
-          }
-          icon={
-            evaluateModal.decision === "APPROVED" ? CheckCircle2 : AlertTriangle
-          }
-          footer={
-            <>
-              <button
-                onClick={() => {
-                  setEvaluateModal(null);
-                  setEvaluateObs("");
-                }}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleEvaluate}
-                disabled={
-                  isEvaluating ||
-                  (evaluateModal.decision === "OBSERVED" && !evaluateObs.trim())
-                }
-                className={`px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2 ${
-                  evaluateModal.decision === "APPROVED"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                }`}
-              >
-                {isEvaluating && <Loader2 className="h-4 w-4 animate-spin" />}
-                {evaluateModal.decision === "APPROVED" ? "Aprobar" : "Observar"}
-              </button>
-            </>
-          }
-        >
-          <div className="p-6">
-            <p className="text-sm text-gray-600 mb-4">
-              {evaluateModal.title}
-              {" — "}
-              {evaluateModal.decision === "APPROVED"
-                ? "El entregable será marcado como REGISTRADO."
-                : "Indique las observaciones para la corrección."}
-            </p>
-            {evaluateModal.decision === "OBSERVED" && (
-              <div>
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                  Observaciones <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={evaluateObs}
-                  onChange={(e) => setEvaluateObs(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-                  placeholder="Describa las observaciones..."
-                />
-              </div>
-            )}
-          </div>
-        </ModalShell>
+        <EvaluarEntregableModal
+          requestId={evaluateModal.id}
+          title={evaluateModal.title}
+          decision={evaluateModal.decision}
+          onEvaluate={handleEvaluate}
+          onCancel={() => setEvaluateModal(null)}
+        />
       )}
     </SectionCard>
   );
