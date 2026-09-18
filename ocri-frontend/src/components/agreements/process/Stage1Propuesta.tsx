@@ -24,6 +24,7 @@ import GenerarOficioRectoradoModal from "./GenerarOficioRectoradoModal";
 import ResponderSolicitudModal from "./ResponderSolicitudModal";
 import ValidarOpinionModal from "./ValidarOpinionModal";
 import SubirDocumentoModal from "./SubirDocumentoModal";
+import SolicitarOpinionesModal from "./SolicitarOpinionesModal";
 import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -51,7 +52,6 @@ import {
 } from "lucide-react";
 import {
   DOCUMENT_TYPE_LABELS,
-  ModalShell,
   NEXT_STAGE_DESTINATION,
   ProcessDetail,
   SectionCard,
@@ -233,9 +233,6 @@ export default function Stage1Propuesta({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTargetType, setUploadTargetType] = useState<string | null>(null);
 
-  const [selectedDeps, setSelectedDeps] = useState<number[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const [showRectoradoModal, setShowRectoradoModal] = useState(false);
 
   const [isGeneratingExpediente, setIsGeneratingExpediente] = useState(false);
@@ -286,18 +283,13 @@ export default function Stage1Propuesta({
       );
     });
 
-  const handleGenerateRequests = async () => {
-    if (selectedDeps.length === 0) {
-      toast.error("Debe seleccionar al menos una dependencia.");
-      return;
-    }
-    setIsGenerating(true);
+  const handleGenerateRequests = async (dependenciaIds: number[]) => {
     try {
       await generateOpinionRequests(agreementId, {
-        dependencia_ids: selectedDeps,
+        dependencia_ids: dependenciaIds,
       });
       toast.success(
-        `Solicitudes generadas para ${selectedDeps.length} dependencias.`,
+        `Solicitudes generadas para ${dependenciaIds.length} dependencias.`,
       );
       setShowGenerateModal(false);
       await onRefresh();
@@ -305,8 +297,6 @@ export default function Stage1Propuesta({
       const message =
         err instanceof Error ? err.message : "Error al generar solicitudes";
       toast.error(message);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -737,7 +727,6 @@ export default function Stage1Propuesta({
           canManage && GENERATION_STATUSES.includes(processStatus) ? (
             <button
               onClick={() => {
-                setSelectedDeps([]);
                 setShowGenerateModal(true);
               }}
               className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
@@ -1134,70 +1123,11 @@ export default function Stage1Propuesta({
       </SectionCard>
 
       {showGenerateModal && (
-        <ModalShell
-          title="Solicitar Opiniones"
-          icon={MessageSquare}
-          size="lg"
-          footer={
-            <>
-              <button
-                onClick={() => setShowGenerateModal(false)}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleGenerateRequests}
-                disabled={isGenerating || selectedDeps.length === 0}
-                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
-                Solicitar ({selectedDeps.length})
-              </button>
-            </>
-          }
-        >
-          <div className="p-6">
-            <p className="text-sm text-gray-600 mb-4">
-              Seleccione las dependencias que deben emitir opinión sobre este
-              convenio.
-            </p>
-            <div className="space-y-1 mb-6">
-              {defaultTargets.length === 0 && (
-                <div className="py-6 text-center text-sm text-gray-500">
-                  No hay dependencias configuradas por defecto.
-                </div>
-              )}
-              {defaultTargets.map((dep) => (
-                <label
-                  key={dep.id}
-                  className="flex items-center gap-3 p-2 hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedDeps.includes(dep.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedDeps((prev) => [...prev, dep.id]);
-                      } else {
-                        setSelectedDeps((prev) =>
-                          prev.filter((id) => id !== dep.id),
-                        );
-                      }
-                    }}
-                    className="rounded border-gray-300"
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">
-                      {dep.name}
-                    </div>
-                    <div className="text-xs text-gray-500">{dep.code}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-        </ModalShell>
+        <SolicitarOpinionesModal
+          dependencies={defaultTargets}
+          onGenerate={handleGenerateRequests}
+          onCancel={() => setShowGenerateModal(false)}
+        />
       )}
 
       {showSendModal !== null && (
