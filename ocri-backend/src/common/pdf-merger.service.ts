@@ -542,36 +542,11 @@ export class PdfMergerService {
   }
 
   /**
-   * Vista previa en vivo del oficio: combina plantilla + HTML editable y
-   * devuelve el PDF renderizado con el MISMO motor y los mismos márgenes que
-   * `renderOficioOpinionPdf`, sin escribir ningún archivo. Así la vista previa
-   * del editor es idéntica hoja a hoja al PDF final que se exporta.
-   */
-  async renderOficioOpinionPreview(bodyHtml: string): Promise<Buffer> {
-    const template = await this.readOficioOpinionTemplate();
-    const fullHtml = template.replace(
-      '{{CUERPO}}',
-      sanitizeOficioHtml(bodyHtml),
-    );
-    // 1mm = 72/25.4 pt. Los cuatro lados de la plantilla original: 30mm izq.
-    const mmToPt = (mm: number) => (mm * 72) / 25.4;
-    return renderPdfFromHtml(fullHtml, {
-      margins: {
-        top: mmToPt(25),
-        right: mmToPt(25),
-        bottom: mmToPt(25),
-        left: mmToPt(30),
-      },
-    });
-  }
-
-  /**
    * Genera el PDF del oficio de solicitud de opinión combinando la plantilla
    * (estilos + contenedor A4) con el HTML editable recibido del frontend.
-   * Los márgenes de página se fijan en los mismos valores que usaba el padding
-   * del contenedor `.document` (30mm izquierda, 25mm resto) para que la vista
-   * previa del editor y el PDF resultante sean idénticos en la primera hoja Y,
-   * además, que todas las hojas siguientes repitan el mimso margen. Si los
+   * Los márgenes de página se fijan en los valores que usaba el padding
+   * del contenedor `.document` (30mm izquierda, 25mm resto) para que todas las
+   * hojas repitan el mismo margen. Si los
    * márgenes de página fueran 0 y el padding viviera en `.document`, el motor
    * (html-pdf-lite) reiniciaría el cursor en (0,0) tras cortar la página y todo
    * el contenido que desborda a la hoja 2+ saldría pegado a la esquina sin

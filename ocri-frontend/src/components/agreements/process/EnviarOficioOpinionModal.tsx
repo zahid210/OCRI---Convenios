@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, FileText, Loader2, X } from "lucide-react";
-import {
-  getOficioOpinionTemplate,
-  previewOficioOpinion,
-} from "@/lib/api";
+import { getOficioOpinionTemplate } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 import OficioEditor from "./OficioEditor";
 import { ModalShell } from "./shared";
@@ -200,7 +197,7 @@ export default function EnviarOficioOpinionModal({
             <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
               <FileText className="h-4 w-4 text-gold" />
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-                Previsualizar y editar oficio
+                Editar oficio
               </h2>
               <button
                 onClick={() => setShowEditor(false)}
@@ -216,7 +213,6 @@ export default function EnviarOficioOpinionModal({
                 initialHtml={oficioHtml}
                 css={oficioCss}
                 onChange={setOficioHtml}
-                renderPdf={(html) => previewOficioOpinion(requestId, html)}
               />
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-surface">

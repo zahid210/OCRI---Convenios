@@ -8,7 +8,6 @@ import {
   ParseIntPipe,
   Post,
   Req,
-  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -23,14 +22,12 @@ import { GenerateOpinionRequestsDto } from './dto/generate-opinion-requests.dto'
 import { SendOpinionRequestDto } from './dto/send-opinion-request.dto';
 import { RespondOpinionRequestDto } from './dto/respond-opinion-request.dto';
 import { ValidateOpinionRequestDto } from './dto/validate-opinion-request.dto';
-import { OficioPreviewDto } from './dto/oficio-preview.dto';
 import { GenerateOficioOpinionDto } from './dto/generate-oficio-opinion.dto';
 import { GenerateOficioRectoradoDto } from './dto/generate-oficio-rectorado.dto';
 import { UploadProcessDocumentDto } from './dto/upload-process-document.dto';
 import { RectorateDecisionDto } from './dto/rectorate-decision.dto';
 import { RegisterAgreementDto } from './dto/register-agreement.dto';
 import { SetValidityDto } from './dto/set-validity.dto';
-import type { Response } from 'express';
 
 interface AuthenticatedRequest {
   user?: {
@@ -145,25 +142,6 @@ export class ProcessController {
   @Get('opinion-requests/:id/oficio/template')
   getOficioOpinionTemplate(@Param('id', ParseIntPipe) id: number) {
     return this.processService.getOficioOpinionTemplate(id);
-  }
-
-  /**
-   * Vista previa en vivo: renderiza el oficio con el MISMO motor que el PDF
-   * final (html-pdf-lite + plantilla de márgenes) y lo devuelve sin persistir.
-   */
-  @Roles(...FLOW_ROLES)
-  @Post('opinion-requests/:id/oficio/preview')
-  async previewOficioOpinion(
-    @Param('id', ParseIntPipe) _id: number,
-    @Body() body: OficioPreviewDto,
-    @Res() res: Response,
-  ) {
-    const pdf = await this.processService.renderOficioOpinionPreview(
-      body.bodyHtml,
-    );
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
-    res.send(pdf);
   }
 
   /** Genera el oficio, lo adjunta automáticamente y marca la solicitud como enviada */
