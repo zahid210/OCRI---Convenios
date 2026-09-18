@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare, Search } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ModalShell } from "./shared";
 import type { Dependencia } from "@/types/agreements";
@@ -21,6 +21,15 @@ export default function SolicitarOpinionesModal({
 
   const [selectedDeps, setSelectedDeps] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredDeps = dependencies.filter((dep) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      dep.name.toLowerCase().includes(q) || dep.code.toLowerCase().includes(q)
+    );
+  });
 
   const handleSubmit = async () => {
     if (selectedDeps.length === 0) {
@@ -66,13 +75,27 @@ export default function SolicitarOpinionesModal({
           Seleccione las dependencias que deben emitir opinión sobre este
           convenio.
         </p>
+        <div className="relative mb-4">
+          <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o código..."
+            className="w-full border border-gray-300 pl-9 pr-3 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
+          />
+        </div>
         <div className="space-y-1 mb-6">
           {dependencies.length === 0 && (
             <div className="py-6 text-center text-sm text-gray-500">
               No hay dependencias configuradas por defecto.
             </div>
           )}
-          {dependencies.map((dep) => (
+          {dependencies.length > 0 && filteredDeps.length === 0 && (
+            <div className="py-6 text-center text-sm text-gray-500">
+              No se encontraron dependencias para “{search.trim()}”.
+            </div>
+          )}
+          {filteredDeps.map((dep) => (
             <label
               key={dep.id}
               className="flex items-center gap-3 p-2 hover:bg-gray-50 transition-colors cursor-pointer"
