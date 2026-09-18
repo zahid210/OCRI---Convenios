@@ -128,22 +128,23 @@
             font-style: italic;
         }
 
-        /* Asunto y Referencia: bloques de flujo libre (sin columnas ni tabla).
-           En el editor el texto fluye en renglones normales y "Referencia:"
-           con muchos nombres se envuelve sin partirse. */
+        /* Asunto y Referencia (grid de 2 columnas en lugar de tabla). Las
+           etiquetas y su contenido quedan en la MISMA fila pero separados
+           horizontalmente: "ASUNTO:"/"Referencia:" van en la columna 20% y el
+           texto en la 80% restante. Reproduce el oficio original tanto en el
+           editor (navegador) como en el PDF (html-pdf-lite resuelve la grilla
+           con render-grid, por eso no se puede usar márgenes/espacios en
+           inline: el motor los ignora). */
         .subject-line {
-            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: 20% 80%;
+            margin-bottom: 12px;
             /* El bloque ASUNTO/Referencia no debe partirse entre hojas. */
             break-inside: avoid;
             page-break-inside: avoid;
         }
         .subject-label {
             font-weight: bold;
-            /* Aire horizontal entre la etiqueta y su contenido, sin columnas:
-               la línea sigue siendo un bloque de texto libre que fluye. Tanto
-               el navegador como html-pdf-lite aplican word-spacing al espacio
-               que cierra la etiqueta, por eso edición y PDF coinciden. */
-            word-spacing: 30px;
         }
         .subject-content {
             font-weight: bold;
