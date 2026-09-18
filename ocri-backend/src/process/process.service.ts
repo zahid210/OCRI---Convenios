@@ -1065,14 +1065,8 @@ export class ProcessService {
         <p class="role">${depName}</p>
         <p><br><u>Presente</u>.</p>
       </div>
-      <div class="subject-line">
-        <span class="subject-label">ASUNTO:</span>
-        <span class="subject-content">${asunto}</span>
-      </div>
-      <div class="subject-line">
-        <span class="subject-label">Referencia:</span>
-        <span class="subject-content">&nbsp;</span>
-      </div>
+      <div class="subject-line"><span class="subject-label">ASUNTO: </span><span class="subject-content">${asunto}</span></div>
+      <div class="subject-line"><span class="subject-label">Referencia: </span><span class="subject-content">&nbsp;</span></div>
       <div class="body-text">
         <p>Luego de un atento y cordial saludo me dirijo a usted para comunicarle que se ha recibido de Rectorado el
         <strong>${title}</strong> y habiendo tomado conocimiento y revisado el proyecto, remito a su despacho para que
@@ -1173,14 +1167,8 @@ export class ProcessService {
         <p class="role">Rector&iacute;a</p>
         <p><br><u>Presente</u>.</p>
       </div>
-      <div class="subject-line">
-        <span class="subject-label">ASUNTO:</span>
-        <span class="subject-content">${asunto}</span>
-      </div>
-      <div class="subject-line">
-        <span class="subject-label">Referencia:</span>
-        <span class="subject-content">${referencia}</span>
-      </div>
+      <div class="subject-line"><span class="subject-label">ASUNTO: </span><span class="subject-content">${asunto}</span></div>
+      <div class="subject-line"><span class="subject-label">Referencia: </span><span class="subject-content">${referencia}</span></div>
       <div class="body-text">
         <p>Luego de un atento y cordial saludo me dirijo a usted, a fin de remitir el expediente t&eacute;cnico del
         <strong>${title}</strong>, conjuntamente con la propuesta de

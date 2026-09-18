@@ -139,6 +139,11 @@
         }
         .subject-label {
             font-weight: bold;
+            /* Aire horizontal entre la etiqueta y su contenido, sin columnas:
+               la línea sigue siendo un bloque de texto libre que fluye. Tanto
+               el navegador como html-pdf-lite aplican word-spacing al espacio
+               que cierra la etiqueta, por eso edición y PDF coinciden. */
+            word-spacing: 30px;
         }
         .subject-content {
             font-weight: bold;
