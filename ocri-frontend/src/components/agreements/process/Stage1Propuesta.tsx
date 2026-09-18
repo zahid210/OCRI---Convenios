@@ -22,6 +22,7 @@ import { fileName } from "@/lib/utils";
 import EnviarOficioOpinionModal from "./EnviarOficioOpinionModal";
 import GenerarOficioRectoradoModal from "./GenerarOficioRectoradoModal";
 import ResponderSolicitudModal from "./ResponderSolicitudModal";
+import ValidarOpinionModal from "./ValidarOpinionModal";
 import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -237,9 +238,6 @@ export default function Stage1Propuesta({
 
   const [showRectoradoModal, setShowRectoradoModal] = useState(false);
 
-  const [validateObs, setValidateObs] = useState("");
-  const [isValidating, setIsValidating] = useState(false);
-
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTypeCode, setUploadTypeCode] = useState("EXPEDIENTE_TECNICO");
   const [isUploading, setIsUploading] = useState(false);
@@ -383,26 +381,18 @@ export default function Stage1Propuesta({
     }
   };
 
-  const handleValidate = async (requestId: number, valid: boolean) => {
-    if (!valid && !validateObs.trim()) {
-      toast.error("Debe indicar las observaciones.");
-      return;
-    }
-    setIsValidating(true);
+  const handleValidate = async (
+    requestId: number,
+    data: { valid: boolean; observations?: string },
+  ) => {
     try {
-      await validateOpinionRequest(requestId, {
-        valid,
-        observations: validateObs || undefined,
-      });
-      toast.success(valid ? "Opinión validada." : "Opinión observada.");
+      await validateOpinionRequest(requestId, data);
+      toast.success(data.valid ? "Opinión validada." : "Opinión observada.");
       setValidateModal(null);
-      setValidateObs("");
       await onRefresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Error al validar";
       toast.error(message);
-    } finally {
-      setIsValidating(false);
     }
   };
 
@@ -949,7 +939,6 @@ export default function Stage1Propuesta({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setValidateObs("");
                                   setValidateModal({
                                     id: req.id,
                                     valid: true,
@@ -963,7 +952,6 @@ export default function Stage1Propuesta({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setValidateObs("");
                                   setValidateModal({
                                     id: req.id,
                                     valid: false,
@@ -1251,61 +1239,12 @@ export default function Stage1Propuesta({
       )}
 
       {validateModal && (
-        <ModalShell
-          title={validateModal.valid ? "Validar Opinión" : "Observar Opinión"}
-          icon={validateModal.valid ? ShieldCheck : AlertTriangle}
-          footer={
-            <>
-              <button
-                onClick={() => {
-                  setValidateModal(null);
-                  setValidateObs("");
-                }}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() =>
-                  handleValidate(validateModal.id, validateModal.valid)
-                }
-                disabled={
-                  isValidating || (!validateModal.valid && !validateObs.trim())
-                }
-                className={`px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2 ${
-                  validateModal.valid
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                }`}
-              >
-                {isValidating && <Loader2 className="h-4 w-4 animate-spin" />}
-                {validateModal.valid ? "Validar" : "Observar"}
-              </button>
-            </>
-          }
-        >
-          <div className="p-6">
-            <p className="text-sm text-gray-600 mb-4">
-              {validateModal.valid
-                ? "Confirme que la opinión recibida es satisfactoria."
-                : "Indique las observaciones para que la dependencia reenvíe su opinión."}
-            </p>
-            {!validateModal.valid && (
-              <div className="mb-4">
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                  Observaciones <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={validateObs}
-                  onChange={(e) => setValidateObs(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-                  placeholder="Describa las observaciones..."
-                />
-              </div>
-            )}
-          </div>
-        </ModalShell>
+        <ValidarOpinionModal
+          requestId={validateModal.id}
+          valid={validateModal.valid}
+          onValidate={handleValidate}
+          onCancel={() => setValidateModal(null)}
+        />
       )}
 
       {showUploadModal && (
