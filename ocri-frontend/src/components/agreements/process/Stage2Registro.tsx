@@ -16,35 +16,14 @@ import {
     Building2,
     Calendar,
     CheckCircle2,
-    ChevronDown,
     FileCheck,
     Loader2,
     PlayCircle,
-    Plus,
-    Trash2,
-    XCircle,
 } from 'lucide-react';
-import {
-    ModalShell,
-    NEXT_STAGE_DESTINATION,
-    SectionCard,
-} from './shared';
-
-interface ResponsableRow {
-    name: string;
-    role: string;
-    side: 'UNCP' | 'CONTRAPARTE';
-    email: string;
-    phone: string;
-}
-
-const EMPTY_RESPONSABLE: ResponsableRow = {
-    name: '',
-    role: '',
-    side: 'UNCP',
-    email: '',
-    phone: '',
-};
+import { NEXT_STAGE_DESTINATION, SectionCard } from './shared';
+import RechazarPropuestaModal from './RechazarPropuestaModal';
+import PublicarConvenioModal from './PublicarConvenioModal';
+import RegistrarConvenioModal from './RegistrarConvenioModal';
 
 export default function Stage2Registro({
     agreementId,
@@ -72,38 +51,16 @@ export default function Stage2Registro({
     const router = useRouter();
 
     const [showRejectModal, setShowRejectModal] = useState(false);
-    const [rejectMessage, setRejectMessage] = useState('');
     const [isDeciding, setIsDeciding] = useState(false);
 
     const [showPublishModal, setShowPublishModal] = useState(false);
-    const [publishFile, setPublishFile] = useState<File | null>(null);
-    const [isPublishing, setIsPublishing] = useState(false);
 
     const [showRegisterModal, setShowRegisterModal] = useState(false);
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [regResolutionNumber, setRegResolutionNumber] = useState(
-        () => tramiteCode ?? '',
-    );
-    const [regStartDate, setRegStartDate] = useState('');
-    const [regEndDate, setRegEndDate] = useState('');
-    const [regObservations, setRegObservations] = useState('');
-    const [regFile, setRegFile] = useState<File | null>(null);
-    const [regResponsables, setRegResponsables] = useState<ResponsableRow[]>([
-        { ...EMPTY_RESPONSABLE },
-    ]);
 
     const [isStartingSeguimiento, setIsStartingSeguimiento] = useState(false);
 
     const formatDate = (value?: string | null) =>
         value ? new Date(value).toLocaleDateString('es-PE') : null;
-
-    const validResponsables = regResponsables.filter((r) => r.name.trim());
-    const canSubmitRegister = Boolean(
-        regStartDate &&
-            regEndDate &&
-            regFile &&
-            validResponsables.length > 0,
-    );
 
     const handleApprove = async () => {
         const confirmed = await confirm({
@@ -125,17 +82,12 @@ export default function Stage2Registro({
         }
     };
 
-    const handleReject = async () => {
-        if (!rejectMessage.trim()) {
-            toast.error('Debe indicar el motivo del rechazo (mensaje de notificación).');
-            return;
-        }
+    const handleReject = async (message: string) => {
         setIsDeciding(true);
         try {
-            await rectorateDecision(agreementId, 'REJECTED', rejectMessage.trim());
+            await rectorateDecision(agreementId, 'REJECTED', message.trim());
             toast.success('Propuesta no suscrita. Se notificará a la Entidad Solicitante.');
             setShowRejectModal(false);
-            setRejectMessage('');
             await onRefresh();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al rechazar';
@@ -145,78 +97,42 @@ export default function Stage2Registro({
         }
     };
 
-    const handlePublish = async () => {
-        setIsPublishing(true);
+    const handlePublish = async (file: File | undefined) => {
         try {
-            await publishConvenio(agreementId, publishFile || undefined);
+            await publishConvenio(agreementId, file);
             toast.success('Convenio publicado correctamente.');
             setShowPublishModal(false);
-            setPublishFile(null);
             await onRefresh();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al publicar';
             toast.error(message);
-        } finally {
-            setIsPublishing(false);
         }
     };
 
-    const updateResponsable = (idx: number, patch: Partial<ResponsableRow>) => {
-        setRegResponsables((prev) =>
-            prev.map((row, i) => (i === idx ? { ...row, ...patch } : row)),
-        );
-    };
-
-    const handleRegister = async () => {
-        if (!regResolutionNumber.trim() && !tramiteCode) {
-            toast.error('El N° de resolución es obligatorio.');
-            return;
-        }
-        if (!regStartDate || !regEndDate) {
-            toast.error('Las fechas de vigencia son obligatorias.');
-            return;
-        }
-        if (validResponsables.length === 0) {
-            toast.error('Debe agregar al menos un responsable con nombre.');
-            return;
-        }
-        if (!regFile) {
-            toast.error('Debe adjuntar el convenio firmado escaneado (PDF).');
-            return;
-        }
-        setIsRegistering(true);
+    const handleRegister = async (
+        payload: {
+            resolution_number: string;
+            start_date: string;
+            end_date: string;
+            responsables: {
+                name: string;
+                role?: string;
+                side: 'UNCP' | 'CONTRAPARTE';
+                email?: string;
+                phone?: string;
+            }[];
+            observations?: string;
+        },
+        file: File,
+    ) => {
         try {
-            await registerConvenio(
-                agreementId,
-                {
-                    resolution_number: (regResolutionNumber || tramiteCode || '').trim(),
-                    start_date: regStartDate,
-                    end_date: regEndDate,
-                    responsables: validResponsables.map((r) => ({
-                        name: r.name.trim(),
-                        role: r.role.trim() || undefined,
-                        side: r.side,
-                        email: r.email.trim() || undefined,
-                        phone: r.phone.trim() || undefined,
-                    })),
-                    observations: regObservations || undefined,
-                },
-                regFile,
-            );
+            await registerConvenio(agreementId, payload, file);
             toast.success('Convenio registrado formalmente. Ahora está VIGENTE.');
             setShowRegisterModal(false);
-            setRegResolutionNumber('');
-            setRegStartDate('');
-            setRegEndDate('');
-            setRegObservations('');
-            setRegFile(null);
-            setRegResponsables([{ ...EMPTY_RESPONSABLE }]);
             await onRefresh();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al registrar';
             toast.error(message);
-        } finally {
-            setIsRegistering(false);
         }
     };
 
@@ -261,7 +177,6 @@ export default function Stage2Registro({
                                     </button>
                                     <button
                                         onClick={() => {
-                                            setRejectMessage('');
                                             setShowRejectModal(true);
                                         }}
                                         disabled={isDeciding}
@@ -284,7 +199,6 @@ export default function Stage2Registro({
                             {processStatus === 'REGISTRADO' && (
                                 <button
                                     onClick={() => {
-                                        setPublishFile(null);
                                         setShowPublishModal(true);
                                     }}
                                     className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
@@ -446,350 +360,25 @@ export default function Stage2Registro({
             </SectionCard>
 
             {showRejectModal && (
-                <ModalShell
-                    title="Rechazar Propuesta de Convenio"
-                    icon={XCircle}
-                    tone="red"
-                    footer={
-                        <>
-                            <button
-                                onClick={() => setShowRejectModal(false)}
-                                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleReject}
-                                disabled={isDeciding || !rejectMessage.trim()}
-                                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-                            >
-                                {isDeciding && <Loader2 className="h-4 w-4 animate-spin" />}
-                                Confirmar Rechazo
-                            </button>
-                        </>
-                    }
-                >
-                    <div className="p-6 space-y-4">
-                        <p className="text-sm text-gray-600">
-                            El trámite pasará a estado <strong>NO_SUSCRITO</strong>. Se notificará
-                            a la Entidad Solicitante.
-                        </p>
-                        <div>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                Motivo / Mensaje de notificación{' '}
-                                <span className="text-red-500">*</span>
-                            </label>
-                            <textarea
-                                value={rejectMessage}
-                                onChange={(e) => setRejectMessage(e.target.value)}
-                                rows={3}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-                                placeholder="Motivo del rechazo para la Entidad Solicitante..."
-                            />
-                        </div>
-                    </div>
-                </ModalShell>
+                <RechazarPropuestaModal
+                    onReject={handleReject}
+                    onCancel={() => setShowRejectModal(false)}
+                />
             )}
 
             {showPublishModal && (
-                <ModalShell
-                    title="Publicar Convenio"
-                    icon={FileCheck}
-                    footer={
-                        <>
-                            <button
-                                onClick={() => setShowPublishModal(false)}
-                                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handlePublish}
-                                disabled={isPublishing}
-                                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-                            >
-                                {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
-                                <FileCheck className="h-4 w-4" />
-                                Publicar Convenio
-                            </button>
-                        </>
-                    }
-                >
-                    <div className="p-6 space-y-4">
-                        <p className="text-sm text-gray-600">
-                            ¿Marcar este convenio como publicado? El flujo continuará con el
-                            registro formal.
-                        </p>
-                        <div>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                Evidencia de publicación{' '}
-                                <span className="normal-case font-normal">(opcional)</span>
-                            </label>
-                            <input
-                                type="file"
-                                onChange={(e) => setPublishFile(e.target.files?.[0] ?? null)}
-                                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
-                            />
-                            {publishFile && (
-                                <p className="mt-1 text-xs text-gray-500 truncate">
-                                    {publishFile.name}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </ModalShell>
+                <PublicarConvenioModal
+                    onPublish={handlePublish}
+                    onCancel={() => setShowPublishModal(false)}
+                />
             )}
 
             {showRegisterModal && (
-                <ModalShell
-                    title="Registrar Convenio"
-                    icon={FileCheck}
-                    tone="green"
-                    size="2xl"
-                    footer={
-                        <>
-                            <button
-                                onClick={() => setShowRegisterModal(false)}
-                                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleRegister}
-                                disabled={isRegistering || !canSubmitRegister}
-                                className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-                            >
-                                {isRegistering && <Loader2 className="h-4 w-4 animate-spin" />}
-                                <FileCheck className="h-4 w-4" />
-                                Registrar Convenio
-                            </button>
-                        </>
-                    }
-                >
-                    <div className="p-6 space-y-6">
-                        <p className="text-sm text-gray-600">
-                            Complete los datos definitivos del convenio. Al registrarlo pasará a
-                            estado <strong>VIGENTE</strong>.
-                        </p>
-
-                        <div>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                N° de Resolución Rectoral / Convenio
-                                {tramiteCode ? ' (código único registrado)' : ' '}
-                                {!tramiteCode && (
-                                    <span className="text-red-500">*</span>
-                                )}
-                            </label>
-                            <input
-                                type="text"
-                                value={regResolutionNumber}
-                                onChange={(e) =>
-                                    setRegResolutionNumber(e.target.value.toUpperCase())
-                                }
-                                placeholder={
-                                    tramiteCode
-                                        ? `Código del convenio: ${tramiteCode}`
-                                        : 'EJ: R.R. N° 0124-2026-UNCP'
-                                }
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold uppercase"
-                            />
-                            {tramiteCode && (
-                                <p className="text-xs text-gray-400 mt-1">
-                                    Se usará el código <strong>{tramiteCode}</strong> del
-                                    trámite si deja este campo vacío.
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                                Vigencia
-                            </h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                        Fecha de inicio <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={regStartDate}
-                                        onChange={(e) => setRegStartDate(e.target.value)}
-                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                        Fecha de fin <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={regEndDate}
-                                        onChange={(e) => setRegEndDate(e.target.value)}
-                                        className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                                Copia Digital del Convenio Firmado
-                            </h3>
-                            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                                Convenio Firmado Escaneado (PDF){' '}
-                                <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="file"
-                                accept=".pdf"
-                                onChange={(e) => setRegFile(e.target.files?.[0] || null)}
-                                className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-800 hover:file:bg-green-100 cursor-pointer border border-gray-300"
-                            />
-                            {regFile ? (
-                                <p className="mt-1 text-xs text-green-700">
-                                    Archivo seleccionado: {regFile.name}
-                                </p>
-                            ) : (
-                                <p className="mt-1 text-xs text-red-600">
-                                    Obligatorio: adjunte el convenio firmado escaneado.
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-                                Responsables <span className="text-red-500 normal-case">(mínimo 1)</span>
-                            </h3>
-                            <div className="space-y-3">
-                                {regResponsables.map((resp, idx) => (
-                                    <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                                        <div className="col-span-12 sm:col-span-3">
-                                            <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
-                                                Nombre <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                value={resp.name}
-                                                onChange={(e) =>
-                                                    updateResponsable(idx, { name: e.target.value })
-                                                }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                                                placeholder="Nombre completo"
-                                            />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-2">
-                                            <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
-                                                Cargo
-                                            </label>
-                                            <input
-                                                value={resp.role}
-                                                onChange={(e) =>
-                                                    updateResponsable(idx, { role: e.target.value })
-                                                }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                                                placeholder="Coordinador"
-                                            />
-                                        </div>
-                                            <div className="col-span-4 sm:col-span-2">
-                                            <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
-                                                Entidad
-                                            </label>
-                                            <div className="w-full relative">
-                                                <select
-                                                    value={resp.side}
-                                                    onChange={(e) =>
-                                                        updateResponsable(idx, {
-                                                            side: e.target.value as 'UNCP' | 'CONTRAPARTE',
-                                                        })
-                                                    }
-                                                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                                                >
-                                                    <option value="UNCP">UNCP</option>
-                                                    <option value="CONTRAPARTE">Contraparte</option>
-                                                </select>
-                                                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            </div>
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-2">
-                                            <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
-                                                Email
-                                            </label>
-                                            <input
-                                                type="email"
-                                                value={resp.email}
-                                                onChange={(e) =>
-                                                    updateResponsable(idx, {
-                                                        email: e.target.value,
-                                                    })
-                                                }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                                            />
-                                        </div>
-                                        <div className="col-span-3 sm:col-span-2">
-                                            <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1">
-                                                Teléfono
-                                            </label>
-                                            <input
-                                                value={resp.phone}
-                                                onChange={(e) =>
-                                                    updateResponsable(idx, {
-                                                        phone: e.target.value,
-                                                    })
-                                                }
-                                                className="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                                            />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-1">
-                                            <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1 opacity-0 select-none">
-                                                eliminar
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setRegResponsables(
-                                                        regResponsables.filter(
-                                                            (_, i) => i !== idx,
-                                                        ),
-                                                    )
-                                                }
-                                                disabled={regResponsables.length <= 1}
-                                                aria-label={`Eliminar responsable ${idx + 1}`}
-                                                title="Eliminar responsable"
-                                                className="inline-flex items-center justify-center h-[32px] w-full border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setRegResponsables([
-                                            ...regResponsables,
-                                            { ...EMPTY_RESPONSABLE },
-                                        ])
-                                    }
-                                    className="text-xs text-gold hover:underline flex items-center gap-1"
-                                >
-                                    <Plus className="h-3 w-3" /> Agregar responsable
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                                Observaciones
-                            </h3>
-                            <textarea
-                                value={regObservations}
-                                onChange={(e) => setRegObservations(e.target.value)}
-                                rows={2}
-                                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-                                placeholder="Observaciones del registro (opcional)..."
-                            />
-                        </div>
-                    </div>
-                </ModalShell>
+                <RegistrarConvenioModal
+                    tramiteCode={tramiteCode}
+                    onRegister={handleRegister}
+                    onCancel={() => setShowRegisterModal(false)}
+                />
             )}
         </div>
     );
