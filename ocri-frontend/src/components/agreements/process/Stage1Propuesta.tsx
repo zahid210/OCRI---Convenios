@@ -21,6 +21,7 @@ import {
 import { fileName } from "@/lib/utils";
 import EnviarOficioOpinionModal from "./EnviarOficioOpinionModal";
 import GenerarOficioRectoradoModal from "./GenerarOficioRectoradoModal";
+import ResponderSolicitudModal from "./ResponderSolicitudModal";
 import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -236,11 +237,6 @@ export default function Stage1Propuesta({
 
   const [showRectoradoModal, setShowRectoradoModal] = useState(false);
 
-  const [respondDate, setRespondDate] = useState("");
-  const [respondObs, setRespondObs] = useState("");
-  const [respondFile, setRespondFile] = useState<File | null>(null);
-  const [isResponding, setIsResponding] = useState(false);
-
   const [validateObs, setValidateObs] = useState("");
   const [isValidating, setIsValidating] = useState(false);
 
@@ -367,37 +363,23 @@ export default function Stage1Propuesta({
     }
   };
 
-  const handleRespond = async (requestId: number) => {
-    if (!respondFile) {
-      toast.error("Debe adjuntar el archivo de respuesta.");
-      return;
-    }
-    if (!respondDate) {
-      toast.error("Debe indicar la fecha de respuesta.");
-      return;
-    }
-    setIsResponding(true);
+  const handleRespond = async (
+    requestId: number,
+    data: {
+      response_date: string;
+      observations?: string;
+    },
+    file: File | undefined,
+  ) => {
     try {
-      await respondOpinionRequest(
-        requestId,
-        {
-          response_date: respondDate,
-          observations: respondObs || undefined,
-        },
-        respondFile || undefined,
-      );
+      await respondOpinionRequest(requestId, data, file);
       toast.success("Respuesta registrada correctamente.");
       setShowRespondModal(null);
-      setRespondDate("");
-      setRespondObs("");
-      setRespondFile(null);
       await onRefresh();
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error al registrar la respuesta";
       toast.error(message);
-    } finally {
-      setIsResponding(false);
     }
   };
 
@@ -565,9 +547,6 @@ export default function Stage1Propuesta({
   }, [allRectoradoReady, processStatus, agreementId, onRefresh, toast, router]);
 
   const openRespondModal = (requestId: number) => {
-    setRespondDate("");
-    setRespondObs("");
-    setRespondFile(null);
     setShowRespondModal(requestId);
   };
 
@@ -1264,85 +1243,11 @@ export default function Stage1Propuesta({
       )}
 
       {showRespondModal !== null && (
-        <ModalShell
-          title="Registrar Respuesta"
-          icon={FileText}
-          footer={
-            <>
-              <button
-                onClick={() => {
-                  setShowRespondModal(null);
-                  setRespondDate("");
-                  setRespondObs("");
-                  setRespondFile(null);
-                }}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() =>
-                  showRespondModal !== null && handleRespond(showRespondModal)
-                }
-                disabled={isResponding || !respondDate || !respondFile}
-                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                {isResponding && <Loader2 className="h-4 w-4 animate-spin" />}
-                <FileCheck className="h-4 w-4" />
-                Registrar Respuesta
-              </button>
-            </>
-          }
-        >
-          <div className="p-6 space-y-4">
-            {respondingRequest?.dependencias && (
-              <p className="text-sm text-gray-600">
-                Dependencia:{" "}
-                <span className="font-medium text-gray-800">
-                  {respondingRequest.dependencias.name}
-                </span>
-              </p>
-            )}
-            <div>
-              <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                Archivo de respuesta <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="file"
-                onChange={(e) => setRespondFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
-              />
-              {respondFile && (
-                <p className="mt-1 text-xs text-gray-500 truncate">
-                  {respondFile.name}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                Fecha de respuesta <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={respondDate}
-                onChange={(e) => setRespondDate(e.target.value)}
-                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                Observaciones
-              </label>
-              <textarea
-                value={respondObs}
-                onChange={(e) => setRespondObs(e.target.value)}
-                rows={3}
-                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-                placeholder="Observaciones de la dependencia (opcional)..."
-              />
-            </div>
-          </div>
-        </ModalShell>
+        <ResponderSolicitudModal
+          request={respondingRequest}
+          onRespond={handleRespond}
+          onCancel={() => setShowRespondModal(null)}
+        />
       )}
 
       {validateModal && (
