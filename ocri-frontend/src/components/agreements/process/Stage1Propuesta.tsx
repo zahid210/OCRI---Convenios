@@ -23,6 +23,7 @@ import EnviarOficioOpinionModal from "./EnviarOficioOpinionModal";
 import GenerarOficioRectoradoModal from "./GenerarOficioRectoradoModal";
 import ResponderSolicitudModal from "./ResponderSolicitudModal";
 import ValidarOpinionModal from "./ValidarOpinionModal";
+import SubirDocumentoModal from "./SubirDocumentoModal";
 import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -50,7 +51,6 @@ import {
 } from "lucide-react";
 import {
   DOCUMENT_TYPE_LABELS,
-  DOC_TYPE_ACCEPT,
   ModalShell,
   NEXT_STAGE_DESTINATION,
   ProcessDetail,
@@ -237,10 +237,6 @@ export default function Stage1Propuesta({
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [showRectoradoModal, setShowRectoradoModal] = useState(false);
-
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadTypeCode, setUploadTypeCode] = useState("EXPEDIENTE_TECNICO");
-  const [isUploading, setIsUploading] = useState(false);
 
   const [isGeneratingExpediente, setIsGeneratingExpediente] = useState(false);
 
@@ -430,25 +426,16 @@ export default function Stage1Propuesta({
     }
   };
 
-  const handleUploadDocument = async () => {
-    if (!uploadFile) {
-      toast.error("Debe seleccionar un archivo.");
-      return;
-    }
-    setIsUploading(true);
+  const handleUploadDocument = async (file: File, typeCode: string) => {
     try {
-      await uploadProcessDocument(agreementId, uploadFile, uploadTypeCode);
+      await uploadProcessDocument(agreementId, file, typeCode);
       toast.success("Documento subido correctamente.");
       setShowUploadModal(false);
-      setUploadFile(null);
-      setUploadTypeCode("EXPEDIENTE_TECNICO");
       await onRefresh();
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error al subir documento";
       toast.error(message);
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -653,7 +640,6 @@ export default function Stage1Propuesta({
                   <button
                     onClick={() => {
                       setUploadTargetType("PROPUESTA_CONVENIO_FIRMA");
-                      setUploadTypeCode("PROPUESTA_CONVENIO_FIRMA");
                       setShowUploadModal(true);
                     }}
                     className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
@@ -1248,82 +1234,14 @@ export default function Stage1Propuesta({
       )}
 
       {showUploadModal && (
-        <ModalShell
-          title={
-            uploadTargetType
-              ? `Subir ${DOCUMENT_TYPE_LABELS[uploadTargetType] || uploadTargetType}`
-              : "Subir Documento"
-          }
-          icon={Upload}
-          footer={
-            <>
-              <button
-                onClick={() => {
-                  setShowUploadModal(false);
-                  setUploadFile(null);
-                  setUploadTargetType(null);
-                }}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleUploadDocument}
-                disabled={isUploading || !uploadFile}
-                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                <Upload className="h-4 w-4" />
-                Subir Documento
-              </button>
-            </>
-          }
-        >
-          <div className="p-6 space-y-4">
-            {!uploadTargetType && (
-              <div>
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                  Tipo de documento <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full relative">
-                  <select
-                    value={uploadTypeCode}
-                    onChange={(e) => {
-                      setUploadTypeCode(e.target.value);
-                      setUploadFile(null);
-                    }}
-                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                  >
-                    {Object.entries(DOCUMENT_TYPE_LABELS).map(
-                      ([code, label]) => (
-                        <option key={code} value={code}>
-                          {label}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                  <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-                Archivo <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="file"
-                accept={DOC_TYPE_ACCEPT[uploadTypeCode] || undefined}
-                onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
-              />
-              {uploadFile && (
-                <p className="mt-1 text-xs text-gray-500 truncate">
-                  {uploadFile.name}
-                </p>
-              )}
-            </div>
-          </div>
-        </ModalShell>
+        <SubirDocumentoModal
+          initialTypeCode={uploadTargetType}
+          onUpload={handleUploadDocument}
+          onCancel={() => {
+            setShowUploadModal(false);
+            setUploadTargetType(null);
+          }}
+        />
       )}
     </div>
   );
