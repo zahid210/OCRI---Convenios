@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AgreementsService } from './agreements.service';
@@ -78,6 +79,11 @@ export class AgreementsController {
       documentos_origen?: UploadedFileLike[];
     },
   ) {
+    if (!files?.dictamen?.length) {
+      throw new BadRequestException(
+        'Debe adjuntar el Dictamen de Rectorado para registrar la propuesta.',
+      );
+    }
     return this.agreementsService.create(createAgreementDto, files);
   }
 

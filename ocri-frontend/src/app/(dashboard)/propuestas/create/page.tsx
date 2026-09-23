@@ -25,6 +25,10 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/components/user-provider";
 import { useToast } from "@/components/ui/toast";
 
+const MAX_ORIGEN_FILES = 20;
+const ACCEPTED_EXTENSIONS = /\.(pdf|doc|docx)$/i;
+const TRAMITE_CODE_FORMAT = /^\d+-\d{4}$/;
+
 export default function CreatePropuestaPage() {
   const router = useRouter();
   const toast = useToast();
@@ -62,11 +66,10 @@ export default function CreatePropuestaPage() {
     null,
   );
   const [origenFiles, setOrigenFiles] = useState<File[]>([]);
-  const [origenPreviews, setOrigenPreviews] = useState<
-    { name: string; url: string | null }[]
-  >([]);
   const [isDraggingOrigen, setIsDraggingOrigen] = useState(false);
   const [isDictamenPreviewOpen, setIsDictamenPreviewOpen] = useState(false);
+
+  const origenDragDepth = useRef(0);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newInstName, setNewInstName] = useState("");
@@ -112,11 +115,8 @@ export default function CreatePropuestaPage() {
   useEffect(() => {
     return () => {
       if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
-      origenPreviews.forEach((p) => {
-        if (p.url) URL.revokeObjectURL(p.url);
-      });
     };
-  }, [dictamenPreviewUrl, origenPreviews]);
+  }, [dictamenPreviewUrl]);
 
   const handleDictamenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -139,14 +139,27 @@ export default function CreatePropuestaPage() {
   const addOrigenFiles = (fileList: FileList | File[]) => {
     const files = Array.from(fileList);
     if (files.length === 0) return;
-    setOrigenFiles((prev) => [...prev, ...files]);
-    setOrigenPreviews((prev) => [
-      ...prev,
-      ...files.map((f) => ({
-        name: f.name,
-        url: f.type === "application/pdf" ? URL.createObjectURL(f) : null,
-      })),
-    ]);
+
+    const accepted = files.filter((f) => ACCEPTED_EXTENSIONS.test(f.name));
+    const rejected = files.length - accepted.length;
+    if (rejected > 0) {
+      toast.warning(
+        rejected === 1
+          ? "Se omitió un archivo con formato no permitido (solo PDF, DOC, DOCX)."
+          : `Se omitieron ${rejected} archivos con formato no permitido (solo PDF, DOC, DOCX).`,
+      );
+    }
+    if (accepted.length === 0) return;
+
+    setOrigenFiles((prev) => {
+      const merged = [...prev, ...accepted].slice(0, MAX_ORIGEN_FILES);
+      if (merged.length < prev.length + accepted.length) {
+        toast.warning(
+          `Solo se permiten hasta ${MAX_ORIGEN_FILES} documentos de origen.`,
+        );
+      }
+      return merged;
+    });
   };
 
   const handleOrigenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,17 +171,13 @@ export default function CreatePropuestaPage() {
 
   const handleOrigenDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    origenDragDepth.current = 0;
     setIsDraggingOrigen(false);
     addOrigenFiles(e.dataTransfer.files);
   };
 
   const handleRemoveOrigen = (index: number) => {
     setOrigenFiles((prev) => prev.filter((_, i) => i !== index));
-    setOrigenPreviews((prev) => {
-      const removed = prev[index];
-      if (removed?.url) URL.revokeObjectURL(removed.url);
-      return prev.filter((_, i) => i !== index);
-    });
   };
 
   const resetForm = () => {
@@ -183,11 +192,7 @@ export default function CreatePropuestaPage() {
     setDictamenPreviewUrl(null);
     setDictamenFile(null);
     if (dictamenInputRef.current) dictamenInputRef.current.value = "";
-    origenPreviews.forEach((p) => {
-      if (p.url) URL.revokeObjectURL(p.url);
-    });
     setOrigenFiles([]);
-    setOrigenPreviews([]);
     if (origenInputRef.current) origenInputRef.current.value = "";
   };
 
@@ -269,6 +274,14 @@ export default function CreatePropuestaPage() {
       return;
     }
 
+    const formattedCode = tramiteCode.trim().toUpperCase();
+    if (formattedCode && !TRAMITE_CODE_FORMAT.test(formattedCode)) {
+      toast.warning(
+        "El código debe tener el formato NNN-YYYY (ej. 001-2026).",
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -278,8 +291,8 @@ export default function CreatePropuestaPage() {
       formData.append("agreement_type_id", Number(agreementTypeId).toString());
 
       if (name.trim()) formData.append("name", name.trim().toUpperCase());
-      if (tramiteCode.trim())
-        formData.append("tramite_code", tramiteCode.trim().toUpperCase());
+      if (formattedCode)
+        formData.append("tramite_code", formattedCode);
       if (rectorateOficioNumber.trim())
         formData.append(
           "rectorate_oficio_number",
@@ -376,11 +389,15 @@ export default function CreatePropuestaPage() {
           <div className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="rectorateOficioNumber"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   N° Dictamen <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <input
+                    id="rectorateOficioNumber"
                     type="text"
                     required
                     value={rectorateOficioNumber}
@@ -413,12 +430,16 @@ export default function CreatePropuestaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="institutionId"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Entidad Solicitante <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <select
+                      id="institutionId"
                       required
                       value={institutionId}
                       onChange={(e) => setInstitutionId(e.target.value)}
@@ -469,10 +490,14 @@ export default function CreatePropuestaPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="applicantUnit"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Unidad Solicitante <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="applicantUnit"
                   type="text"
                   required
                   value={applicantUnit}
@@ -483,12 +508,16 @@ export default function CreatePropuestaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="agreementTypeId"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Tipo de Convenio Solicitado{" "}
                   <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
+                    id="agreementTypeId"
                     required
                     value={agreementTypeId}
                     onChange={(e) => setAgreementTypeId(e.target.value)}
@@ -507,10 +536,14 @@ export default function CreatePropuestaPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="applicantName"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Representante / Solicitante de la Entidad
                 </label>
                 <input
+                  id="applicantName"
                   type="text"
                   value={applicantName}
                   onChange={(e) => setApplicantName(e.target.value)}
@@ -520,10 +553,14 @@ export default function CreatePropuestaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="applicantEmail"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Correo de Contacto del Solicitante
                 </label>
                 <input
+                  id="applicantEmail"
                   type="email"
                   value={applicantEmail}
                   onChange={(e) => setApplicantEmail(e.target.value)}
@@ -546,10 +583,14 @@ export default function CreatePropuestaPage() {
           <div className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="title"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Título del Convenio <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="title"
                   type="text"
                   required
                   value={title}
@@ -560,10 +601,14 @@ export default function CreatePropuestaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="tramiteCode"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Código <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="tramiteCode"
                   type="text"
                   required
                   value={tramiteCode}
@@ -578,10 +623,14 @@ export default function CreatePropuestaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase text-gray-600">
+              <label
+                htmlFor="name"
+                className="block text-xs font-semibold uppercase text-gray-600"
+              >
                 Objeto de la Propuesta
               </label>
               <textarea
+                id="name"
                 rows={3}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -609,11 +658,21 @@ export default function CreatePropuestaPage() {
             </p>
 
             <div
-              onDragOver={(e) => {
+              onDragEnter={(e) => {
                 e.preventDefault();
+                origenDragDepth.current += 1;
                 setIsDraggingOrigen(true);
               }}
-              onDragLeave={() => setIsDraggingOrigen(false)}
+              onDragOver={(e) => {
+                e.preventDefault();
+              }}
+              onDragLeave={() => {
+                origenDragDepth.current -= 1;
+                if (origenDragDepth.current <= 0) {
+                  origenDragDepth.current = 0;
+                  setIsDraggingOrigen(false);
+                }
+              }}
               onDrop={handleOrigenDrop}
               onClick={() => origenInputRef.current?.click()}
               className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed transition-colors cursor-pointer px-6 py-12 text-center ${
@@ -732,11 +791,15 @@ export default function CreatePropuestaPage() {
 
             <form onSubmit={handleSaveInstitution} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="newInstName"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Nombre de la Institución{" "}
                   <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="newInstName"
                   type="text"
                   required
                   value={newInstName}
@@ -765,6 +828,7 @@ export default function CreatePropuestaPage() {
                 {!isCustomCountry ? (
                   <div className="relative">
                     <select
+                      id="newInstCountry"
                       value={selectedCountry}
                       onChange={(e) => setSelectedCountry(e.target.value)}
                       className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
@@ -779,6 +843,7 @@ export default function CreatePropuestaPage() {
                   </div>
                 ) : (
                   <input
+                    id="newCustomCountry"
                     type="text"
                     required
                     value={customCountry}
@@ -790,11 +855,15 @@ export default function CreatePropuestaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-gray-600">
+                <label
+                  htmlFor="newInstType"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
                   Tipo de Institución <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
+                    id="newInstType"
                     required
                     value={newInstType}
                     onChange={(e) => setNewInstType(e.target.value)}
