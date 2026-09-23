@@ -91,10 +91,12 @@ enum deliverable_type {
   INFORME_FINAL
 }
 
-// Ciclo del entregable: solicitar → recibir → revisar (validar u observar con
-// correcciones) → registrar. La re-remisión tras observación incrementa versión.
+// Ciclo del entregable: solicitar → (la contraparte acepta) → recibir → revisar
+// (validar u observar con correcciones) → registrar. La re-remisión tras
+// observación incrementa versión.
 enum deliverable_status {
   SOLICITADO
+  ACEPTADO
   RECIBIDO
   OBSERVADO
   REGISTRADO

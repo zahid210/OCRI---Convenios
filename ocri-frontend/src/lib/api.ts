@@ -526,7 +526,7 @@ export async function requestReport(
   });
 }
 
-/** Responsable envía un Informe o Corrección (archivo) */
+/** Responsable/envía un Informe o Corrección (archivo) */
 export async function submitDeliverable(deliverableId: number, file: File) {
   const formData = new FormData();
   formData.append("file", file);
@@ -536,15 +536,52 @@ export async function submitDeliverable(deliverableId: number, file: File) {
   });
 }
 
-/** OCRI evalúa un informe: APRUEBA (REGISTRADO) u OBSERVA (OBSERVADO + comentario) */
+/** OCRI registra que la contraparte aceptó la solicitud del entregable */
+export async function acceptDeliverableRequest(deliverableId: number) {
+  return fetchApi(`/agreements/deliverables/${deliverableId}/accept-request`, {
+    method: "POST",
+  });
+}
+
+/** Devuelve el borrador editable del oficio de solicitud (html + css + número) */
+export async function getRequestDocumentTemplate(deliverableId: number) {
+  return fetchApi(
+    `/agreements/deliverables/${deliverableId}/request-document-template`,
+  );
+}
+
+/** Genera/regenera el oficio de solicitud de un entregable (con contenido editable) */
+export async function regenerateRequestDocument(
+  deliverableId: number,
+  bodyHtml?: string,
+  oficioNumber?: string,
+) {
+  return fetchApi(
+    `/agreements/deliverables/${deliverableId}/generate-request-document`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        bodyHtml,
+        oficio_number: oficioNumber,
+      }),
+    },
+  );
+}
+
+/** OCRI evalúa un entregable: APRUEBA (adjunta el doc recibido y registra) u OBSERVA (comentario) */
 export async function evaluateDeliverable(
   deliverableId: number,
   decision: "APPROVED" | "OBSERVED",
   observations?: string,
+  file?: File,
 ) {
+  const formData = new FormData();
+  formData.append("decision", decision);
+  if (observations) formData.append("observations", observations);
+  if (file) formData.append("file", file);
   return fetchApi(`/agreements/deliverables/${deliverableId}/evaluate`, {
     method: "POST",
-    body: JSON.stringify({ decision, observations }),
+    body: formData,
   });
 }
 

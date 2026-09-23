@@ -101,6 +101,21 @@ export class DocumentTypesService {
       },
       // ─── Etapa 3: Seguimiento ─────────────────────────────────────────
       {
+        code: 'SOLICITUD_PLAN_TRABAJO',
+        name: 'Oficio de Solicitud de Plan de Trabajo',
+        direction: 'SALIDA',
+      },
+      {
+        code: 'SOLICITUD_INFORME_SEMESTRAL',
+        name: 'Oficio de Solicitud de Informe Semestral',
+        direction: 'SALIDA',
+      },
+      {
+        code: 'SOLICITUD_INFORME_FINAL',
+        name: 'Oficio de Solicitud de Informe Final',
+        direction: 'SALIDA',
+      },
+      {
         code: 'PLAN_DE_TRABAJO',
         name: 'Plan de Trabajo',
         direction: 'ENTRADA',

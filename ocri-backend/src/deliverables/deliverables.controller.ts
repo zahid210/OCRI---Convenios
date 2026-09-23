@@ -18,6 +18,7 @@ import { DeliverablesService } from './deliverables.service';
 import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
 import { RequestReportDto } from './dto/request-report.dto';
 import { EvaluateDeliverableDto } from './dto/evaluate-deliverable.dto';
+import { GenerateRequestDocumentDto } from './dto/generate-request-document.dto';
 
 interface AuthenticatedRequest {
   user?: {
@@ -98,21 +99,63 @@ export class DeliverablesController {
     return this.deliverablesService.submitDeliverable(id, file!, req?.user?.id);
   }
 
-  // ─── E3 · OCRI revisa: registra u observa solicitando correcciones ────────
+  // ─── E3 · La contraparte acepta la solicitud del entregable ────────────────
+
+  @Roles(...FLOW_ROLES)
+  @Post('deliverables/:id/accept-request')
+  acceptRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.deliverablesService.acceptRequest(id, req.user?.id);
+  }
+
+  // ─── E3 · Plantilla editable del oficio de solicitud ──────────────────────
+
+  @Roles(...FLOW_ROLES)
+  @Get('deliverables/:id/request-document-template')
+  getRequestDocumentTemplate(@Param('id', ParseIntPipe) id: number) {
+    return this.deliverablesService.getRequestDocumentTemplate(id);
+  }
+
+  // ─── E3 · Genera/edita el oficio de solicitud (con contenido editable) ────
+
+  @Roles(...FLOW_ROLES)
+  @Post('deliverables/:id/generate-request-document')
+  generateRequestDocument(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: GenerateRequestDocumentDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.deliverablesService.generateRequestDocument(
+      id,
+      req.user?.id,
+      {
+        replace: true,
+        bodyHtml: body?.bodyHtml,
+        oficio_number: body?.oficio_number,
+      },
+    );
+  }
+
+  // ─── E3 · OCRI evalúa (adjuntando el doc recibido): registra u observa ─────
 
   @Roles(...FLOW_ROLES)
   @Post('deliverables/:id/evaluate')
+  @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   evaluateDeliverable(
     @Param('id', ParseIntPipe) id: number,
     @Body()
     body: EvaluateDeliverableDto,
-    @Req() req: AuthenticatedRequest,
+    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @Req() req?: AuthenticatedRequest,
   ) {
     return this.deliverablesService.evaluateDeliverable(
       id,
       body.decision,
       body.observations,
-      req.user?.id,
+      file!,
+      req?.user?.id,
     );
   }
 

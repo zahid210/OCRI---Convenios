@@ -1,9 +1,10 @@
 'use client';
 
-import { Fragment, ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import {
     AlertTriangle,
     Ban,
+    Check,
     Clock,
     MessageSquare,
     Send,
@@ -100,6 +101,7 @@ export const DOC_TYPE_ACCEPT: Record<string, string> = {
 
 export const DELIVERABLE_STATUS_LABELS: Record<string, string> = {
     SOLICITADO: 'Solicitado',
+    ACEPTADO: 'Solicitud aceptada',
     RECIBIDO: 'Recibido',
     OBSERVADO: 'Observado',
     REGISTRADO: 'Registrado',
@@ -187,53 +189,111 @@ export function TemporalBadge({
 
 export function FlowTimeline({ current }: { current: ProcessStatus }) {
     const rejected = current === 'NO_SUSCRITO';
-    const idx = rejected ? PROCESS_FLOW.indexOf('SUSCRITO') : PROCESS_FLOW.indexOf(current);
+    const idx = rejected
+        ? PROCESS_FLOW.indexOf('SUSCRITO')
+        : PROCESS_FLOW.indexOf(current);
+    const total = PROCESS_FLOW.length;
+
+    // Llenado animado de la línea en cada cambio de estado (0 → idx)
+    const [progress, setProgress] = useState(0);
+    const targetIdx = idx === -1 ? 0 : idx;
+    useEffect(() => {
+        let raf1 = 0;
+        let raf2 = 0;
+        raf1 = requestAnimationFrame(() => {
+            raf2 = requestAnimationFrame(() => setProgress(targetIdx));
+        });
+        return () => {
+            cancelAnimationFrame(raf1);
+            cancelAnimationFrame(raf2);
+        };
+    }, [targetIdx]);
+
+    const pct = (progress + 1) / total;
+    const fillWidth = `calc(${pct * 100}% - 5%)`;
+
+    const isCurrent = (i: number) => !rejected && i === idx;
+    const isRejectedNode = (i: number) =>
+        rejected && PROCESS_FLOW[i] === 'SUSCRITO';
+    const isDone = (i: number) => idx !== -1 && i <= idx;
 
     return (
-        <div className="flex items-start overflow-x-auto py-1">
-            {PROCESS_FLOW.map((status, i) => {
-                const done = idx !== -1 && i <= idx;
-                const isCurrent = i === idx && !rejected;
-                const isRejectedNode = rejected && status === 'SUSCRITO';
+        <div className="overflow-x-auto pb-1">
+            <div
+                className="relative flex w-full items-start min-w-[640px] py-3 sm:py-4"
+                role="list"
+                aria-label="Progreso del proceso"
+            >
+                {/* Pista base */}
+                <div className="absolute left-[5%] right-[5%] top-5 sm:top-6 h-1 rounded-full bg-gray-200" />
 
-                const dotCls = isRejectedNode
-                    ? 'bg-red-500 ring-4 ring-red-100'
-                    : isCurrent
-                      ? 'bg-gold ring-4 ring-amber-100'
-                      : done
-                        ? 'bg-green-500'
-                        : 'bg-gray-300';
+                {/* Línea de progreso animada */}
+                <div
+                    className="absolute left-[5%] top-5 sm:top-6 h-1 overflow-hidden rounded-full transition-[width] duration-1000 ease-out"
+                    style={{ width: fillWidth }}
+                >
+                    <div
+                        className={`h-full w-full ${
+                            rejected
+                                ? 'bg-gradient-to-r from-red-500 to-red-400'
+                                : 'bg-gradient-to-r from-primary via-gold to-gold-dark'
+                        }`}
+                    />
+                </div>
 
-                const label = isRejectedNode
-                    ? PROCESS_STATUS_LABELS.NO_SUSCRITO
-                    : PROCESS_STATUS_LABELS[status];
+                {PROCESS_FLOW.map((status, i) => {
+                    const label = PROCESS_STATUS_LABELS[status];
+                    const dotCls = isRejectedNode(i)
+                        ? 'border-red-500 bg-red-50 text-red-600'
+                        : isCurrent(i)
+                          ? 'border-gold bg-gold text-white shadow-[0_0_0_4px_rgba(223,159,31,0.25)]'
+                          : isDone(i)
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-gray-300 bg-white text-gray-300';
 
-                return (
-                    <Fragment key={status}>
-                        {i > 0 && (
-                            <div
-                                className={`h-0.5 w-6 mt-[5px] shrink-0 ${
-                                    idx !== -1 && i <= idx ? 'bg-green-400' : 'bg-gray-300'
-                                }`}
-                            />
-                        )}
-                        <div className="flex flex-col items-center gap-1 shrink-0 w-24">
-                            <span className={`inline-block h-3 w-3 rounded-full ${dotCls}`} />
+                    const labelCls = isRejectedNode(i)
+                        ? 'text-red-600 font-medium'
+                        : isCurrent(i)
+                          ? 'text-primary-deep font-semibold'
+                          : isDone(i)
+                            ? 'text-gray-700'
+                            : 'text-gray-400';
+
+                    return (
+                        <div
+                            key={status}
+                            role="listitem"
+                            className="flex flex-1 min-w-0 flex-col items-center gap-1.5 px-1 sm:gap-2"
+                        >
                             <span
-                                className={`text-[10px] leading-tight text-center ${
-                                    isRejectedNode
-                                        ? 'text-red-600 font-medium'
-                                        : done
-                                          ? 'text-gray-700'
-                                          : 'text-gray-400'
-                                }`}
+                                className={`relative z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors duration-300 animate-pop ${dotCls}`}
+                                style={{ animationDelay: `${i * 60}ms` }}
+                            >
+                                {isRejectedNode(i) && (
+                                    <Ban className="h-2.5 w-2.5 text-red-600" />
+                                )}
+                                {isCurrent(i) && (
+                                    <>
+                                        <span className="absolute inset-0 rounded-full bg-gold/60 animate-ping-soft" />
+                                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                    </>
+                                )}
+                                {!isCurrent(i) &&
+                                    !isRejectedNode(i) &&
+                                    isDone(i) && (
+                                        <Check className="h-2.5 w-2.5 text-white" />
+                                    )}
+                            </span>
+                            <span
+                                className={`w-full truncate text-center text-[11px] leading-tight sm:text-xs transition-colors ${labelCls}`}
+                                title={label}
                             >
                                 {label}
                             </span>
                         </div>
-                    </Fragment>
-                );
-            })}
+                    );
+                })}
+            </div>
         </div>
     );
 }

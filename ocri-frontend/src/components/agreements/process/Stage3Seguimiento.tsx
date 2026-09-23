@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  acceptDeliverableRequest,
   completeMonitoring,
   downloadFile,
   evaluateDeliverable,
   openFilePreview,
+  regenerateRequestDocument,
   requestReport,
-  submitDeliverable,
-  submitWorkPlan,
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
 import { Deliverable, ProcessStatus } from "@/types/agreements";
@@ -25,10 +25,11 @@ import {
   Download,
   ExternalLink,
   FileText,
+  Handshake,
+  Info,
   Loader2,
+  Pencil,
   Plus,
-  RefreshCw,
-  Send,
 } from "lucide-react";
 import {
   DELIVERABLE_STATUS_COLORS,
@@ -37,29 +38,47 @@ import {
   SectionCard,
 } from "./shared";
 import EvaluarEntregableModal from "./EvaluarEntregableModal";
+import GenerarSolicitudModal from "./GenerarSolicitudModal";
 
 function DeliverableCard({
   deliverable,
   canManage,
-  onSubmitFile,
   onEvaluate,
+  onAccept,
+  onOpenDocEditor,
 }: {
   deliverable: Deliverable;
   canManage: boolean;
-  onSubmitFile: (deliverable: Deliverable, file: File) => void;
   onEvaluate: (
     id: number,
     title: string,
     decision: "APPROVED" | "OBSERVED",
   ) => void;
+  onAccept: (deliverable: Deliverable) => Promise<void>;
+  onOpenDocEditor: (deliverable: Deliverable) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [busyAction, setBusyAction] = useState<null | "accept">(null);
   const toast = useToast();
   const documents = deliverable.documents ?? [];
   const observations = [...(deliverable.observations ?? [])].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
+
+  const isSolicitudDoc = (doc: (typeof documents)[number]) =>
+    doc.direction === "SALIDA" ||
+    doc.name?.toLowerCase().startsWith("oficio de solicitud");
+
+  const solicitudDocs = documents.filter(isSolicitudDoc);
+  const submittedDocs = documents.filter((doc) => !isSolicitudDoc(doc));
+
+  const hasSolicitudDoc = solicitudDocs.length > 0;
+  const canEditDocument =
+    canManage &&
+    (deliverable.status === "SOLICITADO" || deliverable.status === "ACEPTADO");
+  const canAcceptRequest =
+    canManage && deliverable.status === "SOLICITADO" && hasSolicitudDoc;
 
   const handleDownloadDocument = async (doc: (typeof documents)[number]) => {
     if (!doc.file_path) {
@@ -83,6 +102,45 @@ function DeliverableCard({
       toast.error(message);
     }
   };
+
+  const handleAccept = async () => {
+    setBusyAction("accept");
+    try {
+      await onAccept(deliverable);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const renderDocumentRow = (doc: (typeof documents)[number]) => (
+    <div
+      key={doc.id}
+      className="flex items-center gap-2 text-sm text-gray-600"
+    >
+      <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+      <span className="truncate flex-1 min-w-0">
+        {fileName(doc.original_name, fileName(doc.name))}
+      </span>
+      <button
+        type="button"
+        onClick={() => openFilePreview(doc.file_path)}
+        className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
+        title="Ver documento"
+      >
+        Ver
+        <ExternalLink className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => handleDownloadDocument(doc)}
+        className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
+        title="Descargar documento"
+      >
+        Descargar
+        <Download className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
 
   return (
     <div className="border border-gray-200 bg-white">
@@ -133,44 +191,49 @@ function DeliverableCard({
           id={`deliverable-${deliverable.id}`}
           className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3"
         >
-          {documents.length > 0 ? (
+          {hasSolicitudDoc ? (
+            <div className="space-y-1">
+              <div
+                className={`text-xs font-semibold uppercase text-gray-500 ${
+                  canEditDocument
+                    ? "flex items-center justify-between gap-2"
+                    : ""
+                }`}
+              >
+                <span>Documento de solicitud</span>
+                {canEditDocument && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenDocEditor(deliverable)}
+                    className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
+                    title="Editar oficio de solicitud"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar
+                  </button>
+                )}
+              </div>
+              {solicitudDocs.map(renderDocumentRow)}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+              <span className="flex-1 min-w-0">
+                Aún no se ha generado el oficio de solicitud.
+              </span>
+            </div>
+          )}
+
+          {submittedDocs.length > 0 ? (
             <div className="space-y-1">
               <div className="text-xs font-semibold uppercase text-gray-500">
-                Archivos presentados
+                Documentos adjuntados
               </div>
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center gap-2 text-sm text-gray-600"
-                >
-                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
-                  <span className="truncate flex-1 min-w-0">
-                    {fileName(doc.original_name, fileName(doc.name))}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => openFilePreview(doc.file_path)}
-                    className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
-                    title="Ver documento"
-                  >
-                    Ver
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadDocument(doc)}
-                    className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
-                    title="Descargar documento"
-                  >
-                    Descargar
-                    <Download className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+              {submittedDocs.map(renderDocumentRow)}
             </div>
           ) : (
             <p className="text-sm text-gray-500">
-              Aún no se ha presentado ningún archivo.
+              Aún no se ha adjuntado el documento recibido.
             </p>
           )}
 
@@ -205,37 +268,34 @@ function DeliverableCard({
 
           {canManage && (
             <div className="flex flex-wrap gap-2 pt-2">
-              {(deliverable.status === "SOLICITADO" ||
-                deliverable.status === "OBSERVADO") && (
-                <label
-                  className={`inline-flex items-center gap-1.5 text-white px-3 py-1.5 text-sm transition-colors cursor-pointer ${
-                    deliverable.status === "OBSERVADO"
-                      ? "bg-amber-600 hover:bg-amber-700"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+              {deliverable.status === "SOLICITADO" && !hasSolicitudDoc && (
+                <button
+                  type="button"
+                  onClick={() => onOpenDocEditor(deliverable)}
+                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
                 >
-                  {deliverable.status === "OBSERVADO" ? (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                  {deliverable.status === "OBSERVADO"
-                    ? "Reenviar Corregido"
-                    : "Enviar"}
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        e.target.value = "";
-                        onSubmitFile(deliverable, file);
-                      }
-                    }}
-                  />
-                </label>
+                  <FileText className="h-3.5 w-3.5" />
+                  Generar Documento de Solicitud
+                </button>
               )}
-              {deliverable.status === "RECIBIDO" && (
+              {canAcceptRequest && (
+                <button
+                  type="button"
+                  onClick={handleAccept}
+                  disabled={busyAction === "accept"}
+                  className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+                >
+                  {busyAction === "accept" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Handshake className="h-3.5 w-3.5" />
+                  )}
+                  Solicitud Aceptada
+                </button>
+              )}
+              {deliverable.status === "ACEPTADO" ||
+              deliverable.status === "OBSERVADO" ||
+              deliverable.status === "RECIBIDO" ? (
                 <>
                   <button
                     onClick={() =>
@@ -256,7 +316,7 @@ function DeliverableCard({
                     Observar
                   </button>
                 </>
-              )}
+              ) : null}
               {deliverable.status === "REGISTRADO" && (
                 <span className="inline-flex items-center gap-1.5 text-xs text-green-700">
                   <CheckCircle2 className="h-3.5 w-3.5" />
@@ -300,6 +360,10 @@ export default function Stage3Seguimiento({
     title: string;
     decision: "APPROVED" | "OBSERVED";
   } | null>(null);
+  const [docEditor, setDocEditor] = useState<{
+    id: number;
+    title: string;
+  } | null>(null);
   const [isCompletingMonitoring, setIsCompletingMonitoring] = useState(false);
 
   const workPlans = deliverables.filter((d) => d.type === "PLAN_DE_TRABAJO");
@@ -311,24 +375,45 @@ export default function Stage3Seguimiento({
   const hasFinalReportRegistered = deliverables.some(
     (d) => d.type === "INFORME_FINAL" && d.status === "REGISTRADO",
   );
+  const planApproved = deliverables.some(
+    (d) => d.type === "PLAN_DE_TRABAJO" && d.status === "REGISTRADO",
+  );
   const canCompleteMonitoring =
     processStatus === "EN_SEGUIMIENTO" &&
     allRegistered &&
     hasFinalReportRegistered;
 
-  const handleSubmitFile = async (deliverable: Deliverable, file: File) => {
+  const handleAcceptRequest = async (deliverable: Deliverable) => {
     try {
-      if (deliverable.type === "PLAN_DE_TRABAJO") {
-        await submitWorkPlan(agreementId, file);
-      } else {
-        await submitDeliverable(deliverable.id, file);
-      }
-      toast.success("Entregable enviado correctamente.");
+      await acceptDeliverableRequest(deliverable.id);
+      toast.success(
+        "Solicitud aceptada. Cuando reciba el documento, adjúntelo al aprobar.",
+      );
       await onRefresh();
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Error al enviar entregable";
+        err instanceof Error ? err.message : "Error al aceptar la solicitud";
       toast.error(message);
+    }
+  };
+
+  const handleGenerateDocument = async (
+    bodyHtml: string,
+    oficioNumber: string,
+  ) => {
+    if (!docEditor) return;
+    try {
+      await regenerateRequestDocument(docEditor.id, bodyHtml, oficioNumber);
+      toast.success("Documento de solicitud generado y adjuntado.");
+      setDocEditor(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Error al generar el documento de solicitud";
+      toast.error(message);
+      throw err;
     }
   };
 
@@ -356,9 +441,10 @@ export default function Stage3Seguimiento({
     id: number,
     decision: "APPROVED" | "OBSERVED",
     observations?: string,
+    file?: File,
   ) => {
     try {
-      await evaluateDeliverable(id, decision, observations);
+      await evaluateDeliverable(id, decision, observations, file);
       toast.success(
         decision === "APPROVED"
           ? "Entregable aprobado y registrado."
@@ -425,7 +511,10 @@ export default function Stage3Seguimiento({
                     key={d.id}
                     deliverable={d}
                     canManage={canManage}
-                    onSubmitFile={handleSubmitFile}
+                    onAccept={handleAcceptRequest}
+                    onOpenDocEditor={(dl) =>
+                      setDocEditor({ id: dl.id, title: dl.title })
+                    }
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -446,7 +535,10 @@ export default function Stage3Seguimiento({
                     key={d.id}
                     deliverable={d}
                     canManage={canManage}
-                    onSubmitFile={handleSubmitFile}
+                    onAccept={handleAcceptRequest}
+                    onOpenDocEditor={(dl) =>
+                      setDocEditor({ id: dl.id, title: dl.title })
+                    }
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -458,43 +550,57 @@ export default function Stage3Seguimiento({
 
           {canManage && processStatus === "EN_SEGUIMIENTO" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-4 border-t border-gray-100">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <select
-                    value={reportType}
-                    onChange={(e) =>
-                      setReportType(
-                        e.target.value as "INFORME_SEMESTRAL" | "INFORME_FINAL",
-                      )
-                    }
-                    className="appearance-none border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                  >
-                    <option value="INFORME_SEMESTRAL">Informe Semestral</option>
-                    <option value="INFORME_FINAL">Informe Final</option>
-                  </select>
-                  <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                </div>
-                {reportType === "INFORME_SEMESTRAL" && (
-                  <input
-                    value={reportPeriod}
-                    onChange={(e) => setReportPeriod(e.target.value)}
-                    placeholder="Periodo (ej: 2026-I)"
-                    className="border border-gray-300 px-3 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold w-40"
-                  />
-                )}
-                <button
-                  onClick={handleRequestReport}
-                  disabled={isRequestingReport}
-                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-                >
-                  {isRequestingReport ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="h-3.5 w-3.5" />
+              {planApproved ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <select
+                      value={reportType}
+                      onChange={(e) =>
+                        setReportType(
+                          e.target.value as
+                            | "INFORME_SEMESTRAL"
+                            | "INFORME_FINAL",
+                        )
+                      }
+                      className="appearance-none border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
+                    >
+                      <option value="INFORME_SEMESTRAL">
+                        Informe Semestral
+                      </option>
+                      <option value="INFORME_FINAL">Informe Final</option>
+                    </select>
+                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  </div>
+                  {reportType === "INFORME_SEMESTRAL" && (
+                    <input
+                      value={reportPeriod}
+                      onChange={(e) => setReportPeriod(e.target.value)}
+                      placeholder="Periodo (ej: 2026-I)"
+                      className="border border-gray-300 px-3 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold w-40"
+                    />
                   )}
-                  Solicitar Informe
-                </button>
-              </div>
+                  <button
+                    onClick={handleRequestReport}
+                    disabled={isRequestingReport}
+                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+                  >
+                    {isRequestingReport ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5" />
+                    )}
+                    Solicitar Informe
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 text-sm text-gray-500">
+                  <Info className="h-4 w-4 shrink-0 mt-0.5 text-gray-400" />
+                  <span className="max-w-md">
+                    Los informes se habilitan cuando el Plan de Trabajo sea
+                    aprobado y registrado (estado REGISTRADO).
+                  </span>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 {!canCompleteMonitoring && (
@@ -528,6 +634,15 @@ export default function Stage3Seguimiento({
           decision={evaluateModal.decision}
           onEvaluate={handleEvaluate}
           onCancel={() => setEvaluateModal(null)}
+        />
+      )}
+
+      {docEditor && (
+        <GenerarSolicitudModal
+          deliverableId={docEditor.id}
+          deliverableTitle={docEditor.title}
+          onGenerate={handleGenerateDocument}
+          onCancel={() => setDocEditor(null)}
         />
       )}
     </SectionCard>

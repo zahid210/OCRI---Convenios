@@ -337,6 +337,7 @@ export type DeliverableType =
 
 export type DeliverableStatus =
     | 'SOLICITADO'
+    | 'ACEPTADO'
     | 'RECIBIDO'
     | 'OBSERVADO'
     | 'REGISTRADO';

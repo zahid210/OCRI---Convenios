@@ -140,13 +140,15 @@ export default function Stage2Registro({
         const confirmed = await confirm({
             title: 'Iniciar Seguimiento',
             description:
-                'Se formalizará el convenio publicado y se solicitará el Plan de Trabajo a los responsables.',
+                'Se formalizará el convenio publicado, se generará el oficio de solicitud y se solicitará el Plan de Trabajo a los responsables.',
         });
         if (!confirmed) return;
         setIsStartingSeguimiento(true);
         try {
             await requestWorkPlan(agreementId);
-            toast.success('Seguimiento iniciado. Se solicitó el Plan de Trabajo.');
+            toast.success(
+                'Seguimiento iniciado. Se solicitó el Plan de Trabajo y se generó el oficio de solicitud.',
+            );
             await onRefresh();
             router.replace(NEXT_STAGE_DESTINATION(agreementId).toSeguimiento);
         } catch (err: unknown) {

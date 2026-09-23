@@ -15,6 +15,7 @@ export const OPINION_STATUS_COLORS: Record<string, string> = {
 
 export const DELIVERABLE_STATUS_COLORS: Record<string, string> = {
     SOLICITADO: 'bg-gray-50 text-gray-700 border-gray-200',
+    ACEPTADO: 'bg-primary-wash text-primary border-primary-tint',
     RECIBIDO: 'bg-blue-50 text-blue-700 border-blue-200',
     OBSERVADO: 'bg-red-50 text-red-700 border-red-200',
     REGISTRADO: 'bg-green-50 text-green-700 border-green-200',
