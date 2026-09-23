@@ -40,6 +40,12 @@ export class InstitutionsController {
     return this.institutionsService.search(q);
   }
 
+  /** Autocompletado por nombre para el registro de propuestas (solo nombre). */
+  @Get('autocomplete')
+  autocomplete(@Query('q') q?: string) {
+    return this.institutionsService.autocomplete(q);
+  }
+
   @Get('countries')
   getCountries() {
     return this.institutionsService.getCountries();

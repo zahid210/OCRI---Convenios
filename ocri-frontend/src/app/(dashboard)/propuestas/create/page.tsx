@@ -9,7 +9,6 @@ import {
   Tag,
   Loader2,
   Paperclip,
-  Plus,
   X,
   FolderInput,
   Gavel,
@@ -18,16 +17,20 @@ import {
   Eye,
   FileX2,
   ChevronDown,
+  Building2,
 } from "lucide-react";
 import { Institution, AgreementType } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/components/user-provider";
 import { useToast } from "@/components/ui/toast";
+import { ModalShell } from "@/components/agreements/process/shared";
 
 const MAX_ORIGEN_FILES = 20;
 const ACCEPTED_EXTENSIONS = /\.(pdf|doc|docx)$/i;
 const TRAMITE_CODE_FORMAT = /^\d+-\d{4}$/;
+const MIN_INST_QUERY = 2;
+const INST_DEBOUNCE_MS = 300;
 
 export default function CreatePropuestaPage() {
   const router = useRouter();
@@ -36,7 +39,6 @@ export default function CreatePropuestaPage() {
   const dictamenInputRef = useRef<HTMLInputElement>(null);
   const origenInputRef = useRef<HTMLInputElement>(null);
 
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [types, setTypes] = useState<AgreementType[]>([]);
   const [countries, setCountries] = useState<string[]>([
     "PERÚ",
@@ -71,26 +73,38 @@ export default function CreatePropuestaPage() {
 
   const origenDragDepth = useRef(0);
 
+  const [pickedInstitution, setPickedInstitution] = useState<Institution | null>(
+    null,
+  );
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newInstName, setNewInstName] = useState("");
   const [newInstType, setNewInstType] = useState("Universidad Nacional");
-  const [isCustomCountry, setIsCustomCountry] = useState(false);
+  const [isAddingCountry, setIsAddingCountry] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("PERÚ");
   const [customCountry, setCustomCountry] = useState("");
   const [savingInst, setSavingInst] = useState(false);
 
+  const [instSuggestions, setInstSuggestions] = useState<Institution[]>([]);
+  const [instSearching, setInstSearching] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const [selectedExisting, setSelectedExisting] = useState<Institution | null>(
+    null,
+  );
+
+  const instDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const instAbortRef = useRef<AbortController | null>(null);
+  const instBoxRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     async function loadAuxData() {
       try {
-        const [instRes, typeRes, countriesRes] = await Promise.all([
-          fetcher<Institution[]>("/agreements/lookups/institutions").catch(
-            () => [],
-          ),
+        const [typeRes, countriesRes] = await Promise.all([
           fetcher<AgreementType[]>("/agreements/lookups/types").catch(() => []),
           fetcher<string[]>("/institutions/countries").catch(() => []),
         ]);
 
-        setInstitutions(instRes || []);
         setTypes(typeRes || []);
 
         if (countriesRes && countriesRes.length > 0) {
@@ -99,8 +113,6 @@ export default function CreatePropuestaPage() {
           );
         }
 
-        if (instRes && instRes.length > 0)
-          setInstitutionId(instRes[0].id.toString());
         if (typeRes && typeRes.length > 0)
           setAgreementTypeId(typeRes[0].id.toString());
       } catch (err) {
@@ -110,6 +122,75 @@ export default function CreatePropuestaPage() {
       }
     }
     loadAuxData();
+  }, []);
+
+  async function searchInstitutions(query: string) {
+    if (instAbortRef.current) instAbortRef.current.abort();
+    const controller = new AbortController();
+    instAbortRef.current = controller;
+    setInstSearching(true);
+    try {
+      const results = await fetcher<Institution[]>(
+        `/institutions/autocomplete?q=${encodeURIComponent(query)}`,
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
+      setInstSuggestions(results || []);
+      setActiveSuggestion(-1);
+      setSuggestionsOpen(true);
+    } catch {
+      if (!controller.signal.aborted) setInstSuggestions([]);
+    } finally {
+      if (!controller.signal.aborted) setInstSearching(false);
+    }
+  }
+
+  const clearInstSearch = () => {
+    if (instDebounceRef.current) clearTimeout(instDebounceRef.current);
+    if (instAbortRef.current) instAbortRef.current.abort();
+    setInstSuggestions([]);
+    setSuggestionsOpen(false);
+    setInstSearching(false);
+    setActiveSuggestion(-1);
+  };
+
+  const openInstitutionModal = () => {
+    clearInstSearch();
+    setNewInstName("");
+    setCustomCountry("");
+    setIsAddingCountry(false);
+    setSelectedExisting(null);
+    setIsModalOpen(true);
+  };
+
+  // Autocompletado en vivo del nombre de la institución en el modal.
+  // Solo agenda la búsqueda; la limpieza vive en los eventos del usuario.
+  useEffect(() => {
+    if (instDebounceRef.current) clearTimeout(instDebounceRef.current);
+    const term = newInstName.trim();
+    if (!isModalOpen || selectedExisting) return;
+    if (term.length < MIN_INST_QUERY) return;
+    instDebounceRef.current = setTimeout(
+      () => void searchInstitutions(term),
+      INST_DEBOUNCE_MS,
+    );
+    return () => {
+      if (instDebounceRef.current) clearTimeout(instDebounceRef.current);
+    };
+  }, [newInstName, isModalOpen, selectedExisting]);
+
+  // Cierra el dropdown al hacer clic fuera del bloque
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        instBoxRef.current &&
+        !instBoxRef.current.contains(e.target as Node)
+      ) {
+        setSuggestionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   useEffect(() => {
@@ -188,6 +269,8 @@ export default function CreatePropuestaPage() {
     setApplicantUnit("");
     setTitle("");
     setName("");
+    setInstitutionId("");
+    setPickedInstitution(null);
     if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
     setDictamenPreviewUrl(null);
     setDictamenFile(null);
@@ -196,9 +279,64 @@ export default function CreatePropuestaPage() {
     if (origenInputRef.current) origenInputRef.current.value = "";
   };
 
+  const applyInstitution = (inst: Institution) => {
+    setPickedInstitution(inst);
+    setInstitutionId(inst.id.toString());
+    const country = inst.country?.trim().toUpperCase();
+    if (
+      country &&
+      !countries.some((c) => c.toUpperCase() === country)
+    ) {
+      setCountries((prev) => Array.from(new Set([...prev, country])));
+    }
+    clearInstSearch();
+    setNewInstName("");
+    setCustomCountry("");
+    setIsAddingCountry(false);
+    setSelectedExisting(null);
+    setIsModalOpen(false);
+  };
+
+  const selectSuggestion = (inst: Institution) => {
+    setSelectedExisting(inst);
+    setNewInstName(inst.name);
+    setInstSuggestions([]);
+    setSuggestionsOpen(false);
+    setActiveSuggestion(-1);
+  };
+
+  const handleInstKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setSuggestionsOpen(false);
+      return;
+    }
+    if (!suggestionsOpen || instSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveSuggestion((prev) =>
+        prev < instSuggestions.length - 1 ? prev + 1 : 0,
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveSuggestion((prev) =>
+        prev > 0 ? prev - 1 : instSuggestions.length - 1,
+      );
+    } else if (e.key === "Enter" && activeSuggestion >= 0) {
+      e.preventDefault();
+      selectSuggestion(instSuggestions[activeSuggestion]);
+    }
+  };
+
   const handleSaveInstitution = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalCountry = isCustomCountry
+
+    if (selectedExisting) {
+      applyInstitution(selectedExisting);
+      toast.success("Institución seleccionada correctamente.");
+      return;
+    }
+
+    const finalCountry = isAddingCountry
       ? customCountry.trim().toUpperCase()
       : selectedCountry;
 
@@ -218,28 +356,7 @@ export default function CreatePropuestaPage() {
         }),
       });
 
-      setInstitutions((prev) => {
-        const exists = prev.some(
-          (item) => Number(item.id) === Number(newInst.id),
-        );
-        if (exists) {
-          return prev.map((item) =>
-            Number(item.id) === Number(newInst.id) ? newInst : item,
-          );
-        }
-        return [newInst, ...prev];
-      });
-
-      setInstitutionId(newInst.id.toString());
-
-      if (!countries.includes(finalCountry)) {
-        setCountries((prev) => Array.from(new Set([...prev, finalCountry])));
-      }
-
-      setNewInstName("");
-      setCustomCountry("");
-      setIsCustomCountry(false);
-      setIsModalOpen(false);
+      applyInstitution(newInst);
       toast.success("Institución registrada correctamente.");
     } catch (err) {
       toast.error(
@@ -431,37 +548,42 @@ export default function CreatePropuestaPage() {
 
               <div className="space-y-1.5">
                 <label
-                  htmlFor="institutionId"
+                  htmlFor="institution-trigger"
                   className="block text-xs font-semibold uppercase text-gray-600"
                 >
                   Entidad Solicitante <span className="text-red-500">*</span>
                 </label>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <select
-                      id="institutionId"
-                      required
-                      value={institutionId}
-                      onChange={(e) => setInstitutionId(e.target.value)}
-                      className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
+                {pickedInstitution ? (
+                  <div className="flex items-center justify-between gap-3 border border-primary/30 bg-primary/5 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800">
+                        {pickedInstitution.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {pickedInstitution.country}
+                        {pickedInstitution.type
+                          ? ` · ${pickedInstitution.type}`
+                          : ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openInstitutionModal}
+                      className="text-xs font-semibold text-primary hover:underline shrink-0 cursor-pointer"
                     >
-                      {institutions.map((inst) => (
-                        <option key={`inst-create-${inst.id}`} value={inst.id}>
-                          {inst.name} {inst.country ? `(${inst.country})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                      Cambiar
+                    </button>
                   </div>
+                ) : (
                   <button
+                    id="institution-trigger"
                     type="button"
-                    onClick={() => setIsModalOpen(true)}
-                    className="h-10 px-3 bg-gold hover:bg-gold-dark text-white flex items-center justify-center gap-1.5 text-sm transition-colors shrink-0 cursor-pointer"
+                    onClick={openInstitutionModal}
+                    className="h-10 w-full bg-gold hover:bg-gold-dark text-white text-sm transition-colors cursor-pointer"
                   >
-                    <Plus className="h-4 w-4" />
-                    Registrar
+                    Agregar institución
                   </button>
-                </div>
+                )}
               </div>
             </div>
             {dictamenFile && (
@@ -769,143 +891,203 @@ export default function CreatePropuestaPage() {
       </form>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 w-full max-w-md p-6 shadow-xl space-y-4 relative">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              aria-label="Cerrar"
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
+        <ModalShell
+          title="Registrar Institución Aliada"
+          icon={Building2}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="institution-form"
+                disabled={savingInst}
+                className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50"
+              >
+                {savingInst
+                  ? "Guardando..."
+                  : selectedExisting
+                    ? "Seleccionar institución"
+                    : "Guardar y Seleccionar"}
+              </button>
+            </>
+          }
+        >
+          <form
+            id="institution-form"
+            onSubmit={handleSaveInstitution}
+            className="p-6 space-y-4"
+          >
             <div>
-              <h3 className="text-base font-semibold text-gray-800">
-                Registrar Nueva Institución Aliada
-              </h3>
-              <p className="text-xs text-gray-500">
-                Ingrese los datos de la entidad solicitante para seleccionarla.
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveInstitution} className="space-y-4">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="newInstName"
-                  className="block text-xs font-semibold uppercase text-gray-600"
-                >
-                  Nombre de la Institución{" "}
-                  <span className="text-red-500">*</span>
-                </label>
+              <label
+                htmlFor="newInstName"
+                className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+              >
+                Nombre de la Institución <span className="text-red-500">*</span>
+              </label>
+              <div ref={instBoxRef} className="relative">
                 <input
                   id="newInstName"
                   type="text"
                   required
                   value={newInstName}
-                  onChange={(e) => setNewInstName(e.target.value)}
-                  placeholder="Ej. UNIVERSIDAD NACIONAL DE INGENIERÍA"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewInstName(value);
+                    if (selectedExisting) setSelectedExisting(null);
+                    if (value.trim().length < MIN_INST_QUERY) {
+                      clearInstSearch();
+                    }
+                  }}
+                  onFocus={() => {
+                    if (
+                      newInstName.trim().length >= MIN_INST_QUERY &&
+                      instSuggestions.length > 0
+                    )
+                      setSuggestionsOpen(true);
+                  }}
+                  onKeyDown={handleInstKeyDown}
+                  placeholder="EJ: UNIVERSIDAD NACIONAL DE INGENIERÍA"
+                  className="w-full border border-gray-300 px-3 py-2 pr-9 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold uppercase"
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold uppercase text-gray-600">
-                    País <span className="text-red-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsCustomCountry(!isCustomCountry)}
-                    className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
-                  >
-                    {isCustomCountry
-                      ? "Seleccionar existente"
-                      : "Escribir país nuevo"}
-                  </button>
-                </div>
-
-                {!isCustomCountry ? (
-                  <div className="relative">
-                    <select
-                      id="newInstCountry"
-                      value={selectedCountry}
-                      onChange={(e) => setSelectedCountry(e.target.value)}
-                      className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
-                    >
-                      {countries.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  </div>
-                ) : (
-                  <input
-                    id="newCustomCountry"
-                    type="text"
-                    required
-                    value={customCountry}
-                    onChange={(e) => setCustomCountry(e.target.value)}
-                    placeholder="Ej. ARGENTINA"
-                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
-                  />
+                {instSearching && (
+                  <Loader2 className="h-4 w-4 animate-spin text-gold absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 )}
+                {suggestionsOpen && instSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto border border-gray-200 bg-white shadow-lg">
+                    {instSuggestions.map((inst, index) => (
+                      <button
+                        key={inst.id}
+                        type="button"
+                        onClick={() => selectSuggestion(inst)}
+                        onMouseEnter={() => setActiveSuggestion(index)}
+                        className={cn(
+                          "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm cursor-pointer",
+                          activeSuggestion === index
+                            ? "bg-gold/10"
+                            : "bg-white",
+                        )}
+                      >
+                        <span className="truncate font-medium text-gray-800">
+                          {inst.name}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-gray-400">
+                          {inst.country}
+                          {inst.type ? ` · ${inst.type}` : ""}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {suggestionsOpen &&
+                  !instSearching &&
+                  newInstName.trim().length >= MIN_INST_QUERY &&
+                  instSuggestions.length === 0 && (
+                    <p className="absolute left-0 right-0 top-full z-20 mt-1 border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500">
+                      No hay instituciones con ese nombre.
+                    </p>
+                  )}
+              </div>
+              {selectedExisting && (
+                <p className="text-xs text-primary font-medium mt-1">
+                  Institución existente. País: {selectedExisting.country}
+                  {selectedExisting.type
+                    ? ` · Tipo: ${selectedExisting.type}`
+                    : ""}
+                </p>
+              )}
+            </div>
+
+            {!selectedExisting && (
+              <div>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="newInstCountry"
+                  className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+                >
+                  País <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingCountry(!isAddingCountry)}
+                  className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+                >
+                  {isAddingCountry
+                    ? "Seleccionar existente"
+                    : "Agregar nuevo país"}
+                </button>
               </div>
 
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="newInstType"
-                  className="block text-xs font-semibold uppercase text-gray-600"
-                >
-                  Tipo de Institución <span className="text-red-500">*</span>
-                </label>
+              {isAddingCountry ? (
+                <input
+                  id="newCustomCountry"
+                  type="text"
+                  value={customCountry}
+                  onChange={(e) => setCustomCountry(e.target.value)}
+                  placeholder="EJ: ARGENTINA"
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold uppercase"
+                />
+              ) : (
                 <div className="relative">
                   <select
-                    id="newInstType"
-                    required
-                    value={newInstType}
-                    onChange={(e) => setNewInstType(e.target.value)}
-                    className="appearance-none h-10 w-full pl-3 pr-10 text-sm bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-gold"
+                    id="newInstCountry"
+                    value={selectedCountry}
+                    onChange={(e) => setSelectedCountry(e.target.value)}
+                    className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   >
-                    <option value="Universidad Nacional">
-                      Universidad Nacional
-                    </option>
-                    <option value="Universidad Privada">
-                      Universidad Privada
-                    </option>
-                    <option value="Entidad Gubernamental">
-                      Entidad Gubernamental
-                    </option>
-                    <option value="Empresa Privada">Empresa Privada</option>
-                    <option value="Organización Internacional">
-                      Organización Internacional
-                    </option>
+                    {countries.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 </div>
+              )}
               </div>
+            )}
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer"
+            {!selectedExisting && (
+              <div>
+              <label
+                htmlFor="newInstType"
+                className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+              >
+                Tipo de Institución <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  id="newInstType"
+                  required
+                  value={newInstType}
+                  onChange={(e) => setNewInstType(e.target.value)}
+                  className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingInst}
-                  className="px-4 py-2 text-xs font-semibold bg-gold hover:bg-gold-dark text-white disabled:opacity-50 cursor-pointer"
-                >
-                  {savingInst ? "Guardando..." : "Guardar y Seleccionar"}
-                </button>
+                  <option value="Universidad Nacional">
+                    Universidad Nacional
+                  </option>
+                  <option value="Universidad Privada">
+                    Universidad Privada
+                  </option>
+                  <option value="Entidad Gubernamental">
+                    Entidad Gubernamental
+                  </option>
+                  <option value="Empresa Privada">Empresa Privada</option>
+                  <option value="Organización Internacional">
+                    Organización Internacional
+                  </option>
+                </select>
+                <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
               </div>
-            </form>
-          </div>
-        </div>
+              </div>
+            )}
+          </form>
+        </ModalShell>
       )}
 
       {isDictamenPreviewOpen && dictamenFile && (

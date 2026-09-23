@@ -178,6 +178,37 @@ export class InstitutionsService {
     });
   }
 
+  /** Autocompletado por nombre: exacto primero, luego prefijo y luego resto. */
+  async autocomplete(q?: string) {
+    const term = (q ?? '').trim();
+    if (term.length < 2) {
+      return [];
+    }
+    const upper = term.toUpperCase();
+
+    const records = await this.prisma.institutions.findMany({
+      where: { name: { contains: term } },
+      select: { id: true, name: true, country: true, type: true },
+      take: 20,
+      orderBy: { name: 'asc' },
+    });
+
+    const scored = records.map((r) => {
+      const name = r.name.toUpperCase();
+      const score =
+        name === upper ? 0 : name.startsWith(upper) ? 1 : 2;
+      return { ...r, score };
+    });
+
+    scored.sort(
+      (a, b) =>
+        a.score - b.score ||
+        a.name.localeCompare(b.name),
+    );
+
+    return scored.slice(0, 8).map(({ score, ...rest }) => rest);
+  }
+
   async getCountries(): Promise<string[]> {
     const records = await this.prisma.institutions.findMany({
       select: { country: true },
