@@ -630,7 +630,7 @@ export default function CreatePropuestaPage() {
                 onChange={handleOrigenChange}
                 className="hidden"
               />
-              <div className="p-3 rounded-full bg-amber-100 text-gold">
+              <div className="p-3 text-gold">
                 <UploadCloud className="h-8 w-8" />
               </div>
               <p className="text-sm font-semibold text-gray-700">

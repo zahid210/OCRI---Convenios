@@ -130,19 +130,19 @@ export const OPINION_STATUS_RESUME: Record<
     string,
     { icon: LucideIcon; className: string }
 > = {
-    GENERADA: { icon: Clock, className: 'bg-gray-100 text-gray-600' },
-    ENVIADA: { icon: Send, className: 'bg-blue-100 text-blue-600 animate-pulse' },
-    RESPONDIDA: { icon: MessageSquare, className: 'bg-amber-100 text-amber-600' },
-    VALIDADA: { icon: ShieldCheck, className: 'bg-green-100 text-green-600' },
-    OBSERVADA: { icon: AlertTriangle, className: 'bg-red-100 text-red-600' },
-    CANCELADA: { icon: Ban, className: 'bg-gray-100 text-gray-500' },
+    GENERADA: { icon: Clock, className: 'text-gray-600' },
+    ENVIADA: { icon: Send, className: 'text-blue-600 animate-pulse' },
+    RESPONDIDA: { icon: MessageSquare, className: 'text-amber-600' },
+    VALIDADA: { icon: ShieldCheck, className: 'text-green-600' },
+    OBSERVADA: { icon: AlertTriangle, className: 'text-red-600' },
+    CANCELADA: { icon: Ban, className: 'text-gray-500' },
 };
 
 /** Marca de estado de una solicitud: ícono + color, sin texto visible. */
 export function OpinionStatusIcon({ status }: { status: string }) {
     const { icon: Icon, className } = OPINION_STATUS_RESUME[status] ?? {
         icon: Clock,
-        className: 'bg-gray-100 text-gray-600',
+        className: 'text-gray-600',
     };
 
     return (
@@ -209,10 +209,14 @@ export function FlowTimeline({ current }: { current: ProcessStatus }) {
         };
     }, [targetIdx]);
 
-    const pct = (progress + 1) / total;
-    const fillWidth = `calc(${pct * 100}% - 5%)`;
+    const pct = progress / total;
+    const fillWidth = `calc(${pct * 100}% )`;
 
     const isCurrent = (i: number) => !rejected && i === idx;
+    // El estado actual pulsa solo si hay estados posteriores; el último (final)
+    // se muestra como completado con check, sin animación infinita.
+    const isCurrentAnimated = (i: number) =>
+        isCurrent(i) && i !== total - 1;
     const isRejectedNode = (i: number) =>
         rejected && PROCESS_FLOW[i] === 'SUSCRITO';
     const isDone = (i: number) => idx !== -1 && i <= idx;
@@ -235,8 +239,8 @@ export function FlowTimeline({ current }: { current: ProcessStatus }) {
                     <div
                         className={`h-full w-full ${
                             rejected
-                                ? 'bg-gradient-to-r from-red-500 to-red-400'
-                                : 'bg-gradient-to-r from-primary via-gold to-gold-dark'
+                                ? 'bg-red-500'
+                                : 'bg-primary'
                         }`}
                     />
                 </div>
@@ -245,7 +249,7 @@ export function FlowTimeline({ current }: { current: ProcessStatus }) {
                     const label = PROCESS_STATUS_LABELS[status];
                     const dotCls = isRejectedNode(i)
                         ? 'border-red-500 bg-red-50 text-red-600'
-                        : isCurrent(i)
+                        : isCurrentAnimated(i)
                           ? 'border-gold bg-gold text-white shadow-[0_0_0_4px_rgba(223,159,31,0.25)]'
                           : isDone(i)
                             ? 'border-primary bg-primary text-white'
@@ -272,13 +276,13 @@ export function FlowTimeline({ current }: { current: ProcessStatus }) {
                                 {isRejectedNode(i) && (
                                     <Ban className="h-2.5 w-2.5 text-red-600" />
                                 )}
-                                {isCurrent(i) && (
+                                {isCurrentAnimated(i) && (
                                     <>
                                         <span className="absolute inset-0 rounded-full bg-gold/60 animate-ping-soft" />
                                         <span className="h-1.5 w-1.5 rounded-full bg-white" />
                                     </>
                                 )}
-                                {!isCurrent(i) &&
+                                {!isCurrentAnimated(i) &&
                                     !isRejectedNode(i) &&
                                     isDone(i) && (
                                         <Check className="h-2.5 w-2.5 text-white" />

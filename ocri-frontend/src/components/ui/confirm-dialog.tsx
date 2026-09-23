@@ -51,7 +51,7 @@ function ConfirmDialog({
             <span
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-full",
-                options?.destructive ? "bg-red-100 text-red-600" : "bg-amber-100 text-gold"
+                options?.destructive ? "text-red-600" : "text-gold"
               )}
             >
               <TriangleAlert className="size-5" aria-hidden="true" />
