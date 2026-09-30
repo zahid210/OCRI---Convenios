@@ -6,6 +6,7 @@ import { getOficioRectoradoTemplate } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 import OficioEditor from "./OficioEditor";
 import { ModalShell } from "./shared";
+import { applyOficioNumberToBody } from "./oficio-number";
 
 interface GenerarOficioRectoradoPayload {
   bodyHtml: string;
@@ -14,9 +15,7 @@ interface GenerarOficioRectoradoPayload {
 
 interface GenerarOficioRectoradoModalProps {
   agreementId: number;
-  onGenerate: (
-    payload: GenerarOficioRectoradoPayload,
-  ) => Promise<void>;
+  onGenerate: (payload: GenerarOficioRectoradoPayload) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -129,8 +128,8 @@ export default function GenerarOficioRectoradoModal({
               Previsualizar y editar
             </button>
             <p className="text-xs text-gray-400 mt-1">
-              Se abrirá el oficio de envío del expediente técnico a Rectorado
-              en una ventana para revisar y corregir su contenido.
+              Se abrirá el oficio de envío del expediente técnico a Rectorado en
+              una ventana para revisar y corregir su contenido.
             </p>
           </div>
           <div className="border-t border-gray-200 pt-4">
@@ -140,7 +139,15 @@ export default function GenerarOficioRectoradoModal({
               </label>
               <input
                 value={oficioNumber}
-                onChange={(e) => setOficioNumber(e.target.value)}
+                onChange={(e) => {
+                  setOficioNumber(e.target.value);
+                  // La vista previa debe mostrar el mismo número que el PDF.
+                  if (e.target.value.trim()) {
+                    setOficioHtml((prev) =>
+                      applyOficioNumberToBody(prev, e.target.value),
+                    );
+                  }
+                }}
                 className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                 placeholder="Ej: 045-2026-OCRI"
               />

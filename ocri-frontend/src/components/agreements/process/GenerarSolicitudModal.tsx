@@ -6,6 +6,7 @@ import { getRequestDocumentTemplate } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 import OficioEditor from "./OficioEditor";
 import { ModalShell } from "./shared";
+import { applyOficioNumberToBody } from "./oficio-number";
 
 interface GenerarSolicitudModalProps {
   deliverableId: number;
@@ -111,8 +112,8 @@ export default function GenerarSolicitudModal({
         <div className="p-6 space-y-4">
           <p className="text-sm text-gray-600">
             Se generará el oficio de solicitud
-            {deliverableTitle ? ` de ${deliverableTitle}` : ""} con el
-            membrete institucional y el contenido precargado.
+            {deliverableTitle ? ` de ${deliverableTitle}` : ""} con el membrete
+            institucional y el contenido precargado.
           </p>
           <div>
             <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
@@ -143,7 +144,15 @@ export default function GenerarSolicitudModal({
               </label>
               <input
                 value={oficioNumber}
-                onChange={(e) => setOficioNumber(e.target.value)}
+                onChange={(e) => {
+                  setOficioNumber(e.target.value);
+                  // La vista previa debe mostrar el mismo número que el PDF.
+                  if (e.target.value.trim()) {
+                    setOficioHtml((prev) =>
+                      applyOficioNumberToBody(prev, e.target.value),
+                    );
+                  }
+                }}
                 className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                 placeholder="Ej: PLAN-2025-2026-OCRI-UNCP"
               />

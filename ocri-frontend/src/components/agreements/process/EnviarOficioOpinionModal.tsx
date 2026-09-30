@@ -6,6 +6,7 @@ import { getOficioOpinionTemplate } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 import OficioEditor from "./OficioEditor";
 import { ModalShell } from "./shared";
+import { applyOficioNumberToBody } from "./oficio-number";
 
 interface GenerarOficioPayload {
   bodyHtml: string;
@@ -41,10 +42,12 @@ export default function EnviarOficioOpinionModal({
 
   const onCancelRef = useRef(onCancel);
   const toastRef = useRef(toast);
+  const oficioNumberRef = useRef(oficioNumber);
 
   useEffect(() => {
     onCancelRef.current = onCancel;
     toastRef.current = toast;
+    oficioNumberRef.current = oficioNumber;
   });
 
   useEffect(() => {
@@ -53,7 +56,8 @@ export default function EnviarOficioOpinionModal({
       .then((data) => {
         if (cancelled) return;
         const payload = data as { html?: string; css?: string };
-        setOficioHtml(payload.html ?? "");
+        const html = payload.html ?? "";
+        setOficioHtml(applyOficioNumberToBody(html, oficioNumberRef.current));
         setOficioCss(payload.css ?? "");
       })
       .catch(() => {
@@ -182,7 +186,17 @@ export default function EnviarOficioOpinionModal({
               </label>
               <input
                 value={oficioNumber}
-                onChange={(e) => setOficioNumber(e.target.value)}
+                onChange={(e) => {
+                  setOficioNumber(e.target.value);
+                  // Mantiene el bloque "OFICIO N° ..." de la vista previa
+                  // sincronizado con este input: el backend aplica el mismo
+                  // reemplazo al generar el PDF.
+                  if (e.target.value.trim()) {
+                    setOficioHtml((prev) =>
+                      applyOficioNumberToBody(prev, e.target.value),
+                    );
+                  }
+                }}
                 className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                 placeholder="Ej: 045-2026-OCRI"
               />
