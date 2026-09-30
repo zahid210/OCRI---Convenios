@@ -537,7 +537,7 @@ export default function CreatePropuestaPage() {
                       "inline-flex items-center gap-1.5 px-3 py-2 text-sm border transition-colors shrink-0 cursor-pointer",
                       dictamenFile
                         ? "border-primary text-primary bg-primary/5 hover:bg-primary/10"
-                        : "border-red-300 text-red-600 bg-red-50 hover:bg-red-100",
+                        : "border-primary text-white bg-primary hover:bg-primary-dark",
                     )}
                   >
                     <Gavel className="h-4 w-4" />
