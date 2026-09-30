@@ -195,13 +195,24 @@ export interface ReportExpiringRow {
 
 export interface SeguimientoEntregable {
     id: number;
-    type: string;
-    status: string;
+    type: DeliverableType;
+    /**
+     * Se tipa con el enum real (y no `string`) para que los mapas de etiqueta y
+     * color de estado sean exhaustivos: un estado desconocido rompe la
+     * compilación en lugar de caer en un texto/borde genérico en pantalla.
+     */
+    status: DeliverableStatus;
     title: string;
     period: string | null;
     version: number;
     submitted_at: string | null;
     registered_at: string | null;
+    /**
+     * `true` si ya se generó el oficio de solicitud. Permite distinguir
+     * "todavía no se le pidió al responsable" (el estado en base ya es
+     * SOLICITADO) de "el oficio ya salió".
+     */
+    tiene_solicitud: boolean;
 }
 
 export interface SeguimientoRow {

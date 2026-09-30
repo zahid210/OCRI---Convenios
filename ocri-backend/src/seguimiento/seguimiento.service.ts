@@ -13,6 +13,14 @@ interface EntregableRow {
   version: number;
   submitted_at: string | null;
   registered_at: string | null;
+  /**
+   * Indica si ya se generó el oficio de solicitud. El estado en base pasa a
+   * `SOLICITADO` al crear el entregable ("Iniciar Seguimiento" / "Solicitar
+   * Informe"), pero el pedido al responsable no existe hasta que ese oficio se
+   * genera y envía. La bandeja lo expone para que la interfaz pueda distinguir
+   * "todavía no se le pidió" de "ya se le pidió".
+   */
+  tiene_solicitud: boolean;
 }
 
 export interface TrackingRow {
@@ -84,6 +92,7 @@ export class SeguimientoService {
     version: number;
     submitted_at: Date | null;
     registered_at: Date | null;
+    documents?: { id: bigint }[];
   }): EntregableRow {
     return {
       id: Number(d.id),
@@ -98,6 +107,7 @@ export class SeguimientoService {
       registered_at: d.registered_at
         ? d.registered_at.toISOString().slice(0, 10)
         : null,
+      tiene_solicitud: (d.documents?.length ?? 0) > 0,
     };
   }
 
@@ -105,7 +115,14 @@ export class SeguimientoService {
     a: Prisma.agreementsGetPayload<{
       include: {
         institutions: { select: { name: true; country: true } };
-        deliverables: true;
+        deliverables: {
+          include: {
+            documents: {
+              where: { direction: 'SALIDA' };
+              select: { id: true };
+            };
+          };
+        };
       };
     }>,
   ): TrackingRow {
@@ -179,6 +196,12 @@ export class SeguimientoService {
           institutions: { select: { name: true, country: true } },
           deliverables: {
             orderBy: [{ type: 'asc' }, { created_at: 'asc' }],
+            include: {
+              documents: {
+                where: { direction: 'SALIDA' },
+                select: { id: true },
+              },
+            },
           },
         },
         orderBy: { id: 'desc' },

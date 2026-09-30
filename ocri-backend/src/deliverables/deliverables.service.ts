@@ -253,7 +253,10 @@ export class DeliverablesService {
    * seguimiento. Se renderiza con la misma plantilla de los oficios de
    * opinión, se almacena en uploads/ y se adjunta como documento de SALIDA.
    *
-   * - Sin opciones: genera solo si todavía no existe (flujo automático).
+   * Se invoca siempre de forma explícita (botón "Generar Documento de
+   * Solicitud"): ya no hay flujo automático al iniciar seguimiento.
+   *
+   * - Sin opciones: genera solo si todavía no existe (idempotente).
    * - Con `replace: true`: reemplaza el oficio anterior (se puede regenerar).
    * - Con `bodyHtml`/`oficio_number`: usa el contenido editado por el usuario.
    */
@@ -358,7 +361,7 @@ export class DeliverablesService {
         tx,
         deliverable.agreement_id,
         'DOCUMENTO_SOLICITUD_GENERADO',
-        `${context.name} adjuntado automáticamente (${oficioNumber}).`,
+        `${context.name} generado (${oficioNumber}).`,
         userId,
         { deliverable_type: type, oficio_number: oficioNumber },
       );
@@ -419,12 +422,10 @@ export class DeliverablesService {
       return d;
     });
 
-    const requestDocument = await this.generateRequestDocument(
-      Number(result.id),
-      userId,
-    );
-
-    return { ...serializeBigInt(result), request_document: requestDocument };
+    // El oficio de solicitud NO se autogenera: el usuario debe pulsar
+    // "Generar Documento de Solicitud" en la ficha del entregable, que llama a
+    // `generateRequestDocument` con el contenido editado.
+    return serializeBigInt(result);
   }
 
   // ─── E3 · Solicitar informe (semestral o final) ────────────────────────────
@@ -512,15 +513,9 @@ export class DeliverablesService {
       return d;
     });
 
-    const requestDocument = await this.generateRequestDocument(
-      Number(deliverable.id),
-      userId,
-    );
-
-    return {
-      ...serializeBigInt(deliverable),
-      request_document: requestDocument,
-    };
+    // Igual que el Plan de Trabajo: el oficio se genera al pulsar el botón en
+    // la ficha del entregable, no al solicitar el informe.
+    return serializeBigInt(deliverable);
   }
 
   // ─── E3 · Responsables remiten entregable (con versionado) ────────────────

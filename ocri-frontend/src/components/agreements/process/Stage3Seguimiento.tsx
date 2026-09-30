@@ -28,14 +28,13 @@ import {
   Handshake,
   Info,
   Loader2,
-  Pencil,
   Plus,
 } from "lucide-react";
 import {
-  DELIVERABLE_STATUS_COLORS,
-  DELIVERABLE_STATUS_LABELS,
+  DELIVERABLE_TYPE_LABELS,
   NEXT_STAGE_DESTINATION,
   SectionCard,
+  deliverableBadge,
 } from "./shared";
 import EvaluarEntregableModal from "./EvaluarEntregableModal";
 import GenerarSolicitudModal from "./GenerarSolicitudModal";
@@ -74,11 +73,14 @@ function DeliverableCard({
   const submittedDocs = documents.filter((doc) => !isSolicitudDoc(doc));
 
   const hasSolicitudDoc = solicitudDocs.length > 0;
-  const canEditDocument =
-    canManage &&
-    (deliverable.status === "SOLICITADO" || deliverable.status === "ACEPTADO");
   const canAcceptRequest =
     canManage && deliverable.status === "SOLICITADO" && hasSolicitudDoc;
+  // "Pendiente de solicitud" mientras no exista el oficio: el pedido al
+  // responsable ocurre al generar y enviar el documento, no al crear el
+  // entregable.
+  const badge = deliverableBadge(deliverable.status, hasSolicitudDoc);
+  const pendienteSolicitud =
+    deliverable.status === "SOLICITADO" && !hasSolicitudDoc;
 
   const handleDownloadDocument = async (doc: (typeof documents)[number]) => {
     if (!doc.file_path) {
@@ -159,20 +161,46 @@ function DeliverableCard({
         }}
       >
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${DELIVERABLE_STATUS_COLORS[deliverable.status]}`}
+          className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${badge.color}`}
+          title={
+            pendienteSolicitud
+              ? `${badge.label} · aún no se generó el oficio de solicitud`
+              : `${badge.label}${
+                  deliverable.requested_at
+                    ? ` · solicitado el ${new Date(deliverable.requested_at).toLocaleDateString("es-PE")}`
+                    : ""
+                }`
+          }
         >
-          {DELIVERABLE_STATUS_LABELS[deliverable.status]}
+          {badge.label}
         </span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-gray-800">
-            {deliverable.title}
-          </div>
-          {deliverable.period && (
+          {/* `deliverable.title` es "Plan de Trabajo" / "Informe Final de
+              Cierre", que repite el encabezado de sección ("Plan de Trabajo" /
+              "Informes") y, cuando coincide, la tarjeta mostraba el mismo texto
+              dos veces. Solo se pinta cuando aporta algo (periodo, versión u
+              otra denominación del tipo). */}
+          {deliverable.title !== DELIVERABLE_TYPE_LABELS[deliverable.type] && (
+            <div className="text-sm font-medium text-gray-800">
+              {deliverable.title}
+            </div>
+          )}
+          {(deliverable.title !== DELIVERABLE_TYPE_LABELS[deliverable.type] ||
+            deliverable.period) && (
             <div className="text-xs text-gray-500 mt-0.5">
-              Periodo: {deliverable.period}
+              {deliverable.title !==
+                DELIVERABLE_TYPE_LABELS[deliverable.type] &&
+                `${DELIVERABLE_TYPE_LABELS[deliverable.type]} · `}
+              {deliverable.period && <>Periodo: {deliverable.period}</>}
             </div>
           )}
         </div>
+        {deliverable.requested_at && !pendienteSolicitud && (
+          <span className="text-xs text-gray-500 hidden sm:inline">
+            Solicitado:{" "}
+            {new Date(deliverable.requested_at).toLocaleDateString("es-PE")}
+          </span>
+        )}
         {deliverable.submitted_at && (
           <span className="text-xs text-gray-500 hidden sm:inline">
             Enviado:{" "}
@@ -193,25 +221,8 @@ function DeliverableCard({
         >
           {hasSolicitudDoc ? (
             <div className="space-y-1">
-              <div
-                className={`text-xs font-semibold uppercase text-gray-500 ${
-                  canEditDocument
-                    ? "flex items-center justify-between gap-2"
-                    : ""
-                }`}
-              >
-                <span>Documento de solicitud</span>
-                {canEditDocument && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenDocEditor(deliverable)}
-                    className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
-                    title="Editar oficio de solicitud"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Editar
-                  </button>
-                )}
+              <div className="text-xs font-semibold uppercase text-gray-500">
+                Documento de solicitud
               </div>
               {solicitudDocs.map(renderDocumentRow)}
             </div>

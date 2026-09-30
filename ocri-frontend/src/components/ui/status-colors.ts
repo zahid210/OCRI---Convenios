@@ -1,7 +1,16 @@
+import type { DeliverableStatus } from '@/types/agreements';
+
 /**
  * Mapas de estado -> clases de color para los badges de estado.
  * Fuente única: los componentes importan de aquí (vía
  * components/agreements/process/shared para no romper imports previos).
+ *
+ * El mapa de entregables se tipa como `Record<DeliverableStatus, string>` en vez
+ * de `Record<string, string>`: si el enum de la base de datos crece y se olvida
+ * un estado, el error salta al compilar en vez de pintar un badge gris vacío o,
+ * peor, de dejar que un estado inexistente se vea como un estado válido. Al
+ * estar completo, indexar por `deliverable.status` devuelve siempre algo y no
+ * hace falta un texto "Estado desconocido" en pantalla.
  */
 
 export const OPINION_STATUS_COLORS: Record<string, string> = {
@@ -13,7 +22,7 @@ export const OPINION_STATUS_COLORS: Record<string, string> = {
     CANCELADA: 'bg-gray-50 text-gray-500 border-gray-200',
 };
 
-export const DELIVERABLE_STATUS_COLORS: Record<string, string> = {
+export const DELIVERABLE_STATUS_COLORS: Record<DeliverableStatus, string> = {
     SOLICITADO: 'bg-gray-50 text-gray-700 border-gray-200',
     ACEPTADO: 'bg-primary-wash text-primary border-primary-tint',
     RECIBIDO: 'bg-blue-50 text-blue-700 border-blue-200',

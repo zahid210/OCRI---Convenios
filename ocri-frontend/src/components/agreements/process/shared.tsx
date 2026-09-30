@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import {
     Agreement,
+    DeliverableStatus,
+    DeliverableType,
     ProcessStage,
     ProcessStatus,
     ProcessStatusResponse,
@@ -63,6 +65,15 @@ export const PROCESS_FLOW: ProcessStatus[] = [
     'SEGUIMIENTO_CONCLUIDO',
 ];
 
+// Se importa (y no solo se reexporta) porque `deliverableBadge` usa
+// `DELIVERABLE_STATUS_COLORS` para componer el estado efectivo; la
+// reexportación posterior conserva los imports previos de otros componentes.
+import {
+    DELIVERABLE_STATUS_COLORS,
+    OPINION_STATUS_COLORS,
+    VALIDITY_COLORS,
+} from '../../ui/status-colors';
+
 export const OPINION_STATUS_LABELS: Record<string, string> = {
     GENERADA: 'Generada',
     ENVIADA: 'Enviada',
@@ -72,11 +83,7 @@ export const OPINION_STATUS_LABELS: Record<string, string> = {
     CANCELADA: 'Cancelada',
 };
 
-export {
-    OPINION_STATUS_COLORS,
-    DELIVERABLE_STATUS_COLORS,
-    VALIDITY_COLORS,
-} from '../../ui/status-colors';
+export { OPINION_STATUS_COLORS, DELIVERABLE_STATUS_COLORS, VALIDITY_COLORS };
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
     OFICIO_SOLICITUD: 'Oficio de Solicitud de Convenio',
@@ -99,7 +106,7 @@ export const DOC_TYPE_ACCEPT: Record<string, string> = {
     PROPUESTA_CONVENIO_FIRMA: '.docx',
 };
 
-export const DELIVERABLE_STATUS_LABELS: Record<string, string> = {
+export const DELIVERABLE_STATUS_LABELS: Record<DeliverableStatus, string> = {
     SOLICITADO: 'Solicitado',
     ACEPTADO: 'Solicitud aceptada',
     RECIBIDO: 'Recibido',
@@ -107,11 +114,40 @@ export const DELIVERABLE_STATUS_LABELS: Record<string, string> = {
     REGISTRADO: 'Registrado',
 };
 
-export const DELIVERABLE_TYPE_LABELS: Record<string, string> = {
+export const DELIVERABLE_TYPE_LABELS: Record<DeliverableType, string> = {
     PLAN_DE_TRABAJO: 'Plan de Trabajo',
     INFORME_SEMESTRAL: 'Informe Semestral',
     INFORME_FINAL: 'Informe Final',
 };
+
+/**
+ * Estado efectivo de un entregable para el badge de la interfaz.
+ *
+ * En la base el estado pasa a `SOLICITADO` al crear el entregable (botón
+ * "Iniciar Seguimiento" / "Solicitar Informe"), pero el pedido al responsable
+ * no se produce hasta que se genera y envía el oficio de solicitud: hasta
+ * entonces no se le pidió nada. Sin esta distinción el badge anunciaba
+ * "Solicitado" en un convenio donde el documento ni siquiera existía.
+ *
+ * No se agrega un estado nuevo al enum porque el resto del flujo (la aceptación
+ * exige oficio generado, los informes se habilitan con el plan REGISTRADO) ya
+ * funciona sobre `SOLICITADO`; lo que faltaba era decirlo en pantalla.
+ */
+export function deliverableBadge(
+    status: DeliverableStatus,
+    tieneSolicitud: boolean,
+): { label: string; color: string } {
+    if (status === 'SOLICITADO' && !tieneSolicitud) {
+        return {
+            label: 'Pendiente de solicitud',
+            color: 'bg-amber-50 text-amber-700 border-amber-200',
+        };
+    }
+    return {
+        label: DELIVERABLE_STATUS_LABELS[status],
+        color: DELIVERABLE_STATUS_COLORS[status],
+    };
+}
 
 export const VALIDITY_LABELS: Record<string, string> = {
     PENDIENTE: 'Pendiente',

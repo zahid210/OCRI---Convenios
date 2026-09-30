@@ -14,9 +14,8 @@ import {
   Eye,
 } from "lucide-react";
 import {
-  DELIVERABLE_STATUS_LABELS,
   DELIVERABLE_TYPE_LABELS,
-  DELIVERABLE_STATUS_COLORS,
+  deliverableBadge,
 } from "@/components/agreements/process/shared";
 
 const STATUS_META: Record<string, { label: string; classes: string }> = {
@@ -193,15 +192,18 @@ export default function SeguimientoPage() {
                   const historicoConcluido =
                     row.process_status === "SEGUIMIENTO_CONCLUIDO" &&
                     row.sin_entregables;
+                  const planBadge = row.plan_trabajo
+                    ? deliverableBadge(
+                        row.plan_trabajo.status,
+                        row.plan_trabajo.tiene_solicitud,
+                      )
+                    : null;
                   const planLabel = historicoConcluido
                     ? "Registrado"
-                    : row.plan_trabajo
-                      ? (DELIVERABLE_STATUS_LABELS[row.plan_trabajo.status] ??
-                        row.plan_trabajo.status)
-                      : "Por solicitar";
+                    : (planBadge?.label ?? "Por solicitar");
                   const planColor = row.plan_trabajo
-                    ? (DELIVERABLE_STATUS_COLORS[row.plan_trabajo.status] ??
-                      "bg-gray-50 text-gray-600 border-gray-200")
+                    ? (planBadge?.color ??
+                      "bg-gray-50 text-gray-500 border-gray-200")
                     : historicoConcluido
                       ? "bg-green-50 text-green-700 border-green-200"
                       : "bg-gray-50 text-gray-500 border-gray-200";
@@ -335,16 +337,14 @@ export default function SeguimientoPage() {
                                     className="border border-gray-200 bg-white p-3 flex flex-wrap items-center gap-2"
                                   >
                                     <span className="text-sm font-medium text-gray-800 flex-1">
-                                      {DELIVERABLE_TYPE_LABELS[d.type] ??
-                                        d.type}
+                                      {DELIVERABLE_TYPE_LABELS[d.type]}
                                       {d.period ? ` · ${d.period}` : ""} · v
                                       {d.version}
                                     </span>
                                     <span
-                                      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase border ${DELIVERABLE_STATUS_COLORS[d.status] ?? "bg-gray-50 text-gray-600 border-gray-200"}`}
+                                      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase border ${deliverableBadge(d.status, d.tiene_solicitud).color}`}
                                     >
-                                      {DELIVERABLE_STATUS_LABELS[d.status] ??
-                                        d.status}
+                                      {deliverableBadge(d.status, d.tiene_solicitud).label}
                                     </span>
                                     {d.submitted_at && (
                                       <span className="px-2 py-0.5 border bg-purple-50 text-purple-700 border-purple-200 text-[11px]">
