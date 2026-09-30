@@ -36,6 +36,19 @@
         .document {
             /* Sin padding, width ni min-height: simplemente llena el ancho de
                contenido (155mm) respetando los márgenes de página. */
+            /* El contenido nunca ensancha la hoja, igual que en Word: las
+               palabras largas y las URLs se parten dentro del ancho útil en
+               lugar de desbordar hacia la derecha. */
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        /* Una imagen o una tabla pegadas desde Word/Excel con un ancho mayor que
+           la hoja se ajustan al ancho útil (155mm) en vez de salirse de la
+           página. El motor del PDF también respeta max-width en imágenes, de
+           modo que vista previa y PDF coinciden. */
+        .document img,
+        .document table {
+            max-width: 100%;
         }
 
         /* Encabezado: logos izquierda/derecha y texto central. Grid en lugar de
@@ -158,11 +171,53 @@
         .body-text p {
             margin: 0 0 10px 0;
         }
+        /* Nota: no usar reglas tipo `.document p`; su especificidad anula los
+           márgenes propios de .univ-name, .office-name, .addressee p y la firma,
+           desalineando membrete y firma respecto al oficio original. */
+
+        /* Títulos/Subtítulos del editor: visibles e idénticos en la vista
+           previa (navegador) y en el PDF (html-pdf-lite). */
+        .document h2 {
+            font-size: 15px;
+            font-weight: bold;
+            margin: 16px 0 6px 0;
+        }
+        .document h3 {
+            font-size: 14px;
+            font-weight: bold;
+            font-style: italic;
+            margin: 14px 0 6px 0;
+        }
+
+        /* Listas (viñetas/numeradas) del editor: deben mostrar su marcador
+           tanto en la vista previa (navegador) como en el PDF (html-pdf-lite).
+           El root editable lleva clase `document` (como el contenedor del PDF),
+           por eso los mismos selectores sirven en ambos. */
+        .document ul,
+        .document ol {
+            list-style-position: outside;
+            padding-left: 28px;
+            margin: 0 0 10px 0;
+        }
+        .document ol {
+            list-style-type: decimal;
+        }
+        .document ul {
+            list-style-type: disc;
+        }
+        .document li {
+            margin: 0 0 4px 0;
+        }
+        .document ol li::marker {
+            font-weight: bold;
+        }
 
         /* Despedida */
         .closing {
             text-align: left;
             margin-bottom: 60px;
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         /* Sección de Firma y Sello. La imagen `sello-firma.png` (firma + sello

@@ -7,9 +7,7 @@ export interface SolicitudAssets {
 }
 
 export type SolicitudType =
-  | 'PLAN_DE_TRABAJO'
-  | 'INFORME_SEMESTRAL'
-  | 'INFORME_FINAL';
+  'PLAN_DE_TRABAJO' | 'INFORME_SEMESTRAL' | 'INFORME_FINAL';
 
 /**
  * Construye el cuerpo HTML del oficio de solicitud de un entregable de la
@@ -92,7 +90,7 @@ export function buildSolicitudHtml(params: {
       </div>
     </div>
     <div class="doc-date">Huancayo, ${fecha}</div>
-    <div class="doc-number">OFICIO N&deg; ${escapeHtml(oficioNumber)}</div>
+    <div class="doc-number" contenteditable="false">OFICIO N&deg; ${escapeHtml(oficioNumber)}</div>
     <div class="addressee">
       <p><strong>${escapeHtml(destinatarioNombre)}</strong></p>
       <p class="role">${escapeHtml(destinatarioRol)}</p>
@@ -123,7 +121,7 @@ export function buildSolicitudHtml(params: {
         </div>
       </div>
     </div>
-    <div class="footer" contenteditable="false">
+    <div class="footer">
       c.c. Archivo
     </div>
   `;

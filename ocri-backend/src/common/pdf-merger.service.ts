@@ -14,6 +14,7 @@ import {
 } from './uploads.config';
 import { StorageService } from './storage/storage.service';
 import { sanitizeOficioHtml } from './sanitize-oficio-html';
+import { renderListMarkersForPdf } from './oficio-lists';
 
 /**
  * Normaliza el número de oficio al formato estándar `045-2026-OCRI-UNCP`.
@@ -45,6 +46,29 @@ export function normalizeOficioNumber(raw?: string): string {
     number = `${number}-OCRI-UNCP`;
   }
   return number;
+}
+
+/**
+ * Sobrescribe la línea "OFICIO N° ..." del cuerpo editable con el número que
+ * el usuario digitó (ya normalizado). Centralizado aquí para que TODOS los
+ * oficios (opinión, rectorado y solicitud) muestren el mismo número en el
+ * documento: antes el flujo de solicitud solo lo usaba para el nombre del
+ * archivo y el PDF conservaba el número viejo dentro del texto.
+ *
+ * El selector es tolerante a propósito: tras editar en el navegador el
+ * `<div>` puede venir con otros atributos o en distinto orden
+ * (`<div class="doc-number" contenteditable="false">`), y con el patrón exacto
+ * anterior el reemplazo fallaba en silencio y el PDF salía con otro número.
+ */
+export function applyOficioNumberToBody(
+  html: string,
+  normalized: string,
+): string {
+  if (!html || !normalized) return html;
+  const re =
+    /(<div\b[^>]*\bclass\s*=\s*["'][^"']*\bdoc-number\b[^"']*["'][^>]*>)[\s\S]*?(<\/div>)/i;
+  if (!re.test(html)) return html;
+  return html.replace(re, `$1OFICIO N&deg; ${normalized}$2`);
 }
 
 /**
@@ -425,8 +449,16 @@ export class PdfMergerService {
     firmaSello: 'sello-firma.png',
   };
 
-  /** Ancho máximo (px) al que se redimensionan los recursos antes de incrustarlos. */
-  private static readonly ASSET_MAX_WIDTH = 320;
+  /**
+   * Ancho máximo (px) al que se redimensionan los recursos antes de incrustarlos.
+   * Los logos se muestran a 75px y el sello a 110px, así que 240px sigue siendo
+   * más del doble de lo necesario para imprimir con nitidez. A 320px las tres
+   * imágenes ocupaban ~361KB en base64, es decir el 72% del límite de 500KB que
+   * el backend acepta para el HTML del oficio (MAX_OFICIO_HTML_LENGTH): con un
+   * texto normal no había margen y una imagen pegada hacía fallar la generación
+   * con un error del servidor. A 240px el peso baja a ~200KB.
+   */
+  private static readonly ASSET_MAX_WIDTH = 240;
 
   /** Cache de data URIs optimizadas por archivo (clave: nombre:mtime:size). */
   private readonly assetCache = new Map<string, string>();
@@ -561,10 +593,17 @@ export class PdfMergerService {
     createdAt?: Date | string | null,
   ): Promise<string> {
     const template = await this.readOficioOpinionTemplate();
-    const fullHtml = template.replace(
-      '{{CUERPO}}',
-      sanitizeOficioHtml(bodyHtml),
+    // El número digitado siempre gana sobre el que trae la plantilla, y ahora
+    // en un único punto para todos los tipos de oficio.
+    const bodyWithNumber = oficioNumber?.trim()
+      ? applyOficioNumberToBody(bodyHtml, normalizeOficioNumber(oficioNumber))
+      : bodyHtml;
+    // El motor de PDF no maqueta listas CSS: se prepagan los marcadores
+    // (negrita, sangría y espaciado) antes de inyectar el cuerpo.
+    const bodyForPdf = renderListMarkersForPdf(
+      sanitizeOficioHtml(bodyWithNumber),
     );
+    const fullHtml = template.replace('{{CUERPO}}', bodyForPdf);
 
     // 1mm = 72/25.4 pt. Los cuatro lados de la plantilla original: 30mm izq.
     const mmToPt = (mm: number) => (mm * 72) / 25.4;

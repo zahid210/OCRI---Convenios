@@ -1059,7 +1059,7 @@ export class ProcessService {
         </div>
       </div>
       <div class="doc-date">Huancayo, ${fecha}</div>
-      <div class="doc-number">OFICIO N&deg; ${oficio}</div>
+      <div class="doc-number" contenteditable="false">OFICIO N&deg; ${oficio}</div>
       <div class="addressee">
         <p><strong>${destinatario}</strong></p>
         <p class="role">${depName}</p>
@@ -1092,7 +1092,7 @@ export class ProcessService {
           </div>
         </div>
       </div>
-      <div class="footer" contenteditable="false">
+      <div class="footer">
         c.c. Archivo
       </div>
     `;
@@ -1167,7 +1167,7 @@ export class ProcessService {
         </div>
       </div>
       <div class="doc-date">Huancayo, ${fecha}</div>
-      <div class="doc-number">OFICIO N&deg; ${oficio}</div>
+      <div class="doc-number" contenteditable="false">OFICIO N&deg; ${oficio}</div>
       <div class="addressee">
         <p><strong>${destinatario}</strong></p>
         <p class="role">Rector&iacute;a</p>
@@ -1200,7 +1200,7 @@ export class ProcessService {
           </div>
         </div>
       </div>
-      <div class="footer" contenteditable="false">
+      <div class="footer">
         c.c. Archivo
       </div>
     `;
@@ -1247,19 +1247,11 @@ export class ProcessService {
       );
     }
 
-    // Sobrescribe el número de oficio dentro del cuerpo con el valor digitado
-    // (normalizado), de modo que el PDF siempre muestre el número del input.
-    let renderedBody = dto.bodyHtml;
-    if (dto.oficio_number && dto.oficio_number.trim()) {
-      const normalized = normalizeOficioNumber(dto.oficio_number);
-      renderedBody = renderedBody.replace(
-        /(<div class="doc-number">)[\s\S]*?(<\/div>)/,
-        `$1OFICIO N&deg;${normalized}$2`,
-      );
-    }
-
+    // El número de oficio se sobrescribe dentro de `renderOficioOpinionPdf`
+    // (ver `applyOficioNumberToBody`), para que opinión, rectorado y solicitud
+    // compartan un único criterio.
     const filename = await this.pdfMerger.renderOficioOpinionPdf(
-      renderedBody,
+      dto.bodyHtml,
       dto.oficio_number,
       request.agreements?.tramite_code,
       request.agreements?.created_at,
@@ -1382,18 +1374,10 @@ export class ProcessService {
       );
     }
 
-    // Sobrescribe el número de oficio dentro del cuerpo con el valor digitado.
-    let renderedBody = dto.bodyHtml;
-    if (dto.oficio_number && dto.oficio_number.trim()) {
-      const normalized = normalizeOficioNumber(dto.oficio_number);
-      renderedBody = renderedBody.replace(
-        /(<div class="doc-number">)[\s\S]*?(<\/div>)/,
-        `$1OFICIO N&deg;${normalized}$2`,
-      );
-    }
-
+    // El número de oficio se sobrescribe dentro de `renderOficioOpinionPdf`
+    // (ver `applyOficioNumberToBody`).
     const filename = await this.pdfMerger.renderOficioOpinionPdf(
-      renderedBody,
+      dto.bodyHtml,
       dto.oficio_number,
       agreement.tramite_code,
       agreement.created_at,
