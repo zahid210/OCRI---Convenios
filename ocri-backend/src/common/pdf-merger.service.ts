@@ -3,15 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { join } from 'path';
 import { renderPdfFromHtml } from 'html-pdf-lite';
 import { PNG } from 'pngjs';
-import {
-  absUploadPath,
-  agreementDir,
-  opinionDir,
-  ensureDir,
-} from './uploads.config';
+import { agreementDir, opinionDir } from './uploads.config';
 import { StorageService } from './storage/storage.service';
 import { sanitizeOficioHtml } from './sanitize-oficio-html';
 import { renderListMarkersForPdf } from './oficio-lists';
@@ -282,14 +276,11 @@ export class PdfMergerService {
 
     const mergedBytes = await pdf.save();
     const filename = `oficio-solicitud-${dependenciaName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-    const dir = absUploadPath(
+    const relPath = await this.storage.putUnique(
       opinionDir(tramiteCode, createdAt ?? null, dependenciaName),
+      filename,
+      Buffer.from(mergedBytes),
     );
-    ensureDir(dir);
-    const outputPath = join(dir, filename);
-    await fs.writeFile(outputPath, mergedBytes);
-    const relPath = `${opinionDir(tramiteCode, createdAt ?? null, dependenciaName)}/${filename}`;
-    await this.storage.uploadRel(relPath);
     this.logger.log(`Oficio de solicitud generado: ${relPath}`);
     return relPath;
   }
@@ -400,7 +391,6 @@ export class PdfMergerService {
     const mergedPdf = await PDFDocument.create();
 
     for (const doc of orderedDocs) {
-      const filePath = absUploadPath(doc.file_path);
       try {
         const pdfBytes = await this.storage.readRel(doc.file_path);
         const srcDoc = await PDFDocument.load(pdfBytes);
@@ -413,7 +403,7 @@ export class PdfMergerService {
         }
       } catch (err) {
         this.logger.warn(
-          `No se pudo leer el PDF ${filePath} (doc #${doc.id}): ${err}`,
+          `No se pudo leer el PDF ${doc.file_path} (doc #${doc.id}): ${err}`,
         );
       }
     }
@@ -421,16 +411,15 @@ export class PdfMergerService {
     const mergedBytes = await mergedPdf.save();
     const filename = 'expediente-tecnico.pdf';
     const subdir = agreementDir(tramiteCode, createdAt ?? null);
-    const dir = absUploadPath(subdir);
-    ensureDir(dir);
-    const outputPath = join(dir, filename);
-    await fs.writeFile(outputPath, mergedBytes);
 
-    const relPath = `${subdir}/${filename}`;
-    await this.storage.uploadRel(relPath);
+    const relPath = await this.storage.putUnique(
+      subdir,
+      filename,
+      Buffer.from(mergedBytes),
+    );
 
     this.logger.log(
-      `Expediente técnico generado: ${subdir}/${filename} (${orderedDocs.length} documentos PDF fusionados, en parejas por opinión)`,
+      `Expediente técnico generado: ${relPath} (${orderedDocs.length} documentos PDF fusionados, en parejas por opinión)`,
     );
 
     return relPath;
@@ -620,13 +609,12 @@ export class PdfMergerService {
     const subdir = tramiteCode
       ? agreementDir(tramiteCode, createdAt ?? null)
       : '';
-    const dir = subdir ? absUploadPath(subdir) : path.resolve('uploads');
-    ensureDir(dir);
-    const outputPath = join(dir, filename);
-    await fs.writeFile(outputPath, pdfBuffer);
 
-    const relPath = subdir ? `${subdir}/${filename}` : filename;
-    await this.storage.uploadRel(relPath);
+    const relPath = await this.storage.putUnique(
+      subdir,
+      filename,
+      Buffer.from(pdfBuffer),
+    );
     this.logger.log(`Oficio de solicitud de opinión generado: ${relPath}`);
 
     return relPath;

@@ -1,15 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
   HeadBucketCommand,
 } from '@aws-sdk/client-s3';
-import { readFile, unlink } from 'fs/promises';
-import { existsSync } from 'fs';
-import { UPLOADS_DIR } from '../uploads.config';
-import { join } from 'path';
+import { extname } from 'path';
 
 const CONTENT_TYPES: Record<string, string> = {
   '.pdf': 'application/pdf',
@@ -24,21 +22,48 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 /**
- * Almacenamiento S3-compatible (Huawei OBS / MinIO / AWS S3).
+ * Almacenamiento de documentos en OBS/S3 de Huawei. Es el ÚNICO almacén.
  *
- * El disco local (`uploads/`) se mantiene como caché/espejo y como fallback:
- * - Toda ruta relativa que se persiste en la BD se refleja en el bucket bajo
- *   `S3_PREFIX/<ruta_relativa>`.
- * - Si las variables S3_* están ausentes, el servicio queda deshabilitado y
- *   toda la operativa funciona como antes (solo disco local), lo que hace que
- *   el despliegue no requiera S3.
- * - Ningún fallo de S3 rompe el flujo: se registra un warning y se continúa
- *   con la copia local (espejo).
+ * Antes este servicio degradaba a disco local cuando faltaban credenciales y
+ * además se tragaba los errores de red (log warning y continuaba). Ese
+ * comportamiento era peligroso por partida doble:
+ *
+ *  1. Sin credenciales, `enabled()` devolvía false y la aplicación arrancaba
+ *     "con normalidad" escribiendo en el volumen del contenedor. Nadie se
+ *     enteraba salvo por el healthcheck, y un despliegue mal configurado
+ *     parecía sano mientras accumulates meses de documentos en un disco que
+ *     no es un respaldo.
+ *  2. Cuando un PUT fallaba, el error se silenciaba y el llamaba guardaba
+ *     igualmente la fila en `documents`. Quedaba un documento que la base
+ *     promete y que en el bucket nunca existió.
+ *
+ * Ahora las credenciales son obligatorias (se valida en `onModuleInit` y el
+ * proceso no arranca sin ellas) y toda operación que falla lanza. Así, si el
+ * bucket no está disponible, la petición falla y no se persiste nada.
  */
 @Injectable()
-export class StorageService {
+export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
   private client: S3Client | null = null;
+
+  /**
+   * Falla el arranque si falta cualquier credencial. Un contenedor que no
+   * puede guardar documentos no debe quedarse "healthy" aceptando tráfico.
+   */
+  onModuleInit(): void {
+    const missing = this.missingConfig();
+    if (missing.length) {
+      throw new Error(
+        `Almacenamiento S3 no configurado. Faltan en el entorno: ${missing.join(', ')}. ` +
+          'Sin estas variables la aplicación no puede guardar documentos.',
+      );
+    }
+    const c = this.cfg();
+    this.s3();
+    this.logger.log(
+      `Almacenamiento S3: bucket ${c.bucket}, prefijo ${c.prefix || '(raíz)'}, endpoint ${c.endpoint}`,
+    );
+  }
 
   private cfg() {
     const rawTtl = Number(process.env.S3_PRESIGN_TTL ?? 300);
@@ -58,12 +83,21 @@ export class StorageService {
     };
   }
 
+  /** Variables obligatorias ausentes o vacías. Vacío = configuración válida. */
+  private missingConfig(): string[] {
+    const c = this.cfg();
+    const required: [string, string][] = [
+      ['S3_BUCKET', c.bucket],
+      ['S3_ACCESS_KEY_ID', c.accessKeyId],
+      ['S3_SECRET_ACCESS_KEY', c.secretAccessKey],
+      ['S3_ENDPOINT', c.endpoint],
+    ];
+    return required.filter(([, v]) => !v).map(([k]) => k);
+  }
+
   /** Devuelve true cuando hay un bucket y credenciales configurados. */
   enabled(): boolean {
-    const c = this.cfg();
-    return Boolean(
-      c.bucket && c.accessKeyId && c.secretAccessKey && c.endpoint,
-    );
+    return this.missingConfig().length === 0;
   }
 
   /** Clave completa en el bucket (con el prefijo S3_PREFIX). */
@@ -73,8 +107,7 @@ export class StorageService {
     return c.prefix ? `${c.prefix}/${clean}` : clean;
   }
 
-  private s3(): S3Client | null {
-    if (!this.enabled()) return null;
+  private s3(): S3Client {
     if (!this.client) {
       const c = this.cfg();
       this.client = new S3Client({
@@ -93,112 +126,119 @@ export class StorageService {
   }
 
   private contentTypeFor(relPath: string): string {
-    const ext = join(relPath).split('.').pop()?.toLowerCase();
+    const ext = extname(relPath).split('.').pop()?.toLowerCase();
     return CONTENT_TYPES[`.${ext}`] ?? 'application/octet-stream';
   }
 
-  /** Ruta absoluta local del espejo. */
-  localPath(relPath: string): string {
-    return join(UPLOADS_DIR, relPath);
+  /**
+   * Sube los bytes a una ruta relativa. Lanza ante cualquier fallo: el
+   * llamador no debe persistir una fila si el objeto no llegó al bucket.
+   */
+  async put(relPath: string, body: Buffer): Promise<void> {
+    await this.s3().send(
+      new PutObjectCommand({
+        Bucket: this.cfg().bucket,
+        Key: this.keyFor(relPath),
+        Body: body,
+        ContentType: this.contentTypeFor(relPath),
+      }),
+    );
   }
 
-  /**
-   * Sube a S3 el archivo local que vive en `absUploadPath(relPath)`
-   * (espejo). No lanza errores: ante cualquier fallo de S3 se registra un
-   * warning y el flujo continúa con la copia local.
-   */
-  async uploadRel(relPath: string): Promise<void> {
-    const s3 = this.s3();
-    if (!s3) return;
-    const localPath = join(UPLOADS_DIR, relPath);
-    if (!existsSync(localPath)) {
-      this.logger.warn(`S3: no existe el archivo local a subir: ${relPath}`);
-      return;
-    }
+  /** ¿Existe el objeto? Se usa para desambiguar nombres sin sobrescribir. */
+  async exists(relPath: string): Promise<boolean> {
     try {
-      const body = await readFile(localPath);
-      await s3.send(
-        new PutObjectCommand({
+      await this.s3().send(
+        new HeadObjectCommand({
           Bucket: this.cfg().bucket,
           Key: this.keyFor(relPath),
-          Body: body,
-          ContentType: this.contentTypeFor(relPath),
         }),
       );
-    } catch (err) {
-      this.logger.warn(`S3: no se pudo subir ${relPath}: ${erroToString(err)}`);
+      return true;
+    } catch {
+      return false;
     }
   }
 
   /**
-   * Elimina el objeto de S3 (si está configurado) y, además, el archivo del
-   * espejo local. No lanza errores.
+   * Sube el archivo en `dir`/desambiguando el nombre con un contador si ya
+   * existe (`dictamen.pdf`, `dictamen(1).pdf`, ...), igual que se hacía contra
+   * el disco con `existsSync`, y devuelve la ruta relativa definitiva.
+   *
+   * La comprobación usa HeadObject contra el bucket porque ya no hay disco que
+   * consultar: el bucket es el único lugar donde puede existir el archivo.
+   */
+  async putUnique(
+    dir: string,
+    filename: string,
+    body: Buffer,
+  ): Promise<string> {
+    const dot = filename.lastIndexOf('.');
+    const stem = dot > 0 ? filename.slice(0, dot) : filename;
+    const ext = dot > 0 ? filename.slice(dot) : '';
+    const base = dir ? `${dir}/${filename}` : filename;
+
+    if (!(await this.exists(base))) {
+      await this.put(base, body);
+      return base;
+    }
+
+    for (let counter = 1; counter < 1000; counter += 1) {
+      const candidate = dir
+        ? `${dir}/${stem}(${counter})${ext}`
+        : `${stem}(${counter})${ext}`;
+      if (await this.exists(candidate)) continue;
+      await this.put(candidate, body);
+      return candidate;
+    }
+    throw new Error(
+      `No se pudo asignar un nombre libre para "${filename}" en "${dir}" (1000 colisiones).`,
+    );
+  }
+
+  /**
+   * Elimina el objeto. Lanza si el bucket no confirma el borrado, de modo que
+   * la fila de `documents` no se elimine dejando un objeto huérfano.
    */
   async removeRel(relPath: string): Promise<void> {
-    const s3 = this.s3();
-    if (s3) {
-      try {
-        await s3.send(
-          new DeleteObjectCommand({
-            Bucket: this.cfg().bucket,
-            Key: this.keyFor(relPath),
-          }),
-        );
-      } catch (err) {
-        this.logger.warn(
-          `S3: no se pudo eliminar ${relPath}: ${erroToString(err)}`,
-        );
-      }
-    }
-    try {
-      await unlink(join(UPLOADS_DIR, relPath));
-    } catch {
-      // el archivo local ya no existe: se ignora.
-    }
+    await this.s3().send(
+      new DeleteObjectCommand({
+        Bucket: this.cfg().bucket,
+        Key: this.keyFor(relPath),
+      }),
+    );
   }
 
-  /**
-   * Lee los bytes de un archivo. Intenta S3 primero y, si no existe o falla,
-   * cae al espejo local.
-   */
+  /** Lee los bytes del objeto. Lanza si no existe o no se puede leer. */
   async readRel(relPath: string): Promise<Buffer> {
-    const s3 = this.s3();
-    if (s3) {
-      try {
-        const result = await s3.send(
-          new GetObjectCommand({
-            Bucket: this.cfg().bucket,
-            Key: this.keyFor(relPath),
-          }),
-        );
-        return await streamToBuffer(result.Body);
-      } catch (err) {
-        this.logger.warn(
-          `S3: no se pudo leer ${relPath}, usando copia local: ${erroToString(err)}`,
-        );
-      }
-    }
-    return readFile(join(UPLOADS_DIR, relPath));
+    const result = await this.s3().send(
+      new GetObjectCommand({
+        Bucket: this.cfg().bucket,
+        Key: this.keyFor(relPath),
+      }),
+    );
+    return streamToBuffer(result.Body);
   }
 
   /**
-   * Devuelve un stream legible del objeto en S3/OBS (si existe) para servirlo
-   * a través del backend sin redirigir al bucket. Necesario para la vista
-   * previa inline: OBS ignora el override Content-Disposition:inline si el
-   * objeto fue subido con metadata de descarga y además evita depender de que
-   * el bucket tenga cabeceras CORS para leer los bytes con fetch.
+   * Devuelve un stream legible del objeto en OBS para servirlo a través del
+   * backend sin redirigir al bucket. Necesario para la vista previa inline: OBS
+   * ignora el override Content-Disposition:inline si el objeto fue subido con
+   * metadata de descarga y además evita depender de que el bucket tenga
+   * cabeceras CORS para leer los bytes con fetch.
+   *
+   * Devuelve null solo si el objeto no existe; cualquier otro fallo se propaga
+   * para no disfrazar un problema de red como "archivo inexistente".
    */
   async getObjectStream(relPath: string): Promise<{
     stream: NodeJS.ReadableStream;
     contentType: string;
     length?: number;
   } | null> {
-    const s3 = this.s3();
-    if (!s3) return null;
     const c = this.cfg();
     const key = this.keyFor(relPath);
     try {
-      const obj = await s3.send(
+      const obj = await this.s3().send(
         new GetObjectCommand({ Bucket: c.bucket, Key: key }),
       );
       if (!obj.Body) return null;
@@ -207,8 +247,9 @@ export class StorageService {
         contentType: this.contentTypeFor(relPath),
         length: obj.ContentLength,
       };
-    } catch {
-      return null;
+    } catch (err) {
+      if (isNotFound(err)) return null;
+      throw err;
     }
   }
 
@@ -219,12 +260,12 @@ export class StorageService {
     message: string;
     bucket?: string;
   }> {
-    const s3 = this.s3();
-    if (!s3) {
+    const missing = this.missingConfig();
+    if (missing.length) {
       return {
         configured: false,
-        ok: true,
-        message: 'S3 no configurado: se usa el almacenamiento local.',
+        ok: false,
+        message: `S3 no configurado (faltan ${missing.join(', ')}).`,
       };
     }
     const c = this.cfg();
@@ -233,7 +274,7 @@ export class StorageService {
       // debe colgarse (timeouts por defecto del SDK pueden superar el tiempo del
       // healthcheck de Docker y marcar el contenedor como unhealthy).
       await Promise.race([
-        s3.send(new HeadBucketCommand({ Bucket: c.bucket })),
+        this.s3().send(new HeadBucketCommand({ Bucket: c.bucket })),
         new Promise<never>((_, reject) =>
           setTimeout(
             () => reject(new Error('timeout (6s) al verificar S3')),
@@ -260,6 +301,16 @@ export class StorageService {
 
 function erroToString(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/** ¿El error corresponde a "el objeto no existe" (404/NoSuchKey)? */
+function isNotFound(err: unknown): boolean {
+  const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return (
+    e?.name === 'NoSuchKey' ||
+    e?.name === 'NotFound' ||
+    e?.$metadata?.httpStatusCode === 404
+  );
 }
 
 async function streamToBuffer(body: unknown): Promise<Buffer> {

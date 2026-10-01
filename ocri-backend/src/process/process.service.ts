@@ -17,11 +17,11 @@ import {
   validateTransition,
 } from '../common/process.constants';
 import {
-  UploadedFileLike,
+  UploadFile,
   DOC_TYPE_EXTENSIONS,
   normalizeUploadName,
   storePath,
-  moveIntoAgreementDir,
+  storeUploadedDocument,
 } from '../common/uploads.config';
 import {
   PdfMergerService,
@@ -240,7 +240,7 @@ export class ProcessService {
   private async persistUploadedDocument(
     tx: Prisma.TransactionClient,
     agreement: { tramite_code: string; created_at: Date | string | null },
-    file: UploadedFileLike & { filename?: string },
+    file: UploadFile,
     opts: {
       agreementId: bigint;
       code: string;
@@ -259,12 +259,11 @@ export class ProcessService {
 
     const originalName = normalizeUploadName(file.originalname);
 
-    const relPath = await moveIntoAgreementDir(
-      file.filename ?? originalName,
+    const relPath = await storeUploadedDocument(
+      this.storage,
+      file,
       agreement.tramite_code,
       agreement.created_at,
-      originalName,
-      (rel) => this.storage.uploadRel(rel),
     );
 
     await tx.documents.create({
@@ -629,7 +628,7 @@ export class ProcessService {
       response_date?: string;
       observations?: string;
     },
-    file?: UploadedFileLike,
+    file?: UploadFile,
     userId?: number,
   ) {
     const request = await this.prisma.opinion_requests.findUnique({
@@ -1441,7 +1440,7 @@ export class ProcessService {
 
   async uploadProcessDocument(
     agreementId: number,
-    file: UploadedFileLike & { filename?: string },
+    file: UploadFile,
     dto: {
       document_type_code: string;
       direction?: string;
@@ -1469,12 +1468,11 @@ export class ProcessService {
       );
     }
 
-    const relPath = await moveIntoAgreementDir(
-      file.filename ?? originalName,
+    const relPath = await storeUploadedDocument(
+      this.storage,
+      file,
       agreement.tramite_code,
       agreement.created_at,
-      originalName,
-      (rel) => this.storage.uploadRel(rel),
     );
 
     const document = await this.prisma.$transaction(
@@ -1766,7 +1764,7 @@ export class ProcessService {
       notificationMessage?: string;
       rectorate_oficio_number?: string;
     },
-    file?: UploadedFileLike & { filename?: string },
+    file?: UploadFile,
     userId?: number,
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
@@ -1885,11 +1883,7 @@ export class ProcessService {
 
   // ─── E2 · Publicación ──────────────────────────────────────────────────────
 
-  async publish(
-    agreementId: number,
-    file?: UploadedFileLike & { filename?: string },
-    userId?: number,
-  ) {
+  async publish(agreementId: number, file?: UploadFile, userId?: number) {
     const agreement = await this.getAgreementOrThrow(agreementId);
 
     if (agreement.process_status !== 'REGISTRADO') {
@@ -1954,7 +1948,7 @@ export class ProcessService {
         phone?: string;
       }>;
     },
-    file: (UploadedFileLike & { filename?: string }) | undefined,
+    file: UploadFile | undefined,
     userId?: number,
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);

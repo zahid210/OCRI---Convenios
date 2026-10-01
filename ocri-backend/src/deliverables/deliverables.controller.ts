@@ -15,7 +15,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { FLOW_ROLES } from '../auth/role-sets';
 import { DeliverablesService } from './deliverables.service';
-import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
+import { safeMulterOptions } from '../common/uploads.config';
+import type { UploadFile } from '../common/uploads.config';
 import { RequestReportDto } from './dto/request-report.dto';
 import { EvaluateDeliverableDto } from './dto/evaluate-deliverable.dto';
 import { GenerateRequestDocumentDto } from './dto/generate-request-document.dto';
@@ -58,7 +59,7 @@ export class DeliverablesController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   submitWorkPlan(
     @Param('agreementId', ParseIntPipe) agreementId: number,
-    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @UploadedFile() file?: UploadFile,
     @Req() req?: AuthenticatedRequest,
   ) {
     return this.deliverablesService.submitWorkPlan(
@@ -93,7 +94,7 @@ export class DeliverablesController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   submitDeliverable(
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @UploadedFile() file?: UploadFile,
     @Req() req?: AuthenticatedRequest,
   ) {
     return this.deliverablesService.submitDeliverable(id, file!, req?.user?.id);
@@ -127,15 +128,11 @@ export class DeliverablesController {
     @Body() body: GenerateRequestDocumentDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.deliverablesService.generateRequestDocument(
-      id,
-      req.user?.id,
-      {
-        replace: true,
-        bodyHtml: body?.bodyHtml,
-        oficio_number: body?.oficio_number,
-      },
-    );
+    return this.deliverablesService.generateRequestDocument(id, req.user?.id, {
+      replace: true,
+      bodyHtml: body?.bodyHtml,
+      oficio_number: body?.oficio_number,
+    });
   }
 
   // ─── E3 · OCRI evalúa (adjuntando el doc recibido): registra u observa ─────
@@ -147,14 +144,14 @@ export class DeliverablesController {
     @Param('id', ParseIntPipe) id: number,
     @Body()
     body: EvaluateDeliverableDto,
-    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @UploadedFile() file?: UploadFile,
     @Req() req?: AuthenticatedRequest,
   ) {
     return this.deliverablesService.evaluateDeliverable(
       id,
       body.decision,
       body.observations,
-      file!,
+      file,
       req?.user?.id,
     );
   }

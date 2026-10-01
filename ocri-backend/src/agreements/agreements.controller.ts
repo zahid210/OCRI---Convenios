@@ -19,7 +19,7 @@ import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { FLOW_ROLES, CREATOR_ROLES } from '../auth/role-sets';
-import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
+import { safeMulterOptions, UploadFile } from '../common/uploads.config';
 
 @Controller('agreements')
 export class AgreementsController {
@@ -75,8 +75,8 @@ export class AgreementsController {
     @Body() createAgreementDto: CreateAgreementDto,
     @UploadedFiles()
     files?: {
-      dictamen?: UploadedFileLike[];
-      documentos_origen?: UploadedFileLike[];
+      dictamen?: UploadFile[];
+      documentos_origen?: UploadFile[];
     },
   ) {
     if (!files?.dictamen?.length) {

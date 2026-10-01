@@ -17,7 +17,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { FLOW_ROLES } from '../auth/role-sets';
 import { ProcessService } from './process.service';
-import { safeMulterOptions, UploadedFileLike } from '../common/uploads.config';
+import { safeMulterOptions } from '../common/uploads.config';
+import type { UploadFile } from '../common/uploads.config';
 import { GenerateOpinionRequestsDto } from './dto/generate-opinion-requests.dto';
 import { SendOpinionRequestDto } from './dto/send-opinion-request.dto';
 import { RespondOpinionRequestDto } from './dto/respond-opinion-request.dto';
@@ -98,7 +99,7 @@ export class ProcessController {
   respondOpinionRequest(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: RespondOpinionRequestDto,
-    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @UploadedFile() file?: UploadFile,
     @Req() req?: AuthenticatedRequest,
   ) {
     return this.processService.respondOpinionRequest(
@@ -211,7 +212,7 @@ export class ProcessController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   uploadProcessDocument(
     @Param('agreementId', ParseIntPipe) agreementId: number,
-    @UploadedFile() file: UploadedFileLike & { filename?: string },
+    @UploadedFile() file: UploadFile,
     @Body()
     body: UploadProcessDocumentDto,
     @Req() req: AuthenticatedRequest,
@@ -258,7 +259,7 @@ export class ProcessController {
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @Body()
     body: RectorateDecisionDto,
-    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @UploadedFile() file?: UploadFile,
     @Req() req?: AuthenticatedRequest,
   ) {
     return this.processService.rectorateDecision(
@@ -279,7 +280,7 @@ export class ProcessController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   publishConvenio(
     @Param('agreementId', ParseIntPipe) agreementId: number,
-    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @UploadedFile() file?: UploadFile,
     @Req() req?: AuthenticatedRequest,
   ) {
     return this.processService.publish(agreementId, file, req?.user?.id);
@@ -296,7 +297,7 @@ export class ProcessController {
     @Param('agreementId', ParseIntPipe) agreementId: number,
     @Body()
     body: RegisterAgreementDto,
-    @UploadedFile() file?: UploadedFileLike & { filename?: string },
+    @UploadedFile() file?: UploadFile,
     @Req() req?: AuthenticatedRequest,
   ) {
     return this.processService.registerAgreement(

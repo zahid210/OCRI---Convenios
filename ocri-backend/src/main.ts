@@ -4,7 +4,6 @@ import { json, urlencoded } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
-import { OrphanFileFilter } from './common/orphan-file.filter';
 import { MAX_TOTAL_UPLOAD_BYTES } from './common/uploads.config';
 
 // Extensión tipada de BigInt para serialización JSON segura
@@ -28,8 +27,8 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '10mb' }));
 
   // Límite agregado por petición multipart: multer limita cada archivo, pero no
-  // la suma del lote. Este guard imperial Content-Length, de modo que un body
-  // > MAX_TOTAL_UPLOAD_BYTES se rechaza antes de escribir parciales en disco.
+  // la suma del lote. Este guard comprueba Content-Length, de modo que un body
+  // > MAX_TOTAL_UPLOAD_BYTES se rechaza antes de acumularlo en memoria.
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (
       req.method === 'POST' &&
@@ -106,8 +105,6 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
-  app.useGlobalFilters(new OrphanFileFilter());
 
   // Todo el API vive bajo /api para que el proxy del frontend (rewrite /api/:path*)
   // no colisione con las páginas de la UI (p. ej. /seguimiento, /users, /reports).

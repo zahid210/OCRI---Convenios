@@ -1,12 +1,16 @@
-import multer, { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import type { Request } from 'express';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { PassThrough } from 'stream';
-import { dirname, join, basename, extname, relative, isAbsolute } from 'path';
-import { existsSync, mkdirSync, readdirSync, renameSync, unlinkSync } from 'fs';
+import { basename, extname } from 'path';
 import { BadRequestException } from '@nestjs/common';
 
-export const UPLOADS_DIR = join(process.cwd(), 'uploads');
+/**
+ * Callback de un StorageEngine de multer. Los tipos publicados declaran el
+ * primer parámetro como `any`; aquí se estrecha a `unknown` para no propagar
+ * valores sin comprobar.
+ */
+type MulterCb = (error?: unknown, info?: Partial<Express.Multer.File>) => void;
 
 /** 15 MB por archivo */
 export const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -23,7 +27,7 @@ const DEPENDENCIA_NAME_RE = /^[\w.\-() °º\u00A0-\u017F]{1,100}$/;
 /**
  * Extrae el año de un nombre de archivo con el patrón institucional
  * `NNN-YYYY.<ext>` (p. ej. "001-2024.pdf" -> "2024"). Si el nombre no sigue
- * ese patrón devuelve "" (el archivo queda en la raíz de uploads/).
+ * ese patrón devuelve "" (el archivo queda en la raíz del prefijo).
  */
 export function yearSubdir(filename: string): string {
   const base = filename.split('/').pop()?.split('\\').pop() || filename;
@@ -32,10 +36,12 @@ export function yearSubdir(filename: string): string {
 }
 
 /**
- * Ruta relativa bajo uploads/ con la que se persiste un archivo en la BD.
+ * Ruta relativa bajo el prefijo S3 con la que se persiste un archivo en la BD.
  * Los documentos institucionales `NNN-YYYY.ext` se organizan en subcarpetas
- * por año ("2021/001-2021.pdf"); cualquier otro nombre se guarda tal cual en
- * la raíz para no romper archivos generados (oficios, expedientes, etc.).
+ * por año ("2021/001-2021.pdf"); cualquier otro nombre se guarda tal cual en la
+ * raíz para no romper archivos generados (oficios, expedientes, etc.).
+ *
+ * Esta función es pura: solo compone la ruta. El archivo vive en el bucket.
  */
 export function storePath(filename: string): string {
   const year = yearSubdir(filename);
@@ -43,24 +49,7 @@ export function storePath(filename: string): string {
 }
 
 /**
- * Ruta absoluta en disco de un `file_path` relativo (ya sea con subcarpeta o
- * no). Única forma centralizada de ubicar archivos bajo UPLOADS_DIR. Rechaza
- * cualquier ruta que intente escapar de uploads/ (anti path traversal).
- */
-export function absUploadPath(filePath: string): string {
-  if (typeof filePath !== 'string' || filePath.length === 0) {
-    throw new BadRequestException('Ruta de archivo inválida');
-  }
-  const abs = join(UPLOADS_DIR, filePath);
-  const rel = relative(UPLOADS_DIR, abs);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
-    throw new BadRequestException('Ruta de archivo inválida');
-  }
-  return abs;
-}
-
-/**
- * Subcarpeta bajo uploads/ para archivos generados de un convenio.
+ * Subcarpeta de un convenio dentro del prefijo S3.
  * Formato: `{año}/{código_trámite}` (p. ej. `"2025/013-2025"`).
  */
 export function agreementDir(
@@ -98,127 +87,6 @@ export function opinionDir(
     );
   }
   return `${agreementDir(tramiteCode, createdAt)}/opiniones/${dependenciaName}`;
-}
-
-/**
- * Crea la carpeta si no existe (recursivo). Usa mkdirSync para no necesitar
- * await en contextos síncronos.
- */
-export function ensureDir(dir: string): void {
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-}
-
-/**
- * Mueve un archivo que multer dejó en `uploads/` (según `safeDiskStorage`) hacia
- * la carpeta del convenio `{año}/{código_trámite}/` y devuelve la ruta relativa
- * resultante. Se usa para que TODOS los documentos (subidos manualmente o
- * generados) queden dentro de la carpeta de su convenio.
- */
-/**
- * Mueve un archivo que multer dejó en `uploads/` (según `safeDiskStorage`) hacia
- * la carpeta del convenio `{año}/{código_trámite}/` y devuelve la ruta relativa
- * resultante. Se usa para que TODOS los documentos (subidos manualmente o
- * generados) queden dentro de la carpeta de su convenio.
- *
- * `onStored` es un hook opcional que se invoca tras mover el archivo con la
- * ruta relativa final (p. ej. para reflejarlo en un S3-compatible).
- */
-export async function moveIntoAgreementDir(
-  sourceRelPath: string,
-  tramiteCode: string,
-  createdAt: Date | string | null,
-  preferredName?: string,
-  onStored?: (relPath: string) => Promise<void>,
-): Promise<string> {
-  const subdir = agreementDir(tramiteCode, createdAt);
-  const dstDir = absUploadPath(subdir);
-  ensureDir(dstDir);
-
-  // Nombre físico final en la carpeta: se prioriza el nombre limpio del usuario
-  // (sin el contador "(1)" que multer añade ante colisiones previas en la raíz).
-  const filename = basename(preferredName?.trim() || sourceRelPath);
-  let targetRel = `${subdir}/${filename}`;
-  let dst = join(UPLOADS_DIR, targetRel);
-  // Si ya existe en la carpeta del convenio, se desambigua con contador.
-  let counter = 1;
-  while (existsSync(dst) && !sameFile(sourceRelPath, targetRel)) {
-    const dot = basename(filename).lastIndexOf('.');
-    const next =
-      dot > 0
-        ? `${basename(filename).slice(0, dot)}(${counter})${basename(filename).slice(dot)}`
-        : `${basename(filename)}(${counter})`;
-    targetRel = `${subdir}/${next}`;
-    dst = join(UPLOADS_DIR, targetRel);
-    counter += 1;
-  }
-
-  // Ubicación donde multer (safeDiskStorage) dejó realmente el archivo: en la
-  // raíz uploads/ o en uploads/{año}/ según el patrón de año del nombre.
-  const srcName = basename(sourceRelPath);
-  const year = yearSubdir(srcName);
-  const src = join(UPLOADS_DIR, year ? `${year}/${srcName}` : srcName);
-
-  if (existsSync(src) && src !== dst) {
-    renameSync(src, dst);
-  }
-
-  // Limpia residuos homónimos que hayan quedado en la raíz/año (por ejemplo el
-  // "dictamen_test.pdf" original cuando multer guardó "dictamen_test(1).pdf").
-  if (preferredName) {
-    cleanupResidual(src, dst, preferredName);
-  }
-
-  if (onStored) {
-    await onStored(targetRel);
-  }
-
-  return targetRel;
-}
-
-/**
- * Elimina un residual homónimo del archivo recién movido que haya quedado en la
- * ubicación de origen de multer (raíz uploads/ o uploads/{año}/). Evita duplicados
- * cuando multer guardó una variante "(n)" y dejó también el nombre base original.
- */
-function cleanupResidual(
-  src: string,
-  dst: string,
-  preferredName: string,
-): void {
-  const base = basename(preferredName);
-  const dir = dirname(src);
-  for (const name of readdirSync(dir)) {
-    const candidate = join(dir, name);
-    if (candidate === dst || candidate === src) continue;
-    if (!isResidualName(base, name)) continue;
-    try {
-      unlinkSync(candidate);
-    } catch {
-      // ignore
-    }
-  }
-}
-
-function isResidualName(base: string, name: string): boolean {
-  if (name === base) return true;
-  const dot = base.lastIndexOf('.');
-  const stem = dot > 0 ? base.slice(0, dot) : base;
-  const ext = dot > 0 ? base.slice(dot) : '';
-  return new RegExp(
-    `^${escapeRegExp(stem)}\\(\\d+\\)${escapeRegExp(ext)}$`,
-  ).test(name);
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function sameFile(a: string, b: string): boolean {
-  const pa = absUploadPath(a);
-  const pb = absUploadPath(b);
-  return pa === pb;
 }
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -308,96 +176,96 @@ export interface UploadedFileLike {
 }
 
 /**
- * Almacenamiento seguro para documentos del expediente:
- * - Conserva el nombre original del archivo (sin rutas) para cumplir el requisito
- *   de que lo adjuntado se guarde en `uploads/` con el mismo nombre.
- * - Se sanitiza el nombre (evita path traversal / caracteres no deseados).
- * - Si ya existe un archivo con ese nombre, se añade un sufijo numérico para no
- *   sobrescribir.
- * - La extensión se valida contra una lista blanca.
+ * Un archivo tal como lo entrega multer con `memoryStorage`: los bytes viven en
+ * el buffer y no existe `path` ni `filename` en disco. Es lo que espera
+ * `storeUploadedDocument` para subirlo a S3.
  */
-export const safeDiskStorage = () =>
-  diskStorage({
-    destination: (
-      _req: unknown,
-      file: UploadedFileLike & { originalname: string },
-      callback: (error: Error | null, destination: string) => void,
-    ) => {
-      const origin = normalizeUploadName(file.originalname);
-      const year = yearSubdir(origin);
-      const subdir = year ? join('uploads', year) : 'uploads';
-      if (!existsSync(subdir)) {
-        mkdirSync(subdir, { recursive: true });
-      }
-      callback(null, subdir);
-    },
-    filename: (
-      _req: unknown,
-      file: UploadedFileLike & { originalname: string },
-      callback: (error: Error | null, filename: string) => void,
-    ) => {
-      const originalName = normalizeUploadName(file.originalname);
-      const ext = extname(originalName).toLowerCase();
+export type UploadFile = { originalname: string; buffer: Buffer };
+
+/**
+ * Normaliza el nombre de un archivo subido para usarlo como clave en el
+ * bucket:
+ * - Se queda solo con el nombre de archivo (descarta cualquier ruta).
+ * - Sustituye por `_` los caracteres fuera del conjunto permitido, lo que
+ *   neutraliza path traversal y caracteres de control.
+ * - Garantiza que termine en una extensión válida.
+ *
+ * El desambiguado por contador (`dictamen.pdf`, `dictamen(1).pdf`) ya no se
+ * resuelve aquí porque antes consultaba `existsSync` en el disco. Ahora lo
+ * resuelve `StorageService.putUnique` con un HeadObject contra el bucket.
+ */
+export function sanitizeUploadName(name: string): string {
+  const original = normalizeUploadName(name);
+  const ext = extname(original).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    throw new BadRequestException(
+      `Tipo de archivo no permitido (${ext || 'sin extensión'}). Permitidos: ${[...ALLOWED_EXTENSIONS].join(', ')}`,
+    );
+  }
+  let base = basename(original).replace(/[^A-Za-z0-9._\-()ºÀ-ſ ]/g, '_');
+  if (!base) {
+    throw new BadRequestException('Nombre de archivo inválido');
+  }
+  if (!extname(base)) {
+    base += ext;
+  }
+  return base;
+}
+
+/** Subconjunto de StorageService que necesita `storeUploadedDocument`. */
+export interface DocumentStorer {
+  putUnique(dir: string, filename: string, body: Buffer): Promise<string>;
+}
+
+/**
+ * Sube un archivo recién subido por multer a la carpeta de su convenio y
+ * devuelve la ruta relativa definitiva (la que se persiste en `documents`).
+ *
+ * Sustituye a `moveIntoAgreementDir`: ahí el archivo nacía en disco y se
+ * movía con `renameSync` antes de reflejarse en el bucket; ahora los bytes ya
+ * vienen en memoria y se escriben directamente en el destino final.
+ */
+export async function storeUploadedDocument(
+  storer: DocumentStorer,
+  file: { originalname: string; buffer: Buffer },
+  tramiteCode: string,
+  createdAt: Date | string | null,
+): Promise<string> {
+  const name = sanitizeUploadName(file.originalname);
+  return storer.putUnique(
+    agreementDir(tramiteCode, createdAt),
+    name,
+    file.buffer,
+  );
+}
+
+/**
+ * Storage de multer que valida la extensión contra la lista blanca y los magic
+ * bytes del stream ANTES de acceptarlo. Multer define `file.stream` únicamente
+ * después de su fileFilter (ver make-middleware.js), por lo que el sniffing se
+ * hace en `_handleFile`: se reemplaza el stream por un PassThrough que replica
+ * el original mientras se acumulan los primeros bytes; si no coinciden con la
+ * extensión, se aborta sin llegar a almacenar nada y se devuelve 400.
+ *
+ * Los archivos se guardan en memoria (`memoryStorage`) y los sube el servicio
+ * a S3: no queda nada en el disco del contenedor.
+ */
+type MulterStorageEngine = ReturnType<typeof memoryStorage>;
+
+function safeStorageEngine(): MulterStorageEngine {
+  const memory = memoryStorage();
+
+  return {
+    _handleFile(req: Request, file: Express.Multer.File, cb: MulterCb) {
+      const ext = extname(normalizeUploadName(file.originalname)).toLowerCase();
       if (!ALLOWED_EXTENSIONS.has(ext)) {
-        return callback(
+        return cb(
           new BadRequestException(
             `Tipo de archivo no permitido (${ext || 'sin extensión'}). Permitidos: ${[...ALLOWED_EXTENSIONS].join(', ')}`,
           ),
-          '',
         );
       }
-      let base = basename(originalName).replace(
-        /[^A-Za-z0-9._\-()\u00BA\u00C0-\u017F ]/g,
-        '_',
-      );
-      if (!base) {
-        return callback(
-          new BadRequestException('Nombre de archivo inválido'),
-          '',
-        );
-      }
-      if (!extname(base)) {
-        base += ext;
-      }
-      let filename = base;
-      let counter = 1;
-      const year = yearSubdir(base);
-      const destFile = (name: string) =>
-        year
-          ? join(process.cwd(), 'uploads', year, name)
-          : join(process.cwd(), 'uploads', name);
-      while (existsSync(destFile(filename))) {
-        const dot = base.lastIndexOf('.');
-        filename =
-          dot > 0
-            ? `${base.slice(0, dot)}(${counter})${base.slice(dot)}`
-            : `${base}(${counter})`;
-        counter += 1;
-      }
-      callback(null, filename);
-    },
-  });
 
-/**
- * Storage de multer que valida los magic bytes del stream ANTES de escribir en
- * disco. Multer define `file.stream` únicamente después de su fileFilter (ver
- * make-middleware.js), por lo que el sniffing se hace en `_handleFile`: se
- * reemplaza el stream por un PassThrough que replica el original mientras se
- * acumulan los primeros bytes; si no coinciden con la extensión, se aborta sin
- * haber escrito nada y se devuelve 400.
- */
-type MulterStorageEngine = ReturnType<typeof multer.diskStorage>;
-
-function safeStorageEngine(): MulterStorageEngine {
-  const disk = safeDiskStorage();
-
-  return {
-    _handleFile(
-      req: Request,
-      file: Express.Multer.File,
-      cb: (error?: any, info?: Partial<Express.Multer.File>) => void,
-    ) {
-      const ext = extname(normalizeUploadName(file.originalname)).toLowerCase();
       const check = MAGIC_BY_EXT[ext];
       const original = file.stream;
       const passthrough = new PassThrough();
@@ -436,7 +304,7 @@ function safeStorageEngine(): MulterStorageEngine {
           );
         }
         passthrough.end();
-        disk._handleFile(req, file, cb);
+        memory._handleFile(req, file, cb);
       });
 
       original.on('error', (err: Error) => reject(err));
@@ -447,7 +315,8 @@ function safeStorageEngine(): MulterStorageEngine {
       file: Express.Multer.File,
       cb: (error: Error | null) => void,
     ) {
-      disk._removeFile(req, file, cb);
+      // Con memoryStorage no hay nada que borrar: el buffer se libera solo.
+      cb(null);
     },
   };
 }

@@ -11,16 +11,16 @@ import {
   validateTransition,
 } from '../common/process.constants';
 import {
-  UploadedFileLike,
-  moveIntoAgreementDir,
+  UploadFile,
+  storeUploadedDocument,
   normalizeUploadName,
 } from '../common/uploads.config';
-import { PdfMergerService, normalizeOficioNumber } from '../common/pdf-merger.service';
-import { StorageService } from '../common/storage/storage.service';
 import {
-  buildSolicitudHtml,
-  SolicitudType,
-} from './solicitud-html';
+  PdfMergerService,
+  normalizeOficioNumber,
+} from '../common/pdf-merger.service';
+import { StorageService } from '../common/storage/storage.service';
+import { buildSolicitudHtml, SolicitudType } from './solicitud-html';
 
 const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
   PLAN_DE_TRABAJO: 'PLAN_DE_TRABAJO',
@@ -162,7 +162,11 @@ export class DeliverablesService {
       title: string | null;
       created_at: Date | null;
       institutions?: { name: string | null } | null;
-      responsables?: { side: string; name?: string | null; role?: string | null }[];
+      responsables?: {
+        side: string;
+        name?: string | null;
+        role?: string | null;
+      }[];
     };
   }) {
     const type = deliverable.type as SolicitudType;
@@ -349,9 +353,7 @@ export class DeliverablesService {
           direction: 'SALIDA',
           stage: 'ETAPA_3_SEGUIMIENTO',
           uploaded_by:
-            userId != null
-              ? { connect: { id: BigInt(userId) } }
-              : undefined,
+            userId != null ? { connect: { id: BigInt(userId) } } : undefined,
           created_at: new Date(),
           updated_at: new Date(),
         },
@@ -521,18 +523,14 @@ export class DeliverablesService {
   // ─── E3 · Responsables remiten entregable (con versionado) ────────────────
 
   /** Remisión directa del Plan de Trabajo usando el convenio como referencia. */
-  async submitWorkPlan(
-    agreementId: number,
-    file: UploadedFileLike & { filename?: string },
-    userId?: number,
-  ) {
+  async submitWorkPlan(agreementId: number, file: UploadFile, userId?: number) {
     const deliverable = await this.getWorkPlanDeliverable(agreementId);
     return this.submitDeliverable(Number(deliverable.id), file, userId);
   }
 
   async submitDeliverable(
     deliverableId: number,
-    file: UploadedFileLike & { filename?: string },
+    file: UploadFile,
     userId?: number,
   ) {
     const deliverable = await this.prisma.deliverables.findUnique({
@@ -575,12 +573,11 @@ export class DeliverablesService {
 
       const nextVersion = deliverable.version + 1;
 
-      const relPath = await moveIntoAgreementDir(
-        file.filename ?? originalName,
+      const relPath = await storeUploadedDocument(
+        this.storage,
+        file,
         deliverable.agreements?.tramite_code ?? '',
         deliverable.agreements?.created_at ?? null,
-        originalName,
-        (rel) => this.storage.uploadRel(rel),
       );
 
       await tx.documents.create({
@@ -701,7 +698,7 @@ export class DeliverablesService {
     deliverableId: number,
     decision: 'APPROVED' | 'OBSERVED',
     observations: string | undefined,
-    file: UploadedFileLike & { filename?: string } | undefined,
+    file: UploadFile | undefined,
     userId?: number,
   ) {
     const deliverable = await this.prisma.deliverables.findUnique({
@@ -759,12 +756,11 @@ export class DeliverablesService {
         const originalName = normalizeUploadName(file.originalname);
         const nextVersion = deliverable.version + 1;
 
-        const relPath = await moveIntoAgreementDir(
-          file.filename ?? originalName,
+        const relPath = await storeUploadedDocument(
+          this.storage,
+          file,
           deliverable.agreements?.tramite_code ?? '',
           deliverable.agreements?.created_at ?? null,
-          originalName,
-          (rel) => this.storage.uploadRel(rel),
         );
 
         await tx.documents.create({
@@ -775,7 +771,9 @@ export class DeliverablesService {
             file_path: relPath,
             original_name: originalName,
             extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-            document_types: docType ? { connect: { id: docType.id } } : undefined,
+            document_types: docType
+              ? { connect: { id: docType.id } }
+              : undefined,
             direction: 'ENTRADA',
             stage: 'ETAPA_3_SEGUIMIENTO',
             uploaded_by:

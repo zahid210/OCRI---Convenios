@@ -35,10 +35,11 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/uploads/templates ./uploads/templates
 
-RUN mkdir -p uploads && chown -R node:node /app
+RUN chown -R node:node /app
 USER node
 
-VOLUME /app/uploads
+# Sin VOLUME /app/uploads: los documentos se guardan en S3/OBS, no en disco.
+# Lo único que se conserva en el contenedor son las plantillas de oficio.
 EXPOSE 4000
 
 CMD ["node", "dist/src/main.js"]

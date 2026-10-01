@@ -10,19 +10,17 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { Request, Response } from 'express';
 import { extname, basename, normalize } from 'path';
-import { existsSync } from 'fs';
 import { Public } from '../auth/decorators/public.decorator';
-import { absUploadPath, UPLOADS_DIR } from '../common/uploads.config';
 import { StorageService } from '../common/storage/storage.service';
 
 /**
  * Repositorio institucional de documentos (protegido).
  *
  * Autenticación: únicamente mediante el header `Authorization: Bearer <jwt>`.
- * Acepta rutas relativas bajo uploads/ (p. ej. `2021/001-2021.pdf`) y sirve el
- * archivo correspondiente. La ruta se valida estrictamente para impedir path
- * traversal. Se soportan archivos anidados en subcarpetas por año y también
- * en la raíz.
+ * Acepta rutas relativas dentro del prefijo S3 (p. ej. `2021/001-2021.pdf`) y
+ * sirve el objeto desde el bucket. Los bytes se transmiten a través del backend
+ * (no se redirige al bucket); solo los PDF se sirven inline, el resto se
+ * descarga forzada para no ejecutar contenido activo embebido.
  *
  * NOTA: no se admite el token por query string para evitar exponer el JWT
  * en la URL (logs, referrer, sharing). Los clientes deben adjuntar el header.
@@ -106,39 +104,25 @@ export class FilesController {
     const remote = await this.storage.getObjectStream(relPath);
     const setDisposition = (disposition: string) =>
       res.setHeader('Content-Disposition', disposition);
-    if (remote) {
-      res.setHeader('Content-Type', remote.contentType);
-      if (downloadName) {
-        setDisposition(
-          `attachment; filename="${downloadName.replace(/["\\]/g, '_')}"`,
-        );
-      } else if (extname(relPath).toLowerCase() === '.pdf') {
-        setDisposition('inline');
-      } else {
-        setDisposition(
-          `attachment; filename="${basename(relPath).replace(/["\\]/g, '_')}"`,
-        );
-      }
-      if (remote.length) {
-        res.setHeader('Content-Length', String(remote.length));
-      }
-      return remote.stream.pipe(res);
-    }
-
-    const filePath = absUploadPath(relPath);
-
-    if (!existsSync(filePath)) {
+    if (!remote) {
       throw new NotFoundException(`El archivo "${relPath}" no existe.`);
     }
 
-    // Solo los PDF se sirven inline (vista previa del navegador); el resto se
-    // descarga forzada para no ejecutar contenido activo embebido si un archivo
-    // malicioso llegó a guardarse como imagen/ofimática.
-    if (extname(relPath).toLowerCase() !== '.pdf') {
-      const name = basename(relPath);
-      setDisposition(`attachment; filename="${name.replace(/["\\]/g, '_')}"`);
+    res.setHeader('Content-Type', remote.contentType);
+    if (downloadName) {
+      setDisposition(
+        `attachment; filename="${downloadName.replace(/["\\]/g, '_')}"`,
+      );
+    } else if (extname(relPath).toLowerCase() === '.pdf') {
+      setDisposition('inline');
+    } else {
+      setDisposition(
+        `attachment; filename="${basename(relPath).replace(/["\\]/g, '_')}"`,
+      );
     }
-
-    return res.sendFile(relPath, { root: UPLOADS_DIR });
+    if (remote.length) {
+      res.setHeader('Content-Length', String(remote.length));
+    }
+    return remote.stream.pipe(res);
   }
 }

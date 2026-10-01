@@ -7,9 +7,9 @@ import { Prisma } from '@prisma/client';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  UploadedFileLike,
+  UploadFile,
   normalizeUploadName,
-  moveIntoAgreementDir,
+  storeUploadedDocument,
 } from '../common/uploads.config';
 import {
   deriveTemporalStatus,
@@ -49,8 +49,8 @@ export class AgreementsService {
   async create(
     dto: CreateAgreementDto,
     files?: {
-      dictamen?: UploadedFileLike[];
-      documentos_origen?: UploadedFileLike[];
+      dictamen?: UploadFile[];
+      documentos_origen?: UploadFile[];
     },
   ) {
     const now = new Date();
@@ -111,7 +111,7 @@ export class AgreementsService {
         });
 
         const docSpecs: Array<{
-          file?: UploadedFileLike;
+          file?: UploadFile;
           code: string;
           fallbackName: string;
         }> = [
@@ -184,7 +184,7 @@ export class AgreementsService {
 
   private async buildDocumentData(
     agreementId: bigint,
-    file: UploadedFileLike & { filename?: string },
+    file: UploadFile,
     opts: {
       name: string;
       tramiteCode: string;
@@ -199,12 +199,11 @@ export class AgreementsService {
   ): Promise<Prisma.documentsCreateInput> {
     const originalName = normalizeUploadName(file.originalname);
     const ext = path.extname(originalName).slice(0, 10) || undefined;
-    const filePath = await moveIntoAgreementDir(
-      file.filename ?? originalName,
+    const filePath = await storeUploadedDocument(
+      this.storage,
+      file,
       opts.tramiteCode,
       opts.createdAt ?? null,
-      originalName,
-      (rel) => this.storage.uploadRel(rel),
     );
     return {
       agreements: { connect: { id: agreementId } },
