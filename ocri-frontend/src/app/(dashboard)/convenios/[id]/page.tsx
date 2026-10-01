@@ -14,13 +14,8 @@ import { canManage } from '@/lib/auth';
 import Stage1Propuesta from '@/components/agreements/process/Stage1Propuesta';
 import Stage2Registro from '@/components/agreements/process/Stage2Registro';
 import Stage3Seguimiento from '@/components/agreements/process/Stage3Seguimiento';
-import {
-    FlowTimeline,
-    PROCESS_STATUS_LABELS,
-    ProcessDetail,
-    VALIDITY_COLORS,
-    VALIDITY_LABELS,
-} from '@/components/agreements/process/shared';
+import AgreementHeader from '@/components/agreements/process/AgreementHeader';
+import { ProcessDetail } from '@/components/agreements/process/shared';
 
 const ETAPA2_STATUSES = [
     'ENVIADO_A_RECTORADO',
@@ -31,14 +26,6 @@ const ETAPA2_STATUSES = [
 ];
 
 const ETAPA3_STATUSES = ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
-
-const PROPOSAL_STATUSES = [
-    'RECEPCIONADA',
-    'OPINIONES_EN_CURSO',
-    'OPINIONES_COMPLETAS',
-    'EXPEDIENTE_TECNICO_LISTO',
-    'ENVIADO_A_RECTORADO',
-];
 
 export default function ConvenioDetailPage({
     params,
@@ -148,55 +135,10 @@ export default function ConvenioDetailPage({
             </div>
 
             {/* Header */}
-            <div className="bg-white border border-gray-200 p-6 shadow-sm space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2 min-w-0" title={agreement.title}>
-                            <span className="line-clamp-2">{agreement.title}</span>
-                        </h1>
-                            <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-                                {agreement.tramite_code ? (
-                                    <>
-                                        Código:{' '}
-                                        <span className="font-medium">{agreement.tramite_code}</span>
-                                        {' · '}
-                                    </>
-                                ) : (
-                                    <>Código #{agreementId} · </>
-                                )}
-                                <span className="font-medium">
-                                    {PROCESS_STATUS_LABELS[agreement.process_status] ??
-                                        agreement.process_status}
-                                </span>
-                            </p>
-                        </div>
-                    <div className="flex items-center gap-2">
-                        <span
-                            className={`inline-flex items-center px-2.5 py-0.5 text-xs border font-semibold ${
-                                PROPOSAL_STATUSES.includes(agreement.process_status)
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-primary text-white border-primary'
-                            }`}
-                        >
-                            {PROPOSAL_STATUSES.includes(agreement.process_status)
-                                ? 'Propuesta'
-                                : 'Convenio'}
-                        </span>
-                        {agreement.validity_status &&
-                            agreement.validity_status !== 'PENDIENTE' && (
-                                <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
-                                        VALIDITY_COLORS[agreement.validity_status]
-                                    }`}
-                                >
-                                    {VALIDITY_LABELS[agreement.validity_status]}
-                                </span>
-                            )}
-                    </div>
-                </div>
-
-                <FlowTimeline current={agreement.process_status} />
-            </div>
+            <AgreementHeader
+                agreement={agreement}
+                fallbackCode={`#${agreementId}`}
+            />
 
             {/* Etapa 1: Propuesta (siempre visible) */}
             <Stage1Propuesta

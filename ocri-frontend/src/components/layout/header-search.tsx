@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, Loader2, FileText, Building2, X } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
+import type { ProcessStatus } from "@/types/agreements";
 import { useUser } from "@/components/user-provider";
 
 interface AgreementSearchResult {
@@ -13,7 +14,7 @@ interface AgreementSearchResult {
   name: string | null;
   resolution_number: string | null;
   tramite_code: string | null;
-  process_status: string | null;
+  process_status: ProcessStatus | null;
   institutions?: { name: string | null } | null;
 }
 
@@ -229,9 +230,7 @@ export function HeaderSearch() {
                       </span>
                       {a.process_status && (
                         <span className="ml-auto shrink-0 border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
-                          {PROCESS_STATUS_LABELS[
-                            a.process_status as keyof typeof PROCESS_STATUS_LABELS
-                          ] || a.process_status}
+                          {PROCESS_STATUS_LABELS[a.process_status]}
                         </span>
                       )}
                     </Link>

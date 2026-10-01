@@ -3,18 +3,13 @@
 import { useCallback, useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProcessStatus } from '@/lib/api';
-import { AlertTriangle, ArrowLeft, Clock, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Loader2 } from 'lucide-react';
 import { ProcessStatusResponse } from '@/types/agreements';
 import { useUser } from '@/components/user-provider';
 import { canManage } from '@/lib/auth';
 import Stage2Registro from '@/components/agreements/process/Stage2Registro';
-import {
-    FlowTimeline,
-    PROCESS_STATUS_LABELS,
-    ProcessDetail,
-    VALIDITY_COLORS,
-    VALIDITY_LABELS,
-} from '@/components/agreements/process/shared';
+import AgreementHeader from '@/components/agreements/process/AgreementHeader';
+import { ProcessDetail } from '@/components/agreements/process/shared';
 
 export default function RegistroDetailPage({
     params,
@@ -97,56 +92,10 @@ export default function RegistroDetailPage({
                     Volver a Bandeja de Registro
                 </button>
             </div>
-            <div className="bg-white border border-gray-200 p-6 shadow-sm space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2 min-w-0" title={agreement.title}>
-                            <Clock className="h-5 w-5 text-gold shrink-0" />
-                            <span className="line-clamp-2">{agreement.title}</span>
-                        </h1>
-                        <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-                            {agreement.tramite_code ? (
-                                <>
-                                    Código:{' '}
-                                    <span className="font-medium">{agreement.tramite_code}</span>
-                                    {' · '}
-                                </>
-                            ) : (
-                                <>Código #{agreementId} · </>
-                            )}
-                            <span className="font-medium">
-                                {PROCESS_STATUS_LABELS[agreement.process_status] ??
-                                    agreement.process_status}
-                            </span>
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span
-                            className={`inline-flex items-center px-2.5 py-0.5 text-xs border font-semibold ${
-                                agreement.process_status === 'ENVIADO_A_RECTORADO'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-primary text-white border-primary'
-                            }`}
-                        >
-                            {agreement.process_status === 'ENVIADO_A_RECTORADO'
-                                ? 'Propuesta'
-                                : 'Convenio'}
-                        </span>
-                        {agreement.validity_status &&
-                            agreement.validity_status !== 'PENDIENTE' && (
-                                <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
-                                        VALIDITY_COLORS[agreement.validity_status]
-                                    }`}
-                                >
-                                    {VALIDITY_LABELS[agreement.validity_status]}
-                                </span>
-                            )}
-                    </div>
-                </div>
-
-                <FlowTimeline current={agreement.process_status} />
-            </div>
+            <AgreementHeader
+                agreement={agreement}
+                fallbackCode={`#${agreementId}`}
+            />
 
             <Stage2Registro
                 agreementId={agreementId}

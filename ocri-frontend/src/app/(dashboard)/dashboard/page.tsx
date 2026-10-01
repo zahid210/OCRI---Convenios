@@ -7,6 +7,8 @@ import { useUser } from "@/components/user-provider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
+import { isProposal as isProposalStatus } from "@/components/agreements/process/AgreementHeader";
+import type { ProcessStatus } from "@/types/agreements";
 import { ClickableTableRow } from "@/components/ui/clickable-table-row";
 import {
   FileCheck,
@@ -31,20 +33,18 @@ interface Agreement {
     name?: string;
     country?: string;
   };
-  process_status?: string;
+  /**
+   * El enum real, no `string`: el dashboard antes redefinía la fila con
+   * `process_status?: string` y por eso necesitaba castear contra
+   * `keyof typeof PROCESS_STATUS_LABELS` y un texto "En trámite" de respaldo.
+   * Con el enum, `PROCESS_STATUS_LABELS[...]` siempre resuelve y un estado
+   * desconocido es un error de tipos en vez de una etiqueta inventada.
+   */
+  process_status?: ProcessStatus;
   end_date?: string;
   temporal_status?: "VIGENTE" | "POR_VENCER" | "VENCIDO" | "SIN_FECHA";
   days_remaining?: number | null;
 }
-
-// Estados en los que el expediente aún es PROPUESTA (pre-aprobación de Rectorado).
-const PROPOSAL_STATUSES = [
-  "RECEPCIONADA",
-  "OPINIONES_EN_CURSO",
-  "OPINIONES_COMPLETAS",
-  "EXPEDIENTE_TECNICO_LISTO",
-  "ENVIADO_A_RECTORADO",
-];
 
 interface AgreementsResponse {
   data?: Agreement[];
@@ -217,21 +217,19 @@ export default function DashboardPage() {
                   </tr>
                 ) : (
                   recentAgreements.map((agreement) => {
-                    const isProposal = PROPOSAL_STATUSES.includes(
-                      agreement.process_status ?? "",
+                    const isProposal = isProposalStatus(
+                      agreement.process_status,
                     );
                     const isExpired =
                       agreement.temporal_status === "VENCIDO" ||
                       (agreement.temporal_status === undefined &&
                         agreement.end_date &&
                         new Date(agreement.end_date) < new Date());
-                    const rawStatus = agreement.process_status ?? "";
                     const stateLabel = isProposal
-                      ? (PROCESS_STATUS_LABELS[
-                          rawStatus as keyof typeof PROCESS_STATUS_LABELS
-                        ] ?? "En trámite")
-                      : agreement.temporal_status === "POR_VENCER"
-                        ? "Por vencer"
+                      ? PROCESS_STATUS_LABELS[
+                          agreement.process_status ?? "RECEPCIONADA"
+                        ]
+                      : agreement.temporal_status === "POR_VENCER"                        ? "Por vencer"
                         : isExpired
                           ? "Vencido"
                           : "Vigente";

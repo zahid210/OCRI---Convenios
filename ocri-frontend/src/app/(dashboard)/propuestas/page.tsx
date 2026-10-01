@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Agreement, PaginatedResponse } from "@/types/agreements";
+import { Agreement, PaginatedResponse, ProcessStatus } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { useUser } from "@/components/user-provider";
 import { canCreate } from "@/lib/auth";
@@ -12,11 +12,25 @@ import { PROCESS_STATUS_LABELS } from "@/components/agreements/process/shared";
 import { ClickableTableRow } from "@/components/ui/clickable-table-row";
 import { PagePagination } from "@/components/ui/page-pagination";
 
-const TRAMITE_BADGES: Record<string, string> = {
+/**
+ * Colores por estado de la propuesta. Se tipa como `Record<ProcessStatus, …>`
+ * para que sea exhaustiva: antes era `Record<string, string>` con 4 de 12
+ * estados y un `|| "bg-gray-100…"` que ocultaba los huecos, pintando cualquier
+ * estado no listado con el mismo gris sin avisar. Al completarla, un estado
+ * nuevo obliga a decidir su color.
+ */
+const TRAMITE_BADGES: Record<ProcessStatus, string> = {
   RECEPCIONADA: "bg-gray-100 text-gray-700 border-gray-200",
   OPINIONES_EN_CURSO: "bg-blue-50 text-blue-700 border-blue-200",
   OPINIONES_COMPLETAS: "bg-yellow-50 text-yellow-700 border-yellow-200",
   EXPEDIENTE_TECNICO_LISTO: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ENVIADO_A_RECTORADO: "bg-primary text-white border-primary",
+  NO_SUSCRITO: "bg-red-50 text-red-700 border-red-200",
+  SUSCRITO: "bg-primary text-white border-primary",
+  REGISTRADO: "bg-primary text-white border-primary",
+  PUBLICADO: "bg-primary text-white border-primary",
+  EN_SEGUIMIENTO: "bg-blue-50 text-blue-700 border-blue-200",
+  SEGUIMIENTO_CONCLUIDO: "bg-green-50 text-green-700 border-green-200",
 };
 
 export default function PropuestasPage() {
@@ -173,12 +187,8 @@ export default function PropuestasPage() {
                 </tr>
               ) : (
                 rows.map((agreement) => {
-                  const label =
-                    PROCESS_STATUS_LABELS[agreement.process_status] ||
-                    agreement.process_status;
-                  const badgeClasses =
-                    TRAMITE_BADGES[agreement.process_status] ||
-                    "bg-gray-100 text-gray-700 border-gray-200";
+                  const label = PROCESS_STATUS_LABELS[agreement.process_status];
+                  const badgeClasses = TRAMITE_BADGES[agreement.process_status];
                   const inst = agreement.institutions;
 
                   return (

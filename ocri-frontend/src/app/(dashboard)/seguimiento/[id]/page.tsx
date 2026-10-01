@@ -8,13 +8,8 @@ import { Deliverable, ProcessStatusResponse } from "@/types/agreements";
 import { useUser } from "@/components/user-provider";
 import { canManage } from "@/lib/auth";
 import Stage3Seguimiento from "@/components/agreements/process/Stage3Seguimiento";
-import {
-    FlowTimeline,
-    PROCESS_STATUS_LABELS,
-    ProcessDetail,
-    VALIDITY_COLORS,
-    VALIDITY_LABELS,
-} from "@/components/agreements/process/shared";
+import AgreementHeader from "@/components/agreements/process/AgreementHeader";
+import { ProcessDetail } from "@/components/agreements/process/shared";
 
 const ETAPA3_STATUSES = ["EN_SEGUIMIENTO", "SEGUIMIENTO_CONCLUIDO"];
 
@@ -127,49 +122,10 @@ export default function SeguimientoDetailPage({
                     Volver a Bandeja de Seguimiento
                 </button>
             </div>
-            <div className="bg-white border border-gray-200 p-6 shadow-sm space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                        <h1 className="text-xl font-normal text-gray-800 flex items-center gap-2 min-w-0" title={agreement.title}>
-                            <span className="line-clamp-2">{agreement.title}</span>
-                        </h1>
-                        <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-                            {agreement.tramite_code ? (
-                                <>
-                                    Código:{" "}
-                                    <span className="font-medium">
-                                        {agreement.tramite_code}
-                                    </span>
-                                    {" · "}
-                                </>
-                            ) : (
-                                <>Código #{agreementId} · </>
-                            )}
-                            <span className="font-medium">
-                                {PROCESS_STATUS_LABELS[
-                                    agreement.process_status
-                                ] ?? agreement.process_status}
-                            </span>
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {agreement.validity_status &&
-                            agreement.validity_status !== "PENDIENTE" && (
-                                <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 text-xs border ${
-                                        VALIDITY_COLORS[
-                                            agreement.validity_status
-                                        ]
-                                    }`}
-                                >
-                                    {VALIDITY_LABELS[agreement.validity_status]}
-                                </span>
-                            )}
-                    </div>
-                </div>
-
-                <FlowTimeline current={agreement.process_status} />
-            </div>
+            <AgreementHeader
+                agreement={agreement}
+                fallbackCode={`#${agreementId}`}
+            />
 
             <Stage3Seguimiento
                 agreementId={agreementId}
