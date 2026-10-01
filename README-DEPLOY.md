@@ -24,8 +24,15 @@ hace falta abrir el puerto del backend en el firewall: solo el del frontend.
 ```bash
 cp .env.example .env
 # Editar .env: DB_PASSWORD, DB_ROOT_PASSWORD, JWT_SECRET (>=32 chars),
-#   y opcionalmente S3_* (almacenamiento OBS).
+#   S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_ENDPOINT,
+#   SEED_ADMIN_PASSWORD y SEED_DEMO_PASSWORD.
 docker compose up -d --build
+```
+
+Genera los secretos con:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
 - El primer arranque crea la base de datos a partir de `dumps/ocri-inicio.sql`
@@ -68,20 +75,33 @@ La columna del hash es `users.password`.
 
 ## Almacenamiento de archivos
 
-- **Con S3/OBS configurado** (`S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`,
-  `S3_ENDPOINT`): los documentos se persisten en el bucket bajo `S3_PREFIX/`
-  (`OCRI_convenios/…`) y se sirven en **streaming** por `/api/resoluciones/…`
-  (el endpoint valida el JWT por header, sin redirecciones 302; un redirect
-  rompería la vista previa en línea del frontend).
-  El volumen `uploads-data` solo guarda un espejo.
-- **Sin S3**: todo queda en el volumen `uploads-data`; `/resoluciones/…` responde
-  el archivo local. Si el contenido subido ya existía localmente (históricos), no
-  requiere migración previa.
+El bucket OBS es el **único** almacén. No hay copia local: los documentos se
+suben directo a `S3_PREFIX/` (`OCRI_convenios/…`) y se sirven en **streaming**
+por `/api/resoluciones/…`, que valida el JWT por header (sin redirecciones 302;
+un redirect rompería la vista previa en línea del frontend).
 
-Si se despliega una BD/vacía o un checkout nuevo y los PDFs locales no están aún en
-el bucket, los históricos se suben automáticamente al ejecutar el seeder
-(`npm run migrate:s3` en un checkout de desarrollo con `HISTORIC_PDFS_ROOT`,
-o bien el seeder `seed:historico` que sincroniza local + S3 en cada ejecución).
+Las cuatro variables `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` y
+`S3_ENDPOINT` son **obligatorias**:
+
+- `docker compose up` se niega a arrancar si falta alguna (`:?`).
+- El backend aborta al iniciar sin ellas.
+- Si el bucket responde con error al guardar o borrar, la operación falla. No se
+  registra una fila en `documents` si el objeto no está en el bucket.
+
+Único material local: las plantillas de oficio en `ocri-backend/uploads/templates/`,
+montadas de solo lectura para generar los PDF.
+
+Los 447 convenios históricos del dump traen sus rutas en la columna `file_path`
+pero **no** los archivos. Para que sus documentos se puedan ver hay que subirlos
+al bucket, con el mismo prefijo y nombre que figura en la BD, por ejemplo:
+
+```bash
+# en un checkout de desarrollo, con aws-cli configurado con las claves de IAM
+cd <ruta-con-los-pdfs>
+aws s3 sync . s3://otiuncp-files/OCRI_convenios/2021/ --endpoint-url https://obs.la-south-2.myhuaweicloud.com
+```
+
+Ajusta el año y el nombre del bucket a los de tu `.env`.
 
 ## Uso diario
 
@@ -97,10 +117,21 @@ o bien el seeder `seed:historico` que sincroniza local + S3 en cada ejecución).
 
 ## Despliegue desde cero en otra máquina
 
-1. Copiar la carpeta del proyecto (sin `node_modules`, sin volúmenes).
-2. Crear `.env` como arriba.
+1. `git clone` del repositorio.
+2. `cp .env.example .env` y editar los secretos (ver arriba). Si es un despliegue
+   que comparte bucket con otra máquina, **no cambies** `S3_PREFIX`: los
+   `file_path` de la BD apuntan a rutas relativas dentro del prefijo.
 3. `docker compose up -d --build`.
-4. Opcional: migrar `uploads/` local al bucket S3 con el comando indicado.
+4. Subir los PDFs históricos al bucket (ver «Almacenamiento de archivos») para que
+   los convenios del dump tengan documento visible.
+
+## Verificación tras desplegar
+
+```bash
+docker compose ps                                    # los 3 servicios "healthy"
+curl -s localhost:3000/api/health                     # status ok + storage ok
+docker compose logs backend | grep -i "S3 no configurado"   # no debe aparecer nada
+```
 
 ## Arquitectura de imágenes
 
