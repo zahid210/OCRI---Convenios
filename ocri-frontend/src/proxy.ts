@@ -19,14 +19,14 @@ const protectedPrefixes = [
 function roleAllowed(role: string | undefined, pathname: string): boolean {
     if (role === "admin") return true;
 
-    // Asistente (registo de propuestas): SOLO el alta.
+    // Asistente (registro de propuestas): SOLO el alta.
     if (role === "asistente") {
         return pathname === "/propuestas/create" || pathname.startsWith("/propuestas/create/");
     }
 
-    // Procesador (Berna): el flujo completo, sin alta ni administración.
+    // Procesador (Berna): el flujo completo y también el alta de propuestas,
+    // para cubrir el registro cuando el asistente no esté. Sin administración.
     if (role === "procesador") {
-        if (pathname === "/propuestas/create" || pathname.startsWith("/propuestas/create/")) return false;
         if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return false;
         if (pathname === "/institutions" || pathname.startsWith("/institutions/")) return false;
         if (pathname === "/reports" || pathname.startsWith("/reports/")) return false;

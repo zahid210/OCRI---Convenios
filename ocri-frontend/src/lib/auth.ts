@@ -36,9 +36,19 @@ export function canManage(user: CurrentUser | null | undefined): boolean {
     return user?.role === 'admin' || user?.role === 'procesador';
 }
 
-/** ¿Puede registrar nuevas propuestas? (admin o asistente) */
+/**
+ * ¿Puede registrar nuevas propuestas? (admin, asistente o procesador).
+ * El procesador también da de alta porque debe cubrir el registro cuando el
+ * asistente no esté en la oficina. Debe coincidir con `CREATOR_ROLES` del
+ * backend (ocri-backend/src/auth/role-sets.ts): el guard es la autoridad real,
+ * pero si esta lista se queda atrás el botón simplemente no aparece.
+ */
 export function canCreate(user: CurrentUser | null | undefined): boolean {
-    return user?.role === 'admin' || user?.role === 'asistente';
+    return (
+        user?.role === 'admin' ||
+        user?.role === 'asistente' ||
+        user?.role === 'procesador'
+    );
 }
 
 /** ¿Puede eliminar registros y gestionar usuarios? (solo admin) */
@@ -60,7 +70,7 @@ export function roleHome(role: string | undefined): string {
 
 export const ROLE_LABELS: Record<string, string> = {
     admin: 'Administrador',
-    procesador: 'Procesamiento de propuestas',
+    procesador: 'Procesamiento y registro de propuestas',
     asistente: 'Registro de propuestas',
     viewer: 'Solo Lectura',
 };
