@@ -24,6 +24,7 @@ import { SendOpinionRequestDto } from './dto/send-opinion-request.dto';
 import { RespondOpinionRequestDto } from './dto/respond-opinion-request.dto';
 import { ValidateOpinionRequestDto } from './dto/validate-opinion-request.dto';
 import { GenerateOficioOpinionDto } from './dto/generate-oficio-opinion.dto';
+import { UploadOficioOpinionDto } from './dto/upload-oficio-opinion.dto';
 import { GenerateOficioRectoradoDto } from './dto/generate-oficio-rectorado.dto';
 import { UploadProcessDocumentDto } from './dto/upload-process-document.dto';
 import { RectorateDecisionDto } from './dto/rectorate-decision.dto';
@@ -161,6 +162,35 @@ export class ProcessController {
         sent_via: body.sent_via,
         adesa_number: body.adesa_number,
         oficio_number: body.oficio_number,
+        directed_to: body.directed_to,
+      },
+      req.user?.id,
+    );
+  }
+
+  /**
+   * Adjunta un oficio de solicitud de opinión ya emitido (en papel o redactado
+   * fuera del sistema) y marca la solicitud como enviada. Alternativa a
+   * `oficio/generate` para quien ya tiene el oficio listo y solo necesita
+   * cargarlo.
+   */
+  @Roles(...FLOW_ROLES)
+  @Post('opinion-requests/:id/oficio/upload')
+  @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
+  uploadOficioOpinion(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: UploadFile,
+    @Body() body: UploadOficioOpinionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.uploadOficioOpinion(
+      id,
+      file,
+      {
+        oficio_number: body.oficio_number,
+        adesa_number: body.adesa_number,
+        sent_at: body.sent_at,
+        sent_via: body.sent_via,
         directed_to: body.directed_to,
       },
       req.user?.id,

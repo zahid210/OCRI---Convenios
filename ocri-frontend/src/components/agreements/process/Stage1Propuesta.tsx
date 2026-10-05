@@ -15,6 +15,7 @@ import {
   respondOpinionRequest,
   sendToRectorado,
   uploadProcessDocument,
+  uploadOficioOpinion,
   validateOpinionRequest,
   cancelOpinionRequest,
 } from "@/lib/api";
@@ -24,6 +25,7 @@ import GenerarOficioRectoradoModal from "./GenerarOficioRectoradoModal";
 import ResponderSolicitudModal from "./ResponderSolicitudModal";
 import ValidarOpinionModal from "./ValidarOpinionModal";
 import SubirDocumentoModal from "./SubirDocumentoModal";
+import CargarOficioModal from "./CargarOficioModal";
 import SolicitarOpinionesModal from "./SolicitarOpinionesModal";
 import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
@@ -224,6 +226,9 @@ export default function Stage1Propuesta({
   const [expandedRequest, setExpandedRequest] = useState<number | null>(null);
 
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showCargarOficioModal, setShowCargarOficioModal] = useState<
+    number | null
+  >(null);
   const [showSendModal, setShowSendModal] = useState<number | null>(null);
   const [showRespondModal, setShowRespondModal] = useState<number | null>(null);
   const [validateModal, setValidateModal] = useState<{
@@ -268,6 +273,10 @@ export default function Stage1Propuesta({
     (r) => r.id === showRespondModal,
   );
 
+  const cargarOficioRequest = opinion_requests.find(
+    (r) => r.id === showCargarOficioModal,
+  );
+
   const pendingRequests = opinion_requests.filter(
     (r) => r.status !== "CANCELADA" && !r.response_date,
   );
@@ -302,6 +311,28 @@ export default function Stage1Propuesta({
 
   const openGenerateOficioModal = (requestId: number) => {
     setShowSendModal(requestId);
+  };
+
+  const handleCargarOficio = async (
+    requestId: number,
+    file: File,
+    data: {
+      sent_via: string;
+      adesa_number?: string;
+      oficio_number?: string;
+      sent_at?: string;
+    },
+  ) => {
+    try {
+      await uploadOficioOpinion(requestId, file, data);
+      toast.success("Oficio cargado y adjuntado correctamente.");
+      setShowCargarOficioModal(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al cargar el oficio";
+      toast.error(message);
+    }
   };
 
   const handleGenerateOficio = async (
@@ -789,6 +820,19 @@ export default function Stage1Propuesta({
                               Generar Oficio
                             </button>
                           )}
+                          {actionsOpen && req.status === "GENERADA" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowCargarOficioModal(req.id);
+                              }}
+                              className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm transition-colors"
+                              title="Adjuntar un oficio que ya fue emitido, en lugar de generarlo aquí"
+                            >
+                              <Upload className="h-4 w-4" />
+                              Cargar Oficio
+                            </button>
+                          )}
                           {actionsOpen && req.status === "ENVIADA" && (
                             <button
                               onClick={(e) => {
@@ -1127,6 +1171,14 @@ export default function Stage1Propuesta({
           dependencies={defaultTargets}
           onGenerate={handleGenerateRequests}
           onCancel={() => setShowGenerateModal(false)}
+        />
+      )}
+
+      {showCargarOficioModal !== null && (
+        <CargarOficioModal
+          request={cargarOficioRequest}
+          onUpload={handleCargarOficio}
+          onCancel={() => setShowCargarOficioModal(null)}
         />
       )}
 

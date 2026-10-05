@@ -357,6 +357,34 @@ export async function generateOficioOpinion(
   });
 }
 
+/**
+ * Carga un oficio de solicitud de opinión ya emitido y lo adjunta a la
+ * solicitud, marcándola como enviada. Alternativa a `generateOficioOpinion`
+ * para cuando el oficio ya está hecho y solo falta subirlo.
+ */
+export async function uploadOficioOpinion(
+  requestId: number,
+  file: File,
+  data: {
+    sent_via?: string;
+    adesa_number?: string;
+    oficio_number?: string;
+    sent_at?: string;
+  },
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (data.sent_via) formData.append("sent_via", data.sent_via);
+  if (data.adesa_number) formData.append("adesa_number", data.adesa_number);
+  if (data.oficio_number) formData.append("oficio_number", data.oficio_number);
+  if (data.sent_at) formData.append("sent_at", data.sent_at);
+
+  return fetchApi(`/process/opinion-requests/${requestId}/oficio/upload`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 /** Devuelve el cuerpo editable precargado del oficio de envío a Rectorado */
 export async function getOficioRectoradoTemplate(agreementId: number) {
   return fetchApi(`/process/${agreementId}/oficio-rectorado/template`);

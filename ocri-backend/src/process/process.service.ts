@@ -20,6 +20,7 @@ import {
   UploadFile,
   DOC_TYPE_EXTENSIONS,
   normalizeUploadName,
+  opinionDir,
   storePath,
   storeUploadedDocument,
 } from '../common/uploads.config';
@@ -36,6 +37,18 @@ interface ActorEventOptions {
   toValue?: string;
   opinionRequestId?: bigint;
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * Convierte una fecha de calendario `YYYY-MM-DD` elegida por el usuario en un
+ * instante real. `new Date('2026-10-15')` se parsea a medianoche UTC, que en
+ * husos negativos (Perú es UTC-5) se mostraría como 14/10. Anclar al mediodía
+ * local deja el día calendario intacto al formatearlo en cualquier huso.
+ */
+function parseLocalCalendarDate(value: string): Date {
+  const m = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return new Date(value);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
 }
 
 @Injectable()
@@ -1338,6 +1351,181 @@ export class ProcessService {
       // Si falla la transacción, elimina el PDF generado para no dejar archivos huérfanos.
       try {
         await this.storage.removeRel(filename);
+      } catch {
+        // el archivo ya no existe o no se pudo borrar: se ignora.
+      }
+      throw err as Error;
+    }
+  }
+
+  /**
+   * Adjunta un oficio de solicitud de opinión ya emitido y marca la solicitud
+   * como enviada. Es la alternativa a `generateOficioOpinion` cuando el oficio
+   * existe en papel o se redactó por fuera del sistema: produce exactamente el
+   * mismo resultado (misma transición GENERADA → ENVIADA, mismo tipo de
+   * documento, misma carpeta en el bucket y mismo emparejamiento en el merge
+   * del expediente), pero sin pasar por el editor HTML.
+   */
+  async uploadOficioOpinion(
+    opinionRequestId: number,
+    file: UploadFile,
+    dto: {
+      oficio_number?: string;
+      adesa_number?: string;
+      sent_at?: string;
+      sent_via?: string;
+      directed_to?: string;
+    },
+    userId?: number,
+  ) {
+    const request = await this.prisma.opinion_requests.findUnique({
+      where: { id: BigInt(opinionRequestId) },
+      include: { agreements: true, dependencias: { select: { name: true } } },
+    });
+
+    if (!request) {
+      throw new NotFoundException(
+        `Solicitud de opinión #${opinionRequestId} no encontrada`,
+      );
+    }
+
+    if (request.status !== 'GENERADA') {
+      throw new BadRequestException(
+        `La solicitud debe estar GENERADA para cargar su oficio. Estado actual: ${request.status}`,
+      );
+    }
+
+    if (!file) {
+      throw new BadRequestException('Debe adjuntar el archivo del oficio.');
+    }
+
+    const agreement = request.agreements;
+    if (!agreement) {
+      throw new NotFoundException(
+        `El convenio de la solicitud #${opinionRequestId} no existe`,
+      );
+    }
+
+    const originalName = normalizeUploadName(file.originalname);
+    const ext = '.' + (originalName.split('.').pop()?.toLowerCase() ?? '');
+    if (ext !== '.pdf') {
+      throw new BadRequestException(
+        `El oficio de solicitud de opinión solo acepta archivos .pdf. Archivo recibido: ${ext || '(sin extensión)'}`,
+      );
+    }
+
+    const docType = await this.prisma.document_types.findUnique({
+      where: { code: 'OFICIO_SOLICITUD_OPINION' },
+    });
+
+    const dependenciaName = request.dependencias?.name ?? 'Dependencia';
+
+    // Mismo nombre y carpeta que el oficio renderizado por el sistema.
+    // `putUnique` no pisa el oficio previo si se vuelve a cargar.
+    const filename = `oficio-solicitud-${dependenciaName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    const relPath = await this.storage.putUnique(
+      opinionDir(agreement.tramite_code, agreement.created_at, dependenciaName),
+      filename,
+      file.buffer,
+    );
+
+    const sentAt = dto.sent_at
+      ? parseLocalCalendarDate(dto.sent_at)
+      : new Date();
+
+    try {
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          await tx.documents.create({
+            data: {
+              agreements: { connect: { id: BigInt(request.agreement_id) } },
+              opinion_requests: { connect: { id: BigInt(opinionRequestId) } },
+              name: 'Oficio de Solicitud de Opinión - ' + dependenciaName,
+              file_path: relPath,
+              original_name: originalName,
+              extension: 'pdf',
+              document_types: docType
+                ? { connect: { id: docType.id } }
+                : undefined,
+              direction: 'SALIDA',
+              stage: 'ETAPA_1_PROPUESTA',
+              uploaded_by:
+                userId != null
+                  ? { connect: { id: BigInt(userId) } }
+                  : undefined,
+              created_at: new Date(),
+              updated_at: new Date(),
+            },
+          });
+
+          // Update condicional por estado: evita que dos cargas concurrentes
+          // sobre la misma solicitud avancen ambas (guard de integridad).
+          const updated = await tx.opinion_requests.updateMany({
+            where: { id: BigInt(opinionRequestId), status: 'GENERADA' },
+            data: {
+              status: 'ENVIADA',
+              oficio_number: dto.oficio_number ?? request.oficio_number,
+              adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
+              sent_via: dto.sent_via ?? request.sent_via,
+              directed_to: dto.directed_to ?? request.directed_to,
+              sent_at: sentAt,
+              updated_at: new Date(),
+            },
+          });
+
+          if (updated.count === 0) {
+            throw new ConflictException(
+              'La solicitud ya no está en estado GENERADA y no puede cargarse su oficio.',
+            );
+          }
+
+          const result = await tx.opinion_requests.findUniqueOrThrow({
+            where: { id: BigInt(opinionRequestId) },
+          });
+
+          await this.logEvent(
+            request.agreement_id,
+            'SOLICITUD_ENVIADA',
+            'Oficio de solicitud de opinión cargado manualmente y adjuntado al expediente.',
+            {
+              actorUserId: userId,
+              fromValue: 'GENERADA',
+              toValue: 'ENVIADA',
+              opinionRequestId: BigInt(opinionRequestId),
+              metadata: JSON.parse(
+                JSON.stringify({
+                  sent_via: dto.sent_via ?? null,
+                  source: 'carga_manual',
+                  original_name: originalName,
+                }),
+              ) as Record<string, unknown>,
+            },
+            'ETAPA_1_PROPUESTA',
+            tx,
+          );
+
+          if (agreement.process_status === 'RECEPCIONADA') {
+            await this.applyTransition(
+              tx,
+              request.agreement_id,
+              'OPINIONES_EN_CURSO',
+              'OPINIONES_EN_CURSO',
+              'El proceso pasó a opiniones en curso tras el primer envío.',
+              { actorUserId: userId },
+            );
+          }
+
+          return result;
+        },
+        { maxWait: 10000, timeout: 30000 },
+      );
+
+      return serializeBigInt(result);
+    } catch (err) {
+      // Si falla la transacción, elimina el PDF subido para no dejar archivos
+      // huérfanos en el bucket.
+      try {
+        await this.storage.removeRel(relPath);
       } catch {
         // el archivo ya no existe o no se pudo borrar: se ignora.
       }
