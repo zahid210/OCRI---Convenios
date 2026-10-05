@@ -144,6 +144,29 @@ function OpinionRequestRow({
 }
 
 /**
+ * Último documento de un tipo dado asociado a una solicitud de opinión, sea el
+ * generado o el cargado a mano. Se ordena por `created_at` porque una
+ * corrección cargada varias veces deja más de una fila con el mismo
+ * `opinion_request_id`.
+ */
+function opinionDocument(
+  documents: readonly AgreementDocument[],
+  requestId: number,
+  code: "OFICIO_SOLICITUD_OPINION" | "OFICIO_RESPUESTA_OPINION",
+): AgreementDocument | undefined {
+  return documents
+    .filter(
+      (d) =>
+        d.opinion_request_id === requestId && d.document_types?.code === code,
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime(),
+    )[0];
+}
+
+/**
  * Nombre del oficio de solicitud generado (original_name sin extensión, p. ej.
  * "12-2026-OCRI-UNCP"), tomado del documento del proceso correspondiente a la
  * solicitud. Devuelve null si aún no se generó el oficio.
@@ -152,20 +175,55 @@ function oficioDocumentLabel(
   documents: readonly AgreementDocument[],
   requestId: number,
 ): string | null {
-  const doc = documents
-    .filter(
-      (d) =>
-        d.opinion_request_id === requestId &&
-        d.document_types?.code === "OFICIO_SOLICITUD_OPINION",
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.created_at ?? 0).getTime() -
-        new Date(a.created_at ?? 0).getTime(),
-    )[0];
+  const doc = opinionDocument(documents, requestId, "OFICIO_SOLICITUD_OPINION");
   if (!doc) return null;
   const base = fileName(doc.original_name, doc.file_path);
   return base.replace(/\.[^.]+$/, "").trim() || null;
+}
+
+/**
+ * Enlaces "Ver" y "Descargar" de un oficio, con el mismo tratamiento que la
+ * tabla de documentos del proceso. Se ocultan si el documento no tiene archivo
+ * asociado.
+ */
+function DocumentoAcciones({
+  doc,
+  onPreview,
+  onDownload,
+}: {
+  doc?: AgreementDocument;
+  onPreview: (filePath: string) => void;
+  onDownload: (doc: AgreementDocument) => void;
+}) {
+  if (!doc?.file_path) return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onPreview(doc.file_path!);
+        }}
+        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+        title="Ver documento"
+      >
+        Ver
+        <ExternalLink className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDownload(doc);
+        }}
+        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+        title="Descargar documento"
+      >
+        Descargar
+        <Download className="h-3.5 w-3.5" />
+      </button>
+    </>
+  );
 }
 
 export default function Stage1Propuesta({
@@ -808,6 +866,15 @@ export default function Stage1Propuesta({
                       }
                       actions={
                         <>
+                          <DocumentoAcciones
+                            doc={opinionDocument(
+                              documents,
+                              req.id,
+                              "OFICIO_SOLICITUD_OPINION",
+                            )}
+                            onPreview={openFilePreview}
+                            onDownload={handleDownloadDocument}
+                          />
                           {actionsOpen && req.status === "GENERADA" && (
                             <button
                               onClick={(e) => {
@@ -953,6 +1020,15 @@ export default function Stage1Propuesta({
                       }
                       actions={
                         <>
+                          <DocumentoAcciones
+                            doc={opinionDocument(
+                              documents,
+                              req.id,
+                              "OFICIO_RESPUESTA_OPINION",
+                            )}
+                            onPreview={openFilePreview}
+                            onDownload={handleDownloadDocument}
+                          />
                           {actionsOpen && req.status === "RESPONDIDA" && (
                             <>
                               <button
