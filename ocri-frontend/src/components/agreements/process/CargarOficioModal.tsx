@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, FileText, Loader2, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ModalShell } from "./shared";
@@ -50,6 +50,7 @@ export default function CargarOficioModal({
   const [oficioNumber, setOficioNumber] = useState("");
   const [sentDate, setSentDate] = useState(todayIso());
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async () => {
     if (!oficioFile) {
@@ -105,34 +106,31 @@ export default function CargarOficioModal({
       }
     >
       <div className="p-6 space-y-4">
-        {request?.dependencias && (
-          <p className="text-sm text-gray-600">
-            Dependencia:{" "}
-            <span className="font-medium text-gray-800">
-              {request.dependencias.name}
-            </span>
-          </p>
-        )}
         <div>
-          <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+          <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
             Documento a cargar <span className="text-red-500">*</span>
           </label>
           <input
+            ref={fileInputRef}
             type="file"
             accept=".pdf"
+            className="hidden"
             onChange={(e) => setOficioFile(e.target.files?.[0] ?? null)}
-            className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
           />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
+          >
+            <FileText className="h-4 w-4" />
+            {oficioFile ? "Cambiar archivo" : "Seleccionar archivo"}
+          </button>
           {oficioFile && (
             <p className="mt-1 text-xs text-gray-500 truncate">
               {oficioFile.name}
             </p>
           )}
-          <p className="text-xs text-gray-400 mt-1">
-            Adjunta el oficio que ya fue emitido. Quedará registrado como
-            enviado en la solicitud, igual que si se hubiera generado desde el
-            sistema.
-          </p>
         </div>
         <div className="border-t border-gray-200 pt-4">
           <div>
