@@ -46,11 +46,11 @@ function ConfirmDialog({
     >
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className="fixed inset-0 z-[100] bg-black/40 transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0" />
-        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-[100] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-5 shadow-xl transition duration-150 ease-out data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0">
+        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-[100] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-none border border-gray-200 bg-white p-5 shadow-xl transition duration-150 ease-out data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0">
           <div className="flex items-start gap-3">
             <span
               className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-full",
+                "flex size-9 shrink-0 items-center justify-center rounded-none",
                 options?.destructive ? "text-red-600" : "text-gold"
               )}
             >

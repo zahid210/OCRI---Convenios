@@ -178,7 +178,7 @@ export function DropdownMenuContent({
       role="menu"
       aria-labelledby={ctx.triggerId}
       className={cn(
-        "absolute z-50 mt-2 min-w-[12rem] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/95 p-1.5 text-slate-100 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95",
+        "absolute z-50 mt-2 min-w-[12rem] overflow-hidden rounded-none border border-slate-800 bg-slate-900/95 p-1.5 text-slate-100 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95",
         align === "end" ? "right-0" : "left-0",
         className,
       )}
@@ -215,7 +215,7 @@ export function DropdownMenuItem({
         }
       }}
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-slate-800 hover:text-white focus:bg-slate-800 focus:text-white",
+        "relative flex cursor-pointer select-none items-center gap-2.5 rounded-none px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-slate-800 hover:text-white focus:bg-slate-800 focus:text-white",
         className,
       )}
       {...props}

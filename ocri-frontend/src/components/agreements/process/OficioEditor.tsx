@@ -218,7 +218,7 @@ function ToolbarButton({
       type="button"
       title={label}
       onClick={onClick}
-      className={`p-1.5 rounded transition-colors ${
+      className={`p-1.5 rounded-none transition-colors ${
         active ? "bg-gold text-white" : "text-gray-600 hover:bg-gray-100"
       }`}
     >
@@ -829,7 +829,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
         </ToolbarButton>
         <span className="flex-1" />
         <span
-          className={`px-2 py-1 text-xs border rounded ${
+          className={`px-2 py-1 text-xs border rounded-none ${
             pages > 1
               ? "text-amber-700 bg-amber-50 border-amber-300"
               : "text-gray-500 bg-gray-50 border-gray-200"
@@ -843,7 +843,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
           {pages === 1 ? "1 hoja" : `${pages} hojas`}
         </span>
         <span
-          className={`px-2 py-1 text-xs border rounded ${
+          className={`px-2 py-1 text-xs border rounded-none ${
             overSize
               ? "text-white bg-red-600 border-red-600"
               : warnSize

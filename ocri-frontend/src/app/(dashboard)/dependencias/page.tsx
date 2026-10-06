@@ -404,7 +404,7 @@ export default function DependenciasPage() {
                   type="checkbox"
                   checked={formIsDefault}
                   onChange={(e) => setFormIsDefault(e.target.checked)}
-                  className="rounded border-gray-300"
+                  className="rounded-none border-gray-300"
                   id="is_default_opinion"
                 />
                 <label

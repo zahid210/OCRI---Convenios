@@ -73,7 +73,7 @@ function ToastViewport() {
                 <Toast.Close
                   onClick={() => close(toast.id)}
                   aria-label="Cerrar notificación"
-                  className="shrink-0 cursor-pointer rounded-sm p-0.5 text-white/80 transition-colors hover:bg-black/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                  className="shrink-0 cursor-pointer rounded-none p-0.5 text-white/80 transition-colors hover:bg-black/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
                 >
                   <XIcon className="size-4" />
                 </Toast.Close>

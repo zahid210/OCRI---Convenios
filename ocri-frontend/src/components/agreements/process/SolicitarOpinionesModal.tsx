@@ -112,7 +112,7 @@ export default function SolicitarOpinionesModal({
                     );
                   }
                 }}
-                className="rounded border-gray-300"
+                className="rounded-none border-gray-300"
               />
               <div>
                 <div className="text-sm font-medium text-gray-800">
