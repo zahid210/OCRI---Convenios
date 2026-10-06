@@ -1731,25 +1731,27 @@ export class ProcessService {
       select: { id: true, file_path: true },
     });
 
-    if (existDoc) {
-      // Evita dejar huérfano el PDF previo al regenerar el expediente.
-      try {
-        await this.storage.removeRel(existDoc.file_path);
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
-          this.logger?.warn?.(
-            `No se pudo eliminar el expediente anterior: ${existDoc.file_path}`,
-          );
-        }
-      }
-      await this.prisma.documents.delete({ where: { id: existDoc.id } });
+    // El merge se ejecuta ANTES de tocar el expediente anterior a propósito.
+    // `mergeOpinionResponses` escribe con `putUnique`, así que si el nombre
+    // base está ocupado guarda como `expediente-tecnico(1).pdf`: el objeto
+    // nuevo nunca colisiona con el viejo y ambos coexisten mientras dura la
+    // operación. Si el merge falla (OBS caído, PDF corrupto, timeout) el
+    // expediente previo sigue intacto y recuperable; con el orden inverso
+    // se perdía de forma irreversible.
+    let filename: string;
+    try {
+      filename = await this.pdfMerger.mergeOpinionResponses(
+        agreementId,
+        agreement.tramite_code,
+        agreement.created_at,
+      );
+    } catch (err) {
+      this.logger?.error?.(
+        `No se generó el expediente de ${agreement.tramite_code}; se conserva el anterior.`,
+        err as Error,
+      );
+      throw err;
     }
-
-    const filename = await this.pdfMerger.mergeOpinionResponses(
-      agreementId,
-      agreement.tramite_code,
-      agreement.created_at,
-    );
 
     const docType = await this.prisma.document_types.findFirst({
       where: { code: 'EXPEDIENTE_TECNICO' },
@@ -1757,6 +1759,14 @@ export class ProcessService {
 
     const document = await this.prisma.$transaction(
       async (tx) => {
+        // La fila anterior se retira dentro de la misma transacción que crea
+        // la nueva: si el create falla, el convenio conserva el expediente
+        // previo. El objeto en OBS se borra después del commit y solo con
+        // carácter informativo, porque esa escritura no es transaccional.
+        if (existDoc) {
+          await tx.documents.delete({ where: { id: existDoc.id } });
+        }
+
         const doc = await tx.documents.create({
           data: {
             agreement_id: BigInt(agreementId),
@@ -1785,6 +1795,25 @@ export class ProcessService {
       },
       { maxWait: 10000, timeout: 30000 },
     );
+
+    // El objeto anterior en OBS se purga DESPUÉS del commit, y nunca antes de
+    // que exista el nuevo. Si el borrado falla solo queda un PDF huérfano en el
+    // bucket (el motivo original de esta limpieza), que es preferible a perder
+    // el expediente. `putUnique` garantiza que la ruta nueva difiere de la
+    // anterior, pero se comprueba explícitamente por si el flujo cambiara a
+    // sobrescribir en el futuro.
+    const newPath = storePath(filename);
+    if (existDoc && existDoc.file_path !== newPath) {
+      try {
+        await this.storage.removeRel(existDoc.file_path);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+          this.logger?.warn?.(
+            `No se pudo eliminar el expediente anterior: ${existDoc.file_path}`,
+          );
+        }
+      }
+    }
 
     return serializeBigInt(document);
   }
