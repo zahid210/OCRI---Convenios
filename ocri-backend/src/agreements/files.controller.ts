@@ -51,11 +51,15 @@ export class FilesController {
       throw new BadRequestException('Ruta de archivo inválida');
     }
 
-    // Solo permite el patrón: [<año>/][<código>[/opiniones/<dependencia>]]/<nombre.ext>
-    // (hasta 3 niveles de subcarpeta) para soportar la organización por año y
-    // por convenio (incluyendo las subcarpetas de opiniones por dependencia).
+    // Solo permite el patrón:
+    // [<año>/][<código>[/opiniones/<dependencia>]]/<nombre.ext>
+    // Son hasta 4 niveles de subcarpeta: `año`, `código`, `opiniones` y
+    // `dependencia` son los que produce `opinionDir()` en uploads.config.ts, que
+    // es justo el formato de los oficios de opinión. Con menos niveles esos
+    // archivos quedaban ilegibles ("Ruta de archivo inválida") aunque estuvieran
+    // correctamente subidos al bucket.
     if (
-      !/^([\w.\-() º\u00A0-\u017F]+\/){0,3}[\w.\-() º\u00A0-\u017F]+$/.test(
+      !/^([\w.\-() º\u00A0-\u017F]+\/){0,4}[\w.\-() º\u00A0-\u017F]+$/.test(
         decoded,
       )
     ) {
