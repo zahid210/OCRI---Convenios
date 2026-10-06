@@ -111,7 +111,7 @@ function OpinionRequestRow({
           }
         }}
       >
-        <OpinionStatusIcon status={request.status} />
+        <OpinionStatusIcon status={request.status} sentAt={request.sent_at} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-gray-800">

@@ -159,8 +159,9 @@ export const VALIDITY_LABELS: Record<string, string> = {
 
 /**
  * Ícono y color por estado de solicitud de opinión, alineados con el mapa de
- * colores del "Resumen de Solicitudes de Opinión" (Etapa 1). ENVIADA conserva
- * la animación de pulso.
+ * colores del "Resumen de Solicitudes de Opinión" (Etapa 1). ENVIADA declara
+ * `animate-pulse`, pero `OpinionStatusIcon` la acota en el tiempo para que no
+ * pulse indefinidamente.
  */
 export const OPINION_STATUS_RESUME: Record<
     string,
@@ -174,18 +175,58 @@ export const OPINION_STATUS_RESUME: Record<
     CANCELADA: { icon: Ban, className: 'text-gray-500' },
 };
 
-/** Marca de estado de una solicitud: ícono + color, sin texto visible. */
-export function OpinionStatusIcon({ status }: { status: string }) {
+/**
+ * Ventana en la que una solicitud ENVIADA sigue considerándose "en curso".
+ * Pasado ese plazo la animación se detiene: la dependencia ya tuvo tiempo de
+ * responder y si no lo hizo, un pulso permanente miente sobre el estado.
+ */
+const ENVIADA_PULSE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Marca de estado de una solicitud: ícono + color, sin texto visible.
+ *
+ * `sentAt` acota la animación de ENVIADA. Sin él (o con una fecha antigua) el
+ * ícono queda estático, de modo que un envío que nunca avançó deja de parecer
+ * un proceso en curso.
+ */
+export function OpinionStatusIcon({
+    status,
+    sentAt,
+}: {
+    status: string;
+    sentAt?: string | null;
+}) {
+    // `Date.now()` no es puro y react-hooks/purity lo rechaza en el cuerpo del
+    // render, y react-hooks/set-state-in-effect prohíbe resolverlo en un
+    // efecto. Se toma una sola referencia de tiempo al montar y se compara
+    // contra ella: la ventana es de días, así que no hace falta reevaluar.
+    const [mountedAt] = useState(() => Date.now());
+
+    const sent = sentAt == null ? NaN : new Date(sentAt).getTime();
+    const isRecent =
+        sentAt == null || (!Number.isNaN(sent) && mountedAt - sent < ENVIADA_PULSE_WINDOW_MS);
+
     const { icon: Icon, className } = OPINION_STATUS_RESUME[status] ?? {
         icon: Clock,
         className: 'text-gray-600',
     };
 
+    const pulsating = className.includes('animate-pulse') && isRecent;
+
+    const label = OPINION_STATUS_LABELS[status] || status;
+    const title =
+        status === 'ENVIADA' && !pulsating
+            ? `${label} · sin respuesta de la dependencia`
+            : label;
+
     return (
         <span
-            className={`flex h-7 w-7 shrink-0 items-center justify-center ${className}`}
-            title={OPINION_STATUS_LABELS[status] || status}
-            aria-label={OPINION_STATUS_LABELS[status] || status}
+            className={`flex h-7 w-7 shrink-0 items-center justify-center ${className.replace(
+                'animate-pulse',
+                '',
+            )}${pulsating ? ' animate-pulse' : ''}`}
+            title={title}
+            aria-label={title}
         >
             <Icon className="h-4 w-4" />
         </span>
