@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 describe('SeedUsersService', () => {
   let service: SeedUsersService;
   const upsert = jest.fn();
+  const findUnique = jest.fn();
 
   const seedKeys = [
     'SEED_ADMIN_PASSWORD',
@@ -35,10 +36,16 @@ describe('SeedUsersService', () => {
   beforeEach(async () => {
     for (const key of seedKeys) delete process.env[key];
     upsert.mockReset();
+    // Por defecto el usuario no existe, así que se sigue creando.
+    findUnique.mockReset();
+    findUnique.mockResolvedValue(null);
     const module = await Test.createTestingModule({
       providers: [
         SeedUsersService,
-        { provide: PrismaService, useValue: { users: { upsert } } },
+        {
+          provide: PrismaService,
+          useValue: { users: { upsert, findUnique } },
+        },
       ],
     }).compile();
     service = module.get(SeedUsersService);
@@ -148,5 +155,47 @@ describe('SeedUsersService', () => {
     process.env.SEED_ADMIN_PASSWORD = '';
     await service.onModuleInit();
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('no reescribe si la credencial ya coincide (idempotencia)', async () => {
+    process.env.SEED_ADMIN_PASSWORD = 'admin-pass';
+
+    // Los tres usuarios ya existen con esa misma contraseña.
+    findUnique.mockResolvedValue({
+      password: await bcrypt.hash('admin-pass', 4),
+    });
+
+    await service.onModuleInit();
+
+    // Evita la carrera "Record has changed since last read" y el hasheo inútil.
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('reemplaza el hash aunque exista usuario si la credencial difiere', async () => {
+    process.env.SEED_ADMIN_PASSWORD = 'admin-pass';
+    process.env.SEED_DEMO_PASSWORD = 'demo-pass';
+
+    // caso real: el dump versionado trae un hash público conocido, que no
+    // debe coincidir con la contraseña del entorno.
+    const ajeno = await bcrypt.hash('otra-credencial-del-dump', 4);
+    findUnique.mockResolvedValue({ password: ajeno });
+
+    await service.onModuleInit();
+
+    // Todos los existentes difieren, así que los tres se reescriben.
+    expect(upsert).toHaveBeenCalledTimes(3);
+    const calls = upsert.mock.calls as Array<
+      Array<{
+        where: { email: string };
+        update: { password: string };
+      }>
+    >;
+    const adminCall = calls.find(
+      ([args]) => args.where.email === 'ocri@uncp.edu.pe',
+    );
+    expect(adminCall).toBeDefined();
+    await expect(
+      bcrypt.compare('admin-pass', adminCall![0].update.password),
+    ).resolves.toBe(true);
   });
 });

@@ -45,6 +45,26 @@ export class SeedUsersService implements OnModuleInit {
     if (!raw) {
       return;
     }
+
+    // Solo se escribe si la credencial realmente difiere. Reescribir en cada
+    // arranque provocaba dos problemas: una carrera entre dos arranques
+    // simultáneos (MariaDB "Record has changed since last read in table
+    // 'users'", error 1020, que hacía fallar el login concurrente) y un
+    // hasheo bcrypt inútil. La comparación mantiene la garantía de seguridad
+    // (un hash conocido del dump versionado NO coincide con `raw`, así que
+    // sigue siendo reemplazado).
+    const existing = await this.prisma.users.findUnique({
+      where: { email },
+      select: { password: true },
+    });
+
+    if (existing && (await bcrypt.compare(raw, existing.password))) {
+      this.logger.log(
+        `Usuario "${role}" (${email}) ya sincronizado con ${envKey}`,
+      );
+      return;
+    }
+
     const password = await bcrypt.hash(raw, BCRYPT_ROUNDS);
     await this.prisma.users.upsert({
       where: { email },
