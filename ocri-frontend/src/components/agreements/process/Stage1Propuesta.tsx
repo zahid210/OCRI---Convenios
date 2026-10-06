@@ -181,51 +181,6 @@ function oficioDocumentLabel(
   return base.replace(/\.[^.]+$/, "").trim() || null;
 }
 
-/**
- * Enlaces "Ver" y "Descargar" de un oficio, con el mismo tratamiento que la
- * tabla de documentos del proceso. Se ocultan si el documento no tiene archivo
- * asociado.
- */
-function DocumentoAcciones({
-  doc,
-  onPreview,
-  onDownload,
-}: {
-  doc?: AgreementDocument;
-  onPreview: (filePath: string) => void;
-  onDownload: (doc: AgreementDocument) => void;
-}) {
-  if (!doc?.file_path) return null;
-  return (
-    <>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onPreview(doc.file_path!);
-        }}
-        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-        title="Ver documento"
-      >
-        Ver
-        <ExternalLink className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDownload(doc);
-        }}
-        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-        title="Descargar documento"
-      >
-        Descargar
-        <Download className="h-3.5 w-3.5" />
-      </button>
-    </>
-  );
-}
-
 export default function Stage1Propuesta({
   agreementId,
   status,
@@ -530,6 +485,16 @@ export default function Stage1Propuesta({
       toast.error(message);
     } finally {
       setIsGeneratingExpediente(false);
+    }
+  };
+
+  const handlePreviewDocument = async (filePath: string | null | undefined) => {
+    try {
+      await openFilePreview(filePath);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al abrir el documento";
+      toast.error(message);
     }
   };
 
@@ -866,15 +831,6 @@ export default function Stage1Propuesta({
                       }
                       actions={
                         <>
-                          <DocumentoAcciones
-                            doc={opinionDocument(
-                              documents,
-                              req.id,
-                              "OFICIO_SOLICITUD_OPINION",
-                            )}
-                            onPreview={openFilePreview}
-                            onDownload={handleDownloadDocument}
-                          />
                           {actionsOpen && req.status === "GENERADA" && (
                             <button
                               onClick={(e) => {
@@ -1020,15 +976,6 @@ export default function Stage1Propuesta({
                       }
                       actions={
                         <>
-                          <DocumentoAcciones
-                            doc={opinionDocument(
-                              documents,
-                              req.id,
-                              "OFICIO_RESPUESTA_OPINION",
-                            )}
-                            onPreview={openFilePreview}
-                            onDownload={handleDownloadDocument}
-                          />
                           {actionsOpen && req.status === "RESPONDIDA" && (
                             <>
                               <button
@@ -1214,7 +1161,7 @@ export default function Stage1Propuesta({
                       <div className="flex items-center justify-end gap-3">
                         <button
                           type="button"
-                          onClick={() => openFilePreview(doc.file_path)}
+                          onClick={() => handlePreviewDocument(doc.file_path)}
                           className="inline-flex items-center gap-1 text-primary hover:underline"
                           title="Ver documento"
                         >

@@ -193,6 +193,12 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
  * Content-Disposition:inline, por lo que el blob siempre se muestra en el
  * visor (independientemente de metadatos o CORS del bucket). Nunca se expone
  * el token en la URL.
+ *
+ * La pestaña se abre ANTES de `await`: `window.open` llamado después de un
+ * await pierde la activación del usuario y el navegador la bloquea como
+ * popup, con lo que el click seemingly no hace nada. Además cualquier fallo
+ * (401, 404, ruta no servible) se propaga como error para que el llamador
+ * pueda notificarlo en vez de fallar en silencio.
  */
 export async function openFilePreview(
   filePath: string | null | undefined,
@@ -200,9 +206,28 @@ export async function openFilePreview(
   if (!filePath) return;
   if (typeof window === "undefined") return;
 
-  const blob = await fetchFileBlob(filePath);
-  const url = URL.createObjectURL(blob);
-  window.open(url, "_blank", "noopener,noreferrer");
+  const win = window.open("about:blank", "_blank");
+  if (win) {
+    try {
+      win.opener = null;
+    } catch {
+      // Algunos navegadores bloquean la escritura; el opener se descarta solo.
+    }
+  }
+
+  try {
+    const blob = await fetchFileBlob(filePath);
+    const url = URL.createObjectURL(blob);
+    if (win) {
+      win.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  } catch (err) {
+    win?.close();
+    throw err;
+  }
 }
 
 /**
