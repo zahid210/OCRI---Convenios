@@ -193,20 +193,23 @@ export class InstitutionsService {
       orderBy: { name: 'asc' },
     });
 
+    // El score se envuelve en `record` en lugar de añadirse con spread para
+    // poder ordenarlo y luego devolver solo los datos: omitirlo con
+    // desestructuración de resto (`({ score, ...rest }) => rest`) dispara
+    // no-unused-vars.
     const scored = records.map((r) => {
       const name = r.name.toUpperCase();
-      const score =
-        name === upper ? 0 : name.startsWith(upper) ? 1 : 2;
-      return { ...r, score };
+      return {
+        record: r,
+        score: name === upper ? 0 : name.startsWith(upper) ? 1 : 2,
+      };
     });
 
     scored.sort(
-      (a, b) =>
-        a.score - b.score ||
-        a.name.localeCompare(b.name),
+      (a, b) => a.score - b.score || a.record.name.localeCompare(b.record.name),
     );
 
-    return scored.slice(0, 8).map(({ score, ...rest }) => rest);
+    return scored.slice(0, 8).map((s) => s.record);
   }
 
   async getCountries(): Promise<string[]> {
