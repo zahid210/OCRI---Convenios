@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -36,17 +35,6 @@ import { RolesGuard } from './auth/guards/roles.guard';
     ProcessModule,
     DeliverablesModule,
     StorageModule,
-    // En @nestjs/throttler v5/v6 TODOS los throttlers de la lista se aplican a
-    // TODAS las rutas, por lo que un throttler 'login' con limit=5 acotaría todo
-    // el API a 5 peticiones/15min (rompía el polling de notificaciones). Se
-    // define SOLO un throttle global y login se sobrescribe en su ruta con
-    // @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } }).
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000,
-        limit: 300,
-      },
-    ]),
   ],
   controllers: [AppController],
   providers: [
@@ -58,10 +46,6 @@ import { RolesGuard } from './auth/guards/roles.guard';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
     },
   ],
 })
