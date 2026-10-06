@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Server } from 'http';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 
@@ -21,6 +22,11 @@ authSuite('Auth (e2e)', () => {
 
   const email = process.env.SEED_ADMIN_EMAIL || 'ocri@uncp.edu.pe';
   const password = process.env.SEED_ADMIN_PASSWORD || '';
+
+  // `getHttpServer()` está tipado como `any` en Nest 11, y pasarlo tal cual a
+  // supertest dispara no-unsafe-argument. El servidor de HTTP es un
+  // `http.Server`, así que se estrecha aquí.
+  const server = (): Server => app.getHttpServer() as Server;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -45,7 +51,7 @@ authSuite('Auth (e2e)', () => {
   });
 
   it('inicia sesión con las credenciales de seed', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(server())
       .post('/api/auth/login')
       .send({ email, password })
       .expect(200);
@@ -56,20 +62,20 @@ authSuite('Auth (e2e)', () => {
   });
 
   it('rechaza credenciales inválidas con 401', async () => {
-    await request(app.getHttpServer())
+    await request(server())
       .post('/api/auth/login')
       .send({ email, password: 'clave-equivocada-xyz' })
       .expect(401);
   });
 
   it('accede a /api/seguimiento con el token y lo bloquea sin él', async () => {
-    const login = await request(app.getHttpServer())
+    const login = await request(server())
       .post('/api/auth/login')
       .send({ email, password })
       .expect(200);
     const token = (login.body as LoginBody).access_token;
 
-    await request(app.getHttpServer())
+    await request(server())
       .get('/api/seguimiento?page=1&per_page=5')
       .set('Authorization', `Bearer ${token}`)
       .expect(200)
@@ -80,7 +86,7 @@ authSuite('Auth (e2e)', () => {
         expect(seguimiento).toHaveProperty('data');
       });
 
-    await request(app.getHttpServer())
+    await request(server())
       .get('/api/seguimiento?page=1&per_page=5')
       .expect(401);
   });
