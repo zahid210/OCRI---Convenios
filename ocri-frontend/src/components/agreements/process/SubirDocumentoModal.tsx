@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { ChevronDown, Loader2, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { DOCUMENT_TYPE_LABELS, DOC_TYPE_ACCEPT, ModalShell } from "./shared";
+import {
+    DOCUMENT_TYPE_LABELS,
+    DOC_TYPE_ACCEPT,
+    FilePicker,
+    ModalShell,
+} from "./shared";
 
 interface SubirDocumentoModalProps {
   initialTypeCode: string | null;
@@ -96,15 +101,12 @@ export default function SubirDocumentoModal({
           <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
             Archivo <span className="text-red-500">*</span>
           </label>
-          <input
-            type="file"
+          <FilePicker
+            file={file}
+            onSelect={setFile}
             accept={DOC_TYPE_ACCEPT[typeCode] || undefined}
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
+            disabled={isUploading}
           />
-          {file && (
-            <p className="mt-1 text-xs text-gray-500 truncate">{file.name}</p>
-          )}
         </div>
       </div>
     </ModalShell>

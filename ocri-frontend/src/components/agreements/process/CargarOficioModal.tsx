@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, FileText, Loader2, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { ModalShell } from "./shared";
+import { FilePicker, ModalShell } from "./shared";
 import type { OpinionRequest } from "@/types/agreements";
 
 interface CargarOficioPayload {
@@ -50,7 +50,6 @@ export default function CargarOficioModal({
   const [oficioNumber, setOficioNumber] = useState("");
   const [sentDate, setSentDate] = useState(todayIso());
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async () => {
     if (!oficioFile) {
@@ -110,27 +109,12 @@ export default function CargarOficioModal({
           <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
             Documento a cargar <span className="text-red-500">*</span>
           </label>
-          <input
-            ref={fileInputRef}
-            type="file"
+          <FilePicker
+            file={oficioFile}
+            onSelect={setOficioFile}
             accept=".pdf"
-            className="hidden"
-            onChange={(e) => setOficioFile(e.target.files?.[0] ?? null)}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
-          >
-            <FileText className="h-4 w-4" />
-            {oficioFile ? "Cambiar archivo" : "Seleccionar archivo"}
-          </button>
-          {oficioFile && (
-            <p className="mt-1 text-xs text-gray-500 truncate">
-              {oficioFile.name}
-            </p>
-          )}
+          />
         </div>
         <div className="border-t border-gray-200 pt-4">
           <div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FileCheck, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { ModalShell } from "./shared";
+import { FilePicker, ModalShell } from "./shared";
 import type { OpinionRequest } from "@/types/agreements";
 
 interface ResponderSolicitudModalProps {
@@ -83,28 +83,15 @@ export default function ResponderSolicitudModal({
       }
     >
       <div className="p-6 space-y-4">
-        {request?.dependencias && (
-          <p className="text-sm text-gray-600">
-            Dependencia:{" "}
-            <span className="font-medium text-gray-800">
-              {request.dependencias.name}
-            </span>
-          </p>
-        )}
         <div>
-          <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+          <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
             Archivo de respuesta <span className="text-red-500">*</span>
           </label>
-          <input
-            type="file"
-            onChange={(e) => setRespondFile(e.target.files?.[0] ?? null)}
-            className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
+          <FilePicker
+            file={respondFile}
+            onSelect={setRespondFile}
+            disabled={isResponding}
           />
-          {respondFile && (
-            <p className="mt-1 text-xs text-gray-500 truncate">
-              {respondFile.name}
-            </p>
-          )}
         </div>
         <div>
           <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">

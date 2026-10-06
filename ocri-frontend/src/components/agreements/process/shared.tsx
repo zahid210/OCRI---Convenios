@@ -1,11 +1,12 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
     AlertTriangle,
     Ban,
     Check,
     Clock,
+    FileText,
     MessageSquare,
     Send,
     ShieldCheck,
@@ -404,6 +405,37 @@ export function SectionCard({
     );
 }
 
+/**
+ * Paleta del encabezado y del icono de cada modal.
+ *
+ * `gold` es el amarillo institucional de la marca: el fondo usa un tinte
+ * claro del token para no competir con el contenido y el texto del título
+ * se mantiene oscuro porque `text-gold` (#df9f1f) sobre blanco solo alcanza
+ * 2.8:1 y no cumpliría el mínimo AA de WCAG para texto normal.
+ */
+const TONE_CLS = {
+    default: {
+        header: 'bg-surface border-gray-200',
+        title: 'text-gray-700',
+        icon: 'text-gold',
+    },
+    red: {
+        header: 'bg-red-50 border-red-200',
+        title: 'text-red-700',
+        icon: 'text-red-600',
+    },
+    green: {
+        header: 'bg-green-50 border-green-200',
+        title: 'text-green-700',
+        icon: 'text-green-600',
+    },
+    gold: {
+        header: 'bg-gold/10 border-gold/40',
+        title: 'text-gray-800',
+        icon: 'text-gold-dark',
+    },
+} as const;
+
 export function ModalShell({
     title,
     icon: Icon,
@@ -414,7 +446,7 @@ export function ModalShell({
 }: {
     title: string;
     icon?: LucideIcon;
-    tone?: 'default' | 'red' | 'green';
+    tone?: keyof typeof TONE_CLS;
     size?: 'md' | 'lg' | '2xl';
     children: ReactNode;
     footer: ReactNode;
@@ -426,35 +458,16 @@ export function ModalShell({
               ? 'max-w-lg max-h-[85vh]'
               : 'max-w-md';
 
-    const headerCls =
-        tone === 'red'
-            ? 'bg-red-50 border-red-200'
-            : tone === 'green'
-              ? 'bg-green-50 border-green-200'
-              : 'bg-surface border-gray-200';
-
-    const titleCls =
-        tone === 'red'
-            ? 'text-red-700'
-            : tone === 'green'
-              ? 'text-green-700'
-              : 'text-gray-700';
-
-    const iconCls =
-        tone === 'red'
-            ? 'h-4 w-4 text-red-600'
-            : tone === 'green'
-              ? 'h-4 w-4 text-green-600'
-              : 'h-4 w-4 text-gold';
+    const toneCls = TONE_CLS[tone];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div
                 className={`bg-white border border-gray-200 shadow-xl ${width} w-full mx-4 flex flex-col`}
             >
-                <div className={`${headerCls} border-b px-6 py-4 flex items-center gap-2 shrink-0`}>
-                    {Icon && <Icon className={iconCls} />}
-                    <h2 className={`text-sm font-semibold uppercase tracking-wider ${titleCls}`}>
+                <div className={`${toneCls.header} border-b px-6 py-4 flex items-center gap-2 shrink-0`}>
+                    {Icon && <Icon className={`h-4 w-4 ${toneCls.icon}`} />}
+                    <h2 className={`text-sm font-semibold uppercase tracking-wider ${toneCls.title}`}>
                         {title}
                     </h2>
                 </div>
@@ -480,3 +493,52 @@ export const NEXT_STAGE_DESTINATION = (id: number) => ({
     toSeguimiento: `/seguimiento/${id}`,
     toConvenio: `/convenios/${id}`,
 });
+
+/**
+ * Selector de archivo con etiquetas en español.
+ *
+ * El `<input type="file">` nativo rotula su botón según el idioma del
+ * navegador ("Choose File" / "No file chosen"), no según la locale de la app,
+ * así que en una estación configurada en inglés el formulario queda en
+ * inglés. Se oculta el input y se dibuja un botón propio, que además permite
+ * bloquear la interacción mientras la operación está en curso.
+ */
+export function FilePicker({
+    file,
+    onSelect,
+    accept,
+    disabled,
+    label = 'Seleccionar archivo',
+}: {
+    file: File | null;
+    onSelect: (file: File | null) => void;
+    accept?: string;
+    disabled?: boolean;
+    label?: string;
+}) {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    return (
+        <>
+            <input
+                ref={inputRef}
+                type="file"
+                accept={accept}
+                onChange={(e) => onSelect(e.target.files?.[0] ?? null)}
+                className="hidden"
+            />
+            <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={disabled}
+                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
+            >
+                <FileText className="h-4 w-4" />
+                {file ? 'Cambiar archivo' : label}
+            </button>
+            {file && (
+                <p className="mt-1 text-xs text-gray-500 truncate">{file.name}</p>
+            )}
+        </>
+    );
+}

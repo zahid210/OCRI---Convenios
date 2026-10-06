@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { FileCheck, Loader2 } from "lucide-react";
-import { ModalShell } from "./shared";
+import { FilePicker, ModalShell } from "./shared";
 
 interface PublicarConvenioModalProps {
   onPublish: (file: File | undefined) => Promise<void>;
@@ -61,14 +61,11 @@ export default function PublicarConvenioModal({
             Evidencia de publicación{" "}
             <span className="normal-case font-normal">(opcional)</span>
           </label>
-          <input
-            type="file"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:bg-white file:mr-3 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 hover:file:bg-gray-50 focus:outline-none focus:border-gold"
+          <FilePicker
+            file={file}
+            onSelect={setFile}
+            disabled={isPublishing}
           />
-          {file && (
-            <p className="mt-1 text-xs text-gray-500 truncate">{file.name}</p>
-          )}
         </div>
       </div>
     </ModalShell>

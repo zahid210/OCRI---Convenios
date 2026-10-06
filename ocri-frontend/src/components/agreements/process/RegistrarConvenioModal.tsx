@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, FileCheck, Loader2, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { ModalShell } from "./shared";
+import { FilePicker, ModalShell } from "./shared";
 
 interface ResponsableRow {
   name: string;
@@ -120,7 +120,7 @@ export default function RegistrarConvenioModal({
     <ModalShell
       title="Registrar Convenio"
       icon={FileCheck}
-      tone="green"
+      tone="gold"
       size="2xl"
       footer={
         <>
@@ -143,15 +143,9 @@ export default function RegistrarConvenioModal({
       }
     >
       <div className="p-6 space-y-6">
-        <p className="text-sm text-gray-600">
-          Complete los datos definitivos del convenio. Al registrarlo pasará a
-          estado <strong>VIGENTE</strong>.
-        </p>
-
         <div>
           <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-            N° de Resolución Rectoral / Convenio
-            {tramiteCode ? " (código único registrado)" : " "}
+            N° de Resolución Rectoral / Convenio{" "}
             {!tramiteCode && <span className="text-red-500">*</span>}
           </label>
           <input
@@ -167,12 +161,6 @@ export default function RegistrarConvenioModal({
             }
             className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold uppercase"
           />
-          {tramiteCode && (
-            <p className="text-xs text-gray-400 mt-1">
-              Se usará el código <strong>{tramiteCode}</strong> del trámite si
-              deja este campo vacío.
-            </p>
-          )}
         </div>
 
         <div>
@@ -210,23 +198,14 @@ export default function RegistrarConvenioModal({
             Copia Digital del Convenio Firmado
           </h3>
           <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-            Convenio Firmado Escaneado (PDF) <span className="text-red-500">*</span>
+            Archivo PDF <span className="text-red-500">*</span>
           </label>
-          <input
-            type="file"
+          <FilePicker
+            file={file}
+            onSelect={setFile}
             accept=".pdf"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-800 hover:file:bg-green-100 cursor-pointer border border-gray-300"
+            disabled={isRegistering}
           />
-          {file ? (
-            <p className="mt-1 text-xs text-green-700">
-              Archivo seleccionado: {file.name}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-red-600">
-              Obligatorio: adjunte el convenio firmado escaneado.
-            </p>
-          )}
         </div>
 
         <div>
@@ -308,9 +287,6 @@ export default function RegistrarConvenioModal({
                   />
                 </div>
                 <div className="col-span-4 sm:col-span-1">
-                  <label className="block text-[10px] font-semibold uppercase text-gray-500 mb-1 opacity-0 select-none">
-                    eliminar
-                  </label>
                   <button
                     type="button"
                     onClick={() =>
@@ -349,7 +325,7 @@ export default function RegistrarConvenioModal({
             onChange={(e) => setObservations(e.target.value)}
             rows={2}
             className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-            placeholder="Observaciones del registro (opcional)..."
+            placeholder="Opcional..."
           />
         </div>
       </div>

@@ -144,10 +144,6 @@ export default function EnviarOficioOpinionModal({
               )}
               Previsualizar y editar
             </button>
-            <p className="text-xs text-gray-400 mt-1">
-              Se abrirá el documento completo del oficio en una ventana para
-              revisar y corregir su contenido.
-            </p>
           </div>
           <div className="border-t border-gray-200 pt-4">
             <div>
