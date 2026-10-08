@@ -7,14 +7,55 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { serializeBigInt } from '../common/process.constants';
+import { AuditActor, AuditService } from '../audit/audit.service';
 import { CreateDependenciaDto } from './dto/create-dependencia.dto';
 import { UpdateDependenciaDto } from './dto/update-dependencia.dto';
 
+/** Valores admitidos por `dependencias.kind` (enum en la base). */
+export const DEPENDENCIA_KINDS = [
+  'RECTORADO',
+  'OCRI',
+  'UNIDAD_ORGANICA',
+] as const;
+export type DependenciaKind = (typeof DEPENDENCIA_KINDS)[number];
+
+/**
+ * ¿Puede esta dependencia ser objetivo por defecto de opiniones?
+ * Debe coincidir con `getDefaultOpinionTargets()`, que excluye RECTORADO y
+ * OCRI: si aquí se admitiera lo que allá se filtra, la tabla mostraría "Sí"
+ * para una dependencia que el modal de opiniones nunca ofrecería.
+ */
+export function esElegibleParaOpinion(kind: string): boolean {
+  return kind === 'UNIDAD_ORGANICA';
+}
+
+/** Nombre comparable: sin mayúsculas ni acentos, para detectar duplicados. */
+function nombreNormalizado(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+}
+
 @Injectable()
 export class DependenciasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  async create(dto: CreateDependenciaDto) {
+  async create(dto: CreateDependenciaDto, actor?: AuditActor) {
+    // Regla de negocio: solo las unidades orgánicas pueden ser objetivo por
+    // defecto (ver esElegibleParaOpinion). Rechazar aquí evita guardar una
+    // fila que el endpoint default-opinions ignoraría en silencio.
+    if (dto.is_default_opinion && !esElegibleParaOpinion(dto.kind)) {
+      throw new BadRequestException(
+        'Solo las unidades orgánicas pueden marcarse como opinión por defecto: ' +
+          'Rectorado y OCRI son los que emiten, no los que opinan.',
+      );
+    }
+
     const existing = await this.prisma.dependencias.findFirst({
       where: { code: dto.code.trim().toUpperCase() },
     });
@@ -40,6 +81,25 @@ export class DependenciasService {
         },
       });
 
+      await this.audit.record({
+        entity: 'dependencias',
+        entityId: dependencia.id,
+        action: 'CREATE',
+        actor,
+        description: `${dependencia.code} — ${dependencia.name}`,
+        changes: {
+          code: { before: null, after: dependencia.code },
+          name: { before: null, after: dependencia.name },
+          kind: { before: null, after: dependencia.kind },
+          email: { before: null, after: dependencia.email },
+          is_default_opinion: {
+            before: null,
+            after: dependencia.is_default_opinion,
+          },
+          sort_order: { before: null, after: dependencia.sort_order },
+        },
+      });
+
       return serializeBigInt(dependencia);
     } catch (error) {
       // Carrera simultánea: el código ya fue insertado por otra petición.
@@ -62,13 +122,26 @@ export class DependenciasService {
   }) {
     const where: Prisma.dependenciasWhereInput = {};
 
-    if (query?.kind) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      where.kind = query.kind as any;
+    if (query?.kind !== undefined && query.kind !== '') {
+      // Validación explícita: castejar el query a `any` y mandarlo a Prisma
+      // terminaba en un error de enum no capturado (HTTP 500).
+      if (!(DEPENDENCIA_KINDS as readonly string[]).includes(query.kind)) {
+        throw new BadRequestException(
+          `kind inválido: "${query.kind}". Valores permitidos: ${DEPENDENCIA_KINDS.join(', ')}.`,
+        );
+      }
+      where.kind = query.kind as DependenciaKind;
     }
-    if (query?.is_active !== undefined) {
+
+    if (query?.is_active !== undefined && query.is_active !== '') {
+      if (query.is_active !== 'true' && query.is_active !== 'false') {
+        throw new BadRequestException(
+          `is_active inválido: "${query.is_active}". Use true o false.`,
+        );
+      }
       where.is_active = query.is_active === 'true';
     }
+
     if (query?.search) {
       const term = query.search.trim();
       where.OR = [{ name: { contains: term } }, { code: { contains: term } }];
@@ -112,7 +185,14 @@ export class DependenciasService {
     return serializeBigInt(data);
   }
 
-  async seed() {
+  async seed(actor?: AuditActor) {
+    // Los valores canónicos (code, name, kind, is_default_opinion) DEBEN
+    // coincidir con los del catálogo del dump (dumps/ocri-inicio.sql): si los
+    // códigos difieren, el seed duplica unidades con otro código (p. ej.
+    // "Vicerrectorado de Investigación" como VRI y VICINV), y si difieren los
+    // flags, ejecutar el seed revierte configuraciones de producción (p. ej.
+    // CEPRE/CEID como opinión por defecto). sort_order e is_active sí son
+    // decisiones del operador y no se tocan en filas existentes.
     const defaults: Array<{
       code: string;
       name: string;
@@ -135,28 +215,28 @@ export class DependenciasService {
         sort_order: 20,
       },
       {
-        code: 'VICINV',
+        code: 'VRI',
         name: 'Vicerrectorado de Investigación',
         kind: 'UNIDAD_ORGANICA',
         is_default_opinion: true,
         sort_order: 30,
       },
       {
-        code: 'VICACA',
+        code: 'VRAC',
         name: 'Vicerrectorado Académico',
         kind: 'UNIDAD_ORGANICA',
         is_default_opinion: true,
         sort_order: 31,
       },
       {
-        code: 'VICEAD',
+        code: 'VRAD',
         name: 'Vicerrectorado Administrativo',
         kind: 'UNIDAD_ORGANICA',
         is_default_opinion: true,
         sort_order: 32,
       },
       {
-        code: 'ASELEG',
+        code: 'OAJ',
         name: 'Asesoría Legal',
         kind: 'UNIDAD_ORGANICA',
         is_default_opinion: true,
@@ -565,14 +645,14 @@ export class DependenciasService {
         code: 'CEID',
         name: 'Centro de Idiomas - CEID',
         kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: false,
+        is_default_opinion: true,
         sort_order: 318,
       },
       {
         code: 'CEPRE',
         name: 'CEPRE',
         kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: false,
+        is_default_opinion: true,
         sort_order: 319,
       },
       {
@@ -584,58 +664,104 @@ export class DependenciasService {
       },
     ];
 
-    let created = 0;
-    let updated = 0;
+    const creadas: string[] = [];
+    const actualizadas: string[] = [];
+
+    // Una sola lectura del catálogo: antes era una consulta por fila.
+    const existentes = await this.prisma.dependencias.findMany();
+    const porCodigo = new Map(existentes.map((d) => [d.code, d]));
+    const porNombre = new Map(
+      existentes.map((d) => [nombreNormalizado(d.name), d]),
+    );
 
     for (const item of defaults) {
-      const existing = await this.prisma.dependencias.findUnique({
-        where: { code: item.code },
-      });
+      // Primero por code; si no, por nombre equivalente. Así un código
+      // heredado distinto del canónico (VRI vs VICINV) no genera una segunda
+      // fila con la misma unidad.
+      const found =
+        porCodigo.get(item.code) ?? porNombre.get(nombreNormalizado(item.name));
 
-      if (existing) {
-        if (
-          existing.name !== item.name ||
-          existing.kind !== item.kind ||
-          existing.is_default_opinion !== item.is_default_opinion ||
-          existing.sort_order !== item.sort_order
-        ) {
-          await this.prisma.dependencias.update({
-            where: { code: item.code },
-            data: {
-              name: item.name,
-              kind: item.kind,
-              is_default_opinion: item.is_default_opinion,
-              sort_order: item.sort_order,
-              is_active: true,
-              updated_at: new Date(),
-            },
-          });
-          updated++;
-        }
+      if (!found) {
+        const nueva = await this.prisma.dependencias.create({
+          data: {
+            code: item.code,
+            name: item.name,
+            kind: item.kind,
+            is_default_opinion: item.is_default_opinion,
+            sort_order: item.sort_order,
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+        creadas.push(item.code);
+        await this.audit.record({
+          entity: 'dependencias',
+          entityId: nueva.id,
+          action: 'SEED',
+          actor,
+          description: `Alta por seed: ${item.code} — ${item.name}`,
+          changes: {
+            code: { before: null, after: item.code },
+            name: { before: null, after: item.name },
+            kind: { before: null, after: item.kind },
+          },
+        });
         continue;
       }
 
-      await this.prisma.dependencias.create({
+      // Solo los campos canónicos. NO se tocan sort_order (el orden de la
+      // tabla lo fija el operador) ni is_active (desactivar una unidad es una
+      // decisión operativa que el seed no debe deshacer).
+      const changes: Record<string, { before: unknown; after: unknown }> = {};
+      if (found.name !== item.name) {
+        changes.name = { before: found.name, after: item.name };
+      }
+      if (found.kind !== item.kind) {
+        changes.kind = { before: found.kind, after: item.kind };
+      }
+      if (found.is_default_opinion !== item.is_default_opinion) {
+        changes.is_default_opinion = {
+          before: found.is_default_opinion,
+          after: item.is_default_opinion,
+        };
+      }
+      if (Object.keys(changes).length === 0) continue;
+
+      await this.prisma.dependencias.update({
+        where: { id: found.id },
         data: {
-          code: item.code,
           name: item.name,
           kind: item.kind,
           is_default_opinion: item.is_default_opinion,
-          sort_order: item.sort_order,
-          is_active: true,
-          created_at: new Date(),
           updated_at: new Date(),
         },
       });
-      created++;
+      actualizadas.push(found.code);
+      await this.audit.record({
+        entity: 'dependencias',
+        entityId: found.id,
+        action: 'SEED',
+        actor,
+        description: `${found.code} — ${item.name}`,
+        changes,
+      });
     }
 
+    await this.audit.record({
+      entity: 'dependencias',
+      action: 'SEED',
+      actor,
+      description: `Seed de catálogo: ${creadas.length} creadas, ${actualizadas.length} actualizadas`,
+      changes: { creadas, actualizadas },
+    });
+
     return {
-      message: `Seed completado: ${created} creadas, ${updated} actualizadas`,
+      message: `Seed completado: ${creadas.length} creadas, ${actualizadas.length} actualizadas`,
     };
   }
 
-  async update(id: number, dto: UpdateDependenciaDto) {
+  async update(id: number, dto: UpdateDependenciaDto, actor?: AuditActor) {
     const dependencia = await this.prisma.dependencias.findUnique({
       where: { id: BigInt(id) },
     });
@@ -655,23 +781,109 @@ export class DependenciasService {
       }
     }
 
+    // Kind efectivo: el que trae el DTO o, si no viene, el de la fila. Sobre
+    // él se decide la regla de objetivo por defecto.
+    const kindEfectivo = dto.kind ?? dependencia.kind;
+    if (
+      dto.is_default_opinion === true &&
+      !esElegibleParaOpinion(kindEfectivo)
+    ) {
+      throw new BadRequestException(
+        'Solo las unidades orgánicas pueden marcarse como opinión por defecto: ' +
+          'Rectorado y OCRI son los que emiten, no los que opinan.',
+      );
+    }
+
     const data: Prisma.dependenciasUpdateInput = {
       updated_at: new Date(),
     };
+    const changes: Record<string, { before: unknown; after: unknown }> = {};
 
-    if (dto.code) data.code = dto.code.trim().toUpperCase();
-    if (dto.name) data.name = dto.name.trim();
-    if (dto.kind) data.kind = dto.kind;
-    if (dto.email !== undefined) data.email = dto.email?.trim() || null;
-    if (dto.is_default_opinion !== undefined)
-      data.is_default_opinion = dto.is_default_opinion;
-    if (dto.sort_order !== undefined) data.sort_order = dto.sort_order;
-    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    if (dto.code) {
+      const after = dto.code.trim().toUpperCase();
+      if (after !== dependencia.code) {
+        changes.code = { before: dependencia.code, after };
+        data.code = after;
+      }
+    }
+    if (dto.name) {
+      const after = dto.name.trim();
+      if (after !== dependencia.name) {
+        changes.name = { before: dependencia.name, after };
+        data.name = after;
+      }
+    }
+    if (dto.kind && dto.kind !== dependencia.kind) {
+      changes.kind = { before: dependencia.kind, after: dto.kind };
+      data.kind = dto.kind;
+    }
+    if (dto.email !== undefined) {
+      const after = dto.email?.trim() || null;
+      if (after !== dependencia.email) {
+        changes.email = { before: dependencia.email, after };
+        data.email = after;
+      }
+    }
+    if (
+      dto.sort_order !== undefined &&
+      dto.sort_order !== dependencia.sort_order
+    ) {
+      changes.sort_order = {
+        before: dependencia.sort_order,
+        after: dto.sort_order,
+      };
+      data.sort_order = dto.sort_order;
+    }
+    if (
+      dto.is_active !== undefined &&
+      dto.is_active !== dependencia.is_active
+    ) {
+      changes.is_active = {
+        before: dependencia.is_active,
+        after: dto.is_active,
+      };
+      data.is_active = dto.is_active;
+    }
+
+    // is_default_opinion: si la fila (o su nuevo kind) no es elegible, se
+    // normaliza a false — corrige en vuelo filas heredadas como la de
+    // Rectorado marcada como opinión por defecto.
+    if (!esElegibleParaOpinion(kindEfectivo)) {
+      if (dependencia.is_default_opinion) {
+        changes.is_default_opinion = {
+          before: dependencia.is_default_opinion,
+          after: false,
+        };
+        data.is_default_opinion = false;
+      }
+    } else if (dto.is_default_opinion !== undefined) {
+      const after = dto.is_default_opinion;
+      if (after !== dependencia.is_default_opinion) {
+        changes.is_default_opinion = {
+          before: dependencia.is_default_opinion,
+          after,
+        };
+        data.is_default_opinion = after;
+      }
+    }
+
+    if (Object.keys(changes).length === 0) {
+      return serializeBigInt(dependencia);
+    }
 
     try {
       const updated = await this.prisma.dependencias.update({
         where: { id: BigInt(id) },
         data,
+      });
+
+      await this.audit.record({
+        entity: 'dependencias',
+        entityId: updated.id,
+        action: 'UPDATE',
+        actor,
+        description: `${updated.code} — ${updated.name}`,
+        changes,
       });
 
       return serializeBigInt(updated);
@@ -689,7 +901,7 @@ export class DependenciasService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, actor?: AuditActor) {
     const dependencia = await this.prisma.dependencias.findUnique({
       where: { id: BigInt(id) },
       include: {
@@ -712,6 +924,20 @@ export class DependenciasService {
     }
 
     await this.prisma.dependencias.delete({ where: { id: BigInt(id) } });
+
+    await this.audit.record({
+      entity: 'dependencias',
+      entityId: dependencia.id,
+      action: 'DELETE',
+      actor,
+      description: `${dependencia.code} — ${dependencia.name}`,
+      changes: {
+        code: { before: dependencia.code, after: null },
+        name: { before: dependencia.name, after: null },
+        kind: { before: dependencia.kind, after: null },
+      },
+    });
+
     return { message: 'Dependencia eliminada correctamente' };
   }
 }

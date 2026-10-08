@@ -30,12 +30,13 @@ ENV NODE_ENV=production
 ENV PORT=4000
 WORKDIR /app
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/uploads/templates ./uploads/templates
+# --chown en el COPY evita el `chown -R` recursivo sobre node_modules (~200 s
+# de build por capa invalidada): los archivos ya nacen en propiedad de node.
+COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/dist ./dist
+COPY --chown=node:node --from=builder /app/prisma ./prisma
+COPY --chown=node:node --from=builder /app/uploads/templates ./uploads/templates
 
-RUN chown -R node:node /app
 USER node
 
 # Sin VOLUME /app/uploads: los documentos se guardan en S3/OBS, no en disco.

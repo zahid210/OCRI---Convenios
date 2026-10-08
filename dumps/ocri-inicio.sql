@@ -729,7 +729,7 @@ LOCK TABLES `dependencias` WRITE;
 REPLACE INTO `dependencias` VALUES
 (2,'OCRI','Oficina de Coordinación de Relaciones Interinstitucionales','OCRI',NULL,0,2,1,NULL,'2026-09-05 02:31:42'),
 (5,'DGA','Dirección General de Administración','UNIDAD_ORGANICA',NULL,0,301,1,NULL,'2026-08-31 22:57:15'),
-(10,'RECTORADO','Rectorado','RECTORADO',NULL,1,1,1,'2026-08-31 22:52:28','2026-09-05 02:31:30'),
+(10,'RECTORADO','Rectorado','RECTORADO',NULL,0,1,1,'2026-08-31 22:52:28','2026-09-05 02:31:30'),
 (11,'VRI','Vicerrectorado de Investigación','UNIDAD_ORGANICA',NULL,1,3,1,'2026-08-31 22:52:28','2026-09-05 02:31:45'),
 (12,'VRAC','Vicerrectorado Académico','UNIDAD_ORGANICA',NULL,1,4,1,'2026-08-31 22:52:28','2026-09-05 02:31:48'),
 (13,'VRAD','Vicerrectorado Administrativo','UNIDAD_ORGANICA',NULL,1,5,1,'2026-08-31 22:52:28','2026-09-05 02:31:55'),
@@ -2272,5 +2272,34 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
+
+--
+-- Table structure for table `audit_logs`
+--
+-- Auditoría de catálogos: quién cambió qué y cuándo, fuera del flujo de
+-- convenios (process_events está ligado a un agreement por FK). Se crea aquí
+-- para que los despliegues nuevos arranquen con ella; el modelo equivalente
+-- está en prisma/schema.prisma.
+--
+
+DROP TABLE IF EXISTS `audit_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `audit_logs` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `entity` varchar(60) NOT NULL,
+  `entity_id` bigint(20) unsigned DEFAULT NULL,
+  `action` varchar(20) NOT NULL,
+  `actor_user_id` bigint(20) unsigned DEFAULT NULL,
+  `actor_email` varchar(255) DEFAULT NULL,
+  `actor_role` varchar(30) DEFAULT NULL,
+  `description` varchar(500) DEFAULT NULL,
+  `changes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`changes`)),
+  `created_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `audit_logs_entity_entity_id_idx` (`entity`,`entity_id`),
+  KEY `audit_logs_created_at_idx` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 -- Dump completed on 2026-09-09 14:33:40

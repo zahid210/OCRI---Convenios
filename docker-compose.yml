@@ -76,6 +76,9 @@ services:
     environment:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
+      # El proxy (src/proxy.ts) verifica la firma del access_token en el
+      # servidor: sin este secreto no se acepta ninguna sesión (fail closed).
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET en .env (mínimo 32 caracteres)}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:

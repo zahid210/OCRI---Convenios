@@ -331,6 +331,27 @@ model process_events {
   @@index([agreement_id, occurred_at])
 }
 
+// ─── Auditoría de catálogos ────────────────────────────────────────────────
+// Quién cambió qué y cuándo, fuera del flujo de convenios (process_events está
+// ligado a un agreement por FK). Sin FK a `users`: se persiste actor_user_id y
+// actor_email des-normalizados, igual que process_events.actor_user_id, para
+// no perder la trazabilidad si el usuario se elimina o cambia de correo.
+model audit_logs {
+  id            BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  entity        String  @db.VarChar(60)
+  entity_id     BigInt? @db.UnsignedBigInt
+  action        String  @db.VarChar(20)
+  actor_user_id BigInt? @db.UnsignedBigInt
+  actor_email   String? @db.VarChar(255)
+  actor_role    String? @db.VarChar(30)
+  description   String? @db.VarChar(500)
+  changes       Json?
+  created_at    DateTime? @db.Timestamp(0)
+
+  @@index([entity, entity_id])
+  @@index([created_at])
+}
+
 // ─── E3: Plan de trabajo e informes ────────────────────────────────────────
 
 model deliverables {

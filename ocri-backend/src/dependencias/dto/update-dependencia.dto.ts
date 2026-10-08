@@ -1,11 +1,14 @@
 import {
+  IsEmail,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   IsBoolean,
-  IsInt,
   Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class UpdateDependenciaDto {
@@ -19,7 +22,7 @@ export class UpdateDependenciaDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(255)
   @Matches(/^[\w.\-() °º\u00A0-\u017F]+$/, {
     message: 'name contiene caracteres no permitidos',
   })
@@ -29,9 +32,11 @@ export class UpdateDependenciaDto {
   @IsEnum(['RECTORADO', 'OCRI', 'UNIDAD_ORGANICA'])
   kind?: 'RECTORADO' | 'OCRI' | 'UNIDAD_ORGANICA';
 
+  // null limpia el correo (IsOptional omite la validación con null).
   @IsOptional()
-  @IsString()
-  email?: string;
+  @IsEmail({}, { message: 'email debe ser una dirección de correo válida' })
+  @MaxLength(255)
+  email?: string | null;
 
   @IsOptional()
   @IsBoolean()
@@ -39,6 +44,8 @@ export class UpdateDependenciaDto {
 
   @IsOptional()
   @IsInt()
+  @Min(0)
+  @Max(999999)
   sort_order?: number;
 
   @IsOptional()

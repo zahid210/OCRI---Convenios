@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchApi } from "@/lib/api";
 import { Dependencia } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
@@ -30,6 +30,16 @@ const KIND_CLASSES: Record<string, string> = {
   UNIDAD_ORGANICA: "bg-green-50 text-green-700 border-green-200",
 };
 
+const KINDS = ["RECTORADO", "OCRI", "UNIDAD_ORGANICA"] as const;
+type Kind = (typeof KINDS)[number];
+
+// Mismos límites que el backend (DTO): code ^[\w.-]{1,30}, name 255 y
+// sort_order 0..999999. Validar antes de mandar evita un viaje de ida y vuelta
+// para descubrir lo que el formulario ya podía comprobar.
+const CODE_RE = /^[\w.-]+$/;
+const NAME_RE = /^[\w.\-() °º\u00A0-\u017F]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export default function DependenciasPage() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -44,14 +54,16 @@ export default function DependenciasPage() {
 
   const [formCode, setFormCode] = useState("");
   const [formName, setFormName] = useState("");
-  const [formKind, setFormKind] = useState<
-    "RECTORADO" | "OCRI" | "UNIDAD_ORGANICA"
-  >("UNIDAD_ORGANICA");
+  const [formKind, setFormKind] = useState<Kind>("UNIDAD_ORGANICA");
   const [formEmail, setFormEmail] = useState("");
   const [formIsDefault, setFormIsDefault] = useState(false);
   const [formSortOrder, setFormSortOrder] = useState(0);
+  const [formIsActive, setFormIsActive] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -62,10 +74,13 @@ export default function DependenciasPage() {
       setData(result);
     } catch (err) {
       console.error("Error loading dependencias:", err);
+      toast.error(
+        err instanceof Error ? err.message : "No se pudieron cargar las dependencias.",
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [activeSearch]);
+  }, [activeSearch, toast]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -74,15 +89,57 @@ export default function DependenciasPage() {
     return () => clearTimeout(t);
   }, [loadData]);
 
-  const resetForm = () => {
+  // Al abrir el modal, el foco entra al primer campo; Escape y Tab quedan
+  // atrapados dentro del diálogo (WAI-ARIA: role="dialog" + aria-modal).
+  useEffect(() => {
+    if (!showForm) return;
+    const t = setTimeout(() => codeRef.current?.focus(), 0);
+    return () => clearTimeout(t);
+  }, [showForm]);
+
+  const closeForm = useCallback(() => {
+    setShowForm(false);
+    resetForm();
+  }, []);
+
+  const handleModalKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeForm();
+      return;
+    }
+    if (e.key !== "Tab") return;
+
+    const modal = modalRef.current;
+    if (!modal) return;
+    const focusables = Array.from(
+      modal.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (focusables.length === 0) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  function resetForm() {
     setFormCode("");
     setFormName("");
     setFormKind("UNIDAD_ORGANICA");
     setFormEmail("");
     setFormIsDefault(false);
     setFormSortOrder(0);
+    setFormIsActive(true);
     setEditingId(null);
-  };
+  }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,9 +147,41 @@ export default function DependenciasPage() {
     setActiveSearch(search.trim());
   };
 
+  const clearSearch = () => {
+    setSearch("");
+    if (activeSearch) {
+      setIsLoading(true);
+      setActiveSearch("");
+    }
+  };
+
+  /** Devuelve el primer error de validación local o null si todo está bien. */
+  const validateForm = (): string | null => {
+    const code = formCode.trim();
+    const name = formName.trim();
+
+    if (!code || !name) return "Código y nombre son obligatorios.";
+    if (code.length > 30) return "El código no puede superar 30 caracteres.";
+    if (!CODE_RE.test(code))
+      return "El código solo admite letras, números, guiones y puntos.";
+    if (name.length > 255) return "El nombre no puede superar 255 caracteres.";
+    if (!NAME_RE.test(name)) return "El nombre contiene caracteres no permitidos.";
+
+    const email = formEmail.trim();
+    if (email && !EMAIL_RE.test(email))
+      return "El correo debe ser una dirección válida (ej. correo@uncp.edu.pe).";
+    if (email.length > 255) return "El correo no puede superar 255 caracteres.";
+
+    if (!Number.isInteger(formSortOrder) || formSortOrder < 0 || formSortOrder > 999999)
+      return "El orden debe ser un entero entre 0 y 999999.";
+
+    return null;
+  };
+
   const handleSave = async () => {
-    if (!formCode.trim() || !formName.trim()) {
-      toast.error("Código y nombre son obligatorios.");
+    const error = validateForm();
+    if (error) {
+      toast.error(error);
       return;
     }
     setIsSaving(true);
@@ -101,9 +190,12 @@ export default function DependenciasPage() {
         code: formCode.trim().toUpperCase(),
         name: formName.trim(),
         kind: formKind,
-        email: formEmail.trim() || undefined,
+        // null limpia el correo en el backend (undefined lo dejaría como estaba).
+        email: formEmail.trim() || null,
         is_default_opinion: formIsDefault,
         sort_order: formSortOrder,
+        // En edición también se gestiona el alta/baja lógica de la unidad.
+        ...(editingId ? { is_active: formIsActive } : {}),
       };
 
       if (editingId) {
@@ -111,18 +203,22 @@ export default function DependenciasPage() {
           method: "PATCH",
           body: JSON.stringify(body),
         });
-        toast.success("Dependencia actualizada correctamente.");
       } else {
         await fetchApi("/dependencias", {
           method: "POST",
           body: JSON.stringify(body),
         });
-        toast.success("Dependencia creada correctamente.");
       }
 
-      setShowForm(false);
-      resetForm();
+      // Recargar antes de cerrar: si la lista no refleja el cambio, el aviso
+      // de éxito y el estado real de la pantalla no divergen.
       await loadData();
+      toast.success(
+        editingId
+          ? "Dependencia actualizada correctamente."
+          : "Dependencia creada correctamente.",
+      );
+      closeForm();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Error al guardar";
       toast.error(message);
@@ -139,7 +235,15 @@ export default function DependenciasPage() {
     setFormEmail(dep.email || "");
     setFormIsDefault(dep.is_default_opinion);
     setFormSortOrder(dep.sort_order);
+    setFormIsActive(dep.is_active);
     setShowForm(true);
+  };
+
+  const handleKindChange = (kind: Kind) => {
+    setFormKind(kind);
+    // Solo las unidades orgánicas opinan: al elegir Rectorado/OCRI se quita la
+    // marca para que el formulario no proponga lo que el backend rechaza.
+    if (kind !== "UNIDAD_ORGANICA") setFormIsDefault(false);
   };
 
   const handleDelete = async (dep: Dependencia) => {
@@ -153,8 +257,8 @@ export default function DependenciasPage() {
     setDeletingId(dep.id);
     try {
       await fetchApi(`/dependencias/${dep.id}`, { method: "DELETE" });
-      toast.success("Dependencia eliminada correctamente.");
       await loadData();
+      toast.success("Dependencia eliminada correctamente.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Error al eliminar";
       toast.error(message);
@@ -182,6 +286,12 @@ export default function DependenciasPage() {
           </h1>
           <p className="text-xs text-gray-500">
             Catálogo de unidades orgánicas y dependencias de la UNCP
+            {!isLoading && (
+              <span className="ml-2 text-gray-400">
+                · {data.length} {data.length === 1 ? "registro" : "registros"}
+                {activeSearch ? ` (filtrado por "${activeSearch}")` : ""}
+              </span>
+            )}
           </p>
         </div>
 
@@ -192,12 +302,23 @@ export default function DependenciasPage() {
           <div className="relative w-full sm:w-80">
             <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
-              type="text"
+              type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre o código..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
+              aria-label="Buscar dependencias por nombre o código"
+              className="w-full pl-9 pr-9 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <button
             type="button"
@@ -256,7 +377,9 @@ export default function DependenciasPage() {
                 {data.map((dep) => (
                   <tr
                     key={dep.id}
-                    className="group hover:bg-gray-50 transition-colors"
+                    className={`group hover:bg-gray-50 transition-colors ${
+                      dep.is_active ? "" : "bg-gray-50/60"
+                    }`}
                   >
                     <td className="py-4 pl-10">
                       <span className="font-mono text-xs text-gray-800 bg-gray-50 px-2 py-0.5 border border-gray-200">
@@ -286,7 +409,9 @@ export default function DependenciasPage() {
                           Sí
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">No</span>
+                        <span className="text-xs text-gray-400 font-medium">
+                          No
+                        </span>
                       )}
                     </td>
                     <td className="py-4 pr-10">
@@ -322,40 +447,62 @@ export default function DependenciasPage() {
 
       {/* Modal Crear / Editar */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white border border-gray-200 shadow-xl max-w-lg w-full mx-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onMouseDown={(e) => {
+            // Clic en el fondo = cerrar. Clic arrastrado dentro del diálogo no.
+            if (e.target === e.currentTarget) closeForm();
+          }}
+        >
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dep-modal-title"
+            onKeyDown={handleModalKeyDown}
+            className="bg-white border border-gray-200 shadow-xl max-w-lg w-full mx-4"
+          >
             <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
               <Network className="h-4 w-4 text-gold" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+              <h2
+                id="dep-modal-title"
+                className="text-sm font-semibold uppercase tracking-wider text-gray-700"
+              >
                 {editingId ? "Editar Dependencia" : "Nueva Dependencia"}
               </h2>
             </div>
 
             <div className="p-6 grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                <label
+                  htmlFor="dep-code"
+                  className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+                >
                   Código
                 </label>
                 <input
+                  id="dep-code"
+                  ref={codeRef}
                   value={formCode}
                   onChange={(e) => setFormCode(e.target.value)}
+                  maxLength={30}
+                  autoComplete="off"
                   className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   placeholder="Ej: VIC_INV"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                <label
+                  htmlFor="dep-kind"
+                  className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+                >
                   Tipo
                 </label>
                 <div className="w-full relative">
                   <select
+                    id="dep-kind"
                     value={formKind}
-                    onChange={(e) =>
-                      setFormKind(
-                        e.target.value as
-                          "RECTORADO" | "OCRI" | "UNIDAD_ORGANICA",
-                      )
-                    }
+                    onChange={(e) => handleKindChange(e.target.value as Kind)}
                     className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   >
                     <option value="RECTORADO">Rectorado</option>
@@ -366,62 +513,100 @@ export default function DependenciasPage() {
                 </div>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                <label
+                  htmlFor="dep-name"
+                  className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+                >
                   Nombre
                 </label>
                 <input
+                  id="dep-name"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
+                  maxLength={255}
                   className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   placeholder="Nombre completo de la dependencia"
                 />
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                <label
+                  htmlFor="dep-email"
+                  className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+                >
                   Email (opcional)
                 </label>
                 <input
+                  id="dep-email"
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                   className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold"
                   type="email"
+                  maxLength={255}
                   placeholder="correo@uncp.edu.pe"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                <label
+                  htmlFor="dep-sort"
+                  className="block text-xs font-semibold uppercase text-gray-500 mb-1"
+                >
                   Orden
                 </label>
                 <input
+                  id="dep-sort"
                   value={formSortOrder}
-                  onChange={(e) => setFormSortOrder(Number(e.target.value))}
+                  onChange={(e) =>
+                    setFormSortOrder(
+                      e.target.value === "" ? 0 : Number(e.target.value),
+                    )
+                  }
                   className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   type="number"
+                  min={0}
+                  max={999999}
                 />
               </div>
-              <div className="flex items-center gap-2 pt-5">
-                <input
-                  type="checkbox"
-                  checked={formIsDefault}
-                  onChange={(e) => setFormIsDefault(e.target.checked)}
-                  className="rounded-none border-gray-300"
-                  id="is_default_opinion"
-                />
+              <div className="flex flex-col gap-2 pt-5">
                 <label
                   htmlFor="is_default_opinion"
-                  className="text-sm text-gray-700"
+                  className="flex items-center gap-2 text-sm text-gray-700"
                 >
+                  <input
+                    type="checkbox"
+                    checked={formIsDefault}
+                    disabled={formKind !== "UNIDAD_ORGANICA"}
+                    onChange={(e) => setFormIsDefault(e.target.checked)}
+                    className="rounded-none border-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    id="is_default_opinion"
+                  />
                   Opinión por defecto
                 </label>
+                {formKind !== "UNIDAD_ORGANICA" && (
+                  <p className="text-[11px] leading-tight text-gray-400">
+                    Solo las unidades orgánicas emiten opinión.
+                  </p>
+                )}
+                {editingId && (
+                  <label
+                    htmlFor="dep-active"
+                    className="flex items-center gap-2 text-sm text-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formIsActive}
+                      onChange={(e) => setFormIsActive(e.target.checked)}
+                      className="rounded-none border-gray-300"
+                      id="dep-active"
+                    />
+                    Activa
+                  </label>
+                )}
               </div>
             </div>
 
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-surface">
               <button
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
+                onClick={closeForm}
                 className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancelar
