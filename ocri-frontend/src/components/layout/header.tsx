@@ -13,7 +13,6 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/components/user-provider';
 import { HeaderSearch } from '@/components/layout/header-search';
@@ -25,9 +24,14 @@ export function Header() {
     const router = useRouter();
     const currentUser = useUser();
 
-    const handleLogout = () => {
-        Cookies.remove('access_token', { path: '/' });
-        Cookies.remove('user', { path: '/' });
+    const handleLogout = async () => {
+        // La access_token es httpOnly: solo el servidor (proxy) puede vaciarla.
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', keepalive: true });
+        } catch {
+            // Sin red no hay nada más que hacer: el proxy limpia la sesión
+            // en la siguiente petición (cookie inválida → 401 + limpieza).
+        }
         router.push('/login');
         router.refresh();
     };

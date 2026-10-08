@@ -2,7 +2,6 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
 import { fetchApi } from '@/lib/api';
 import { roleHome } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -10,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
 
+// El access_token NO viaja en esta respuesta: lo emite el proxy como cookie
+// httpOnly (src/proxy.ts), fuera del alcance del JavaScript de la página.
 interface LoginResponse {
-    access_token: string;
     user: {
         id: number;
         name: string;
@@ -38,20 +38,12 @@ export default function LoginPage() {
                 body: JSON.stringify({ email, password }),
             });
 
-            if (!data.access_token) {
-                throw new Error('El servidor no devolvió un token de acceso válido.');
+            if (!data.user) {
+                throw new Error('El servidor no devolvió los datos de usuario.');
             }
 
-            const cookieOptions = {
-                expires: 1,
-                path: '/',
-                sameSite: 'lax' as const,
-                secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
-            };
-
-            Cookies.set('access_token', data.access_token, cookieOptions);
-            Cookies.set('user', JSON.stringify(data.user), cookieOptions);
-
+            // La cookie httpOnly ya la seteó el proxy en la respuesta del
+            // login: aquí solo queda llevar al usuario a su pantalla inicial.
             router.push(roleHome(data.user.role));
             router.refresh();
         } catch (err: unknown) {

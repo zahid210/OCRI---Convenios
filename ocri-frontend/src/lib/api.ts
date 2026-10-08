@@ -1,8 +1,9 @@
-import Cookies from "js-cookie";
-
-// Base del API. En desarrollo vuela localhost:3000 por defecto; en producción suele
-// usarse el mismo origen (NEXT_PUBLIC_API_URL="" o "/"), donde Next proxea al
-// backend (rewrites beforeFiles). "" permite llamadas relativas: `/agreements`, etc.
+// Base del API. En producción usa el mismo origen (NEXT_PUBLIC_API_URL="" o
+// "/"): Next proxea al backend (rewrite beforeFiles) y la sesión viaja en la
+// cookie httpOnly que el proxy convierte en header `Authorization`. Por eso NO
+// pueden reintroducirse llamadas directas al backend con token en el cliente:
+// romperían la autenticación. En desarrollo hay que apuntar a la misma
+// instancia de Next que aplica el proxy (nunca directo al puerto del backend).
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const API_URL = API_BASE.trim().replace(/\/+$/, "");
 
@@ -16,12 +17,27 @@ function apiPath(endpoint: string): string {
   return `${endpoint}`.startsWith("/") ? `/api${endpoint}` : `/api/${endpoint}`;
 }
 
+/**
+ * Cierra la sesión en el servidor. La `access_token` es httpOnly: el
+ * JavaScript no puede leerla ni borrarla, así que se le pide al proxy que
+ * vacíe las cookies. Si la red falla, en la siguiente petición el proxy se
+ * encarga igualmente (cookie inválida → 401 + limpieza).
+ */
+async function endSession(): Promise<void> {
+  try {
+    await fetch("/api/auth/logout", { method: "POST", keepalive: true });
+  } catch {
+    // Sin red no hay nada más que hacer: el proxy limpia en la próxima llamada.
+  }
+}
+
 export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const token = Cookies.get("access_token");
-
+  // La sesión viaja en la cookie httpOnly y el proxy (src/proxy.ts) la
+  // convierte en header `Authorization` al reenviar al backend: el token
+  // nunca está al alcance del JavaScript de la página.
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((options.headers as Record<string, string>) || {}),
@@ -30,10 +46,6 @@ export async function fetchApi<T>(
   // Si enviamos FormData (archivos), el navegador debe gestionar el Content-Type y boundary
   if (options.body instanceof FormData) {
     delete headers["Content-Type"];
-  }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
   }
 
   let response: Response;
@@ -55,17 +67,16 @@ export async function fetchApi<T>(
   // cae en el manejo normal de errores con el mensaje del backend.
   const isLoginRequest = endpoint.startsWith("/auth/login");
   if (response.status === 401 && !isLoginRequest) {
-    if (typeof window !== "undefined") {
-      // Elimina cookies de sesión expiradas
-      Cookies.remove("access_token", { path: "/" });
-      Cookies.remove("user", { path: "/" });
+    // La access_token es httpOnly: solo el servidor puede vaciarla.
+    await endSession();
 
-      // Redirige al login si no estamos ya en él
-      if (!window.location.pathname.startsWith("/login")) {
-        // Redirección dura fuera del árbol de React (interceptor de sesión expirada)
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.assign(`${window.location.origin}/login`);
-      }
+    if (
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/login")
+    ) {
+      // Redirección dura fuera del árbol de React (interceptor de sesión expirada)
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign(`${window.location.origin}/login`);
     }
     throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
   }
@@ -103,12 +114,10 @@ export const fetcher = <T = unknown>(
 ): Promise<T> => fetchApi<T>(endpoint, options);
 
 /**
- * Genera la URL del archivo en el backend (sin exponer el token en la URL).
- * Apunta al controlador protegido /resoluciones. No se adjunta el JWT por
- * query string: la autenticación se hace con el header `Authorization`, por lo
- * que esta URL por sí sola NO sirve el archivo (requiere header) y solo debe
- * usarse cuando el consumidor adjunta credenciales (ver `fetchFileBlob` /
- * `openFilePreview`).
+ * Genera la URL del archivo en el backend. Apunta al controlador protegido
+ * /resoluciones: la sesión viaja en la cookie httpOnly (el navegador la
+ * adjunta solo) y el proxy la convierte en header `Authorization`, por lo que
+ * esta URL por sí sola no sirve el archivo sin sesión válida.
  */
 export function getFileUrl(filePath: string | null | undefined): string {
   if (!filePath) return "";
@@ -130,48 +139,21 @@ export function getFileUrl(filePath: string | null | undefined): string {
   return `${storageBaseUrl}${apiPath(`/resoluciones/${relativePath}`)}`;
 }
 
-// El JWT solo se adjunta a orígenes que controla la app: el de la propia
-// interfaz o el del API backend (API_URL). En dev el frontend corre en un
-// puerto distinto del backend (3001 vs 3000), así que "mismo origen" no
-// basta: si getFileUrl devuelve una URL absoluta cuyo origen NO es la app ni
-// el API (p. ej. un presigned de S3/OBS), se ignora el token y nunca se
-// exfiltra el Bearer hacia orígenes externos.
-function isTrustedUrl(u: string): boolean {
-  if (!/^https?:\/\//i.test(u)) return true; // relativa: mismo origen
-  try {
-    const target = new URL(u).origin;
-    if (typeof window !== "undefined" && target === window.location.origin)
-      return true;
-    if (/^https?:\/\//i.test(API_URL || "")) {
-      return target === new URL(API_URL).origin;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Descarga los bytes de un archivo del repositorio protegido (/resoluciones)
- * adjuntando el JWT por header (nunca en la URL). Devuelve un Blob o lanza error.
+ * Descarga los bytes de un archivo del repositorio protegido (/resoluciones).
+ * En los orígenes propios la cookie httpOnly viaja sola y el proxy la
+ * convierte en `Authorization`; los URL prefirmados externos del storage son
+ * auto-validables y no llevan credenciales. Devuelve un Blob o lanza error.
  */
 export async function fetchFileBlob(filePath: string): Promise<Blob> {
   const url = getFileUrl(filePath);
   if (!url) throw new Error("Ruta de archivo vacía.");
 
-  const token = Cookies.get("access_token");
-  const headers: Record<string, string> = {};
-
-  if (token && isTrustedUrl(url)) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(url, { headers });
+  const response = await fetch(url);
 
   if (!response.ok) {
     if (response.status === 401) {
-      Cookies.remove("access_token", { path: "/" });
-      Cookies.remove("user", { path: "/" });
+      await endSession();
       if (
         typeof window !== "undefined" &&
         !window.location.pathname.startsWith("/login")
@@ -189,10 +171,10 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
 
 /**
  * Abre un archivo del repositorio en una pestaña nueva como vista previa. Los
- * bytes se obtienen con el JWT por header y el backend los sirve con
- * Content-Disposition:inline, por lo que el blob siempre se muestra en el
- * visor (independientemente de metadatos o CORS del bucket). Nunca se expone
- * el token en la URL.
+ * bytes se obtienen con la cookie httpOnly (el proxy la convierte en header
+ * `Authorization`) y el backend los sirve con Content-Disposition:inline, por
+ * lo que el blob siempre se muestra en el visor (independientemente de
+ * metadatos o CORS del bucket). El token nunca está al alcance de la página.
  *
  * La pestaña se abre ANTES de `await`: `window.open` llamado después de un
  * await pierde la activación del usuario y el navegador la bloquea como
@@ -231,31 +213,22 @@ export async function openFilePreview(
 }
 
 /**
- * Descarga un archivo (ej. reporte Excel) desde un endpoint protegido del backend
- * usando el token de sesión y disparando la descarga en el navegador.
+ * Descarga un archivo (ej. reporte Excel) desde un endpoint protegido del
+ * backend. La sesión viaja en la cookie httpOnly y el proxy la convierte en
+ * header `Authorization`; dispara la descarga en el navegador.
  */
 export async function downloadFile(
   endpoint: string,
   filename: string,
 ): Promise<void> {
-  // Descarga SOLO el archivo (nunca lo abre): los bytes se obtienen con el
-  // JWT por header y se dispara la descarga con un blob local + atributo
-  // download. No depende de CORS ni metadatos del bucket (OBS adjunta su
-  // Content-Disposition si se navega al presigned y algunos navegadores abren
-  // el PDF en vez de descargarlo).
-  const token = Cookies.get("access_token");
-
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_URL}${apiPath(endpoint)}`, { headers });
+  // Descarga SOLO el archivo (nunca lo abre): los bytes se obtienen con la
+  // cookie httpOnly (el proxy los convierte en `Authorization` al reenviar) y
+  // se dispara la descarga con un blob local + atributo download.
+  const response = await fetch(`${API_URL}${apiPath(endpoint)}`);
 
   if (!response.ok) {
     if (response.status === 401) {
-      Cookies.remove("access_token", { path: "/" });
-      Cookies.remove("user", { path: "/" });
+      await endSession();
       if (
         typeof window !== "undefined" &&
         !window.location.pathname.startsWith("/login")
