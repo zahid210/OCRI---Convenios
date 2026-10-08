@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Type, ValidationPipe } from '@nestjs/common';
 import { GenerateOpinionRequestsDto } from './generate-opinion-requests.dto';
 import { RectorateDecisionDto } from './rectorate-decision.dto';
 import { ValidateOpinionRequestDto } from './validate-opinion-request.dto';
@@ -17,15 +17,15 @@ const pipe = new ValidationPipe({
 });
 
 async function validateWithPipe(
-  metatype: unknown,
+  metatype: Type<unknown>,
   data: unknown,
-): Promise<{ ok: boolean; value?: unknown; messages?: string[] }> {
+): Promise<{ ok: boolean; value?: unknown; messages: string[] }> {
   try {
     const value: unknown = await pipe.transform(data, {
       type: 'body',
       metatype,
     });
-    return { ok: true, value };
+    return { ok: true, value, messages: [] };
   } catch (err) {
     const response = (err as { response?: { message?: unknown } }).response;
     const messages = Array.isArray(response?.message)

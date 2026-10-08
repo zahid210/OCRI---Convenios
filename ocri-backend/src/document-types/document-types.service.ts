@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, document_direction } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -13,11 +13,10 @@ export class DocumentTypesService {
     return JSON.parse(jsonString) as T;
   }
 
-  async findAll(direction?: string) {
+  async findAll(direction?: document_direction) {
     const where: Prisma.document_typesWhereInput = {};
     if (direction) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      where.direction = direction as any;
+      where.direction = direction;
     }
 
     const data = await this.prisma.document_types.findMany({

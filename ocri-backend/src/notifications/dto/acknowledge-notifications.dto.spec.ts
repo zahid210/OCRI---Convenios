@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Type, ValidationPipe } from '@nestjs/common';
 import { AcknowledgeNotificationsDto } from './acknowledge-notifications.dto';
 
 const pipe = new ValidationPipe({
@@ -8,12 +8,12 @@ const pipe = new ValidationPipe({
 });
 
 async function validateWithPipe(
-  metatype: unknown,
+  metatype: Type<unknown>,
   data: unknown,
-): Promise<{ ok: boolean; messages?: string[] }> {
+): Promise<{ ok: boolean; messages: string[] }> {
   try {
     await pipe.transform(data, { type: 'body', metatype });
-    return { ok: true };
+    return { ok: true, messages: [] };
   } catch (err) {
     const response = (err as { response?: { message?: unknown } }).response;
     const messages = Array.isArray(response?.message)

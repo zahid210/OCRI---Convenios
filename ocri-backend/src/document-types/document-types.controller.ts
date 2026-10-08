@@ -1,14 +1,15 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { DocumentTypesService } from './document-types.service';
+import { FilterDocumentTypesDto } from './dto/filter-document-types.dto';
 
 @Controller('document-types')
 export class DocumentTypesController {
   constructor(private readonly documentTypesService: DocumentTypesService) {}
 
   @Get()
-  findAll(@Query('direction') direction?: string) {
-    return this.documentTypesService.findAll(direction);
+  findAll(@Query() filterDto: FilterDocumentTypesDto) {
+    return this.documentTypesService.findAll(filterDto.direction);
   }
 
   @Get(':id')

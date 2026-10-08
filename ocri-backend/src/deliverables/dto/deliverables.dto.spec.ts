@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Type, ValidationPipe } from '@nestjs/common';
 import { RequestReportDto } from './request-report.dto';
 import { EvaluateDeliverableDto } from './evaluate-deliverable.dto';
 
@@ -9,7 +9,7 @@ const pipe = new ValidationPipe({
 });
 
 async function validateWithPipe(
-  metatype: unknown,
+  metatype: Type<unknown>,
   data: unknown,
 ): Promise<{ ok: boolean }> {
   try {
