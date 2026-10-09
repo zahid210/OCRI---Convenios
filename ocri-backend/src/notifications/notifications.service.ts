@@ -224,7 +224,9 @@ export class NotificationsService {
       throw new BadRequestException('No hay notificaciones para marcar.');
     }
 
-    const normalized = [...new Set(keys)].filter((k) => k && k.length <= 120);
+    const normalized = [...new Set(keys)]
+      .map((k) => k.trim())
+      .filter((k) => k && k.length <= 120);
 
     if (normalized.length === 0) {
       throw new BadRequestException('No hay notificaciones para marcar.');
@@ -238,27 +240,24 @@ export class NotificationsService {
 
   /**
    * Inserta como leídas las claves del usuario que aún no lo están.
+   * `skipDuplicates` hace la operación idempotente: antes se hacía un
+   * findMany + createMany en dos pasos, y dos acks simultáneos con la misma
+   * clave reventaban el @unique([user_id, key]) en un P2002 (500).
    */
   private async persistAcknowledgedKeys(
     userId: number,
     keys: string[],
   ): Promise<void> {
-    const existing = await this.prisma.notification_acknowledgements.findMany({
-      where: { user_id: BigInt(userId), key: { in: keys } },
-      select: { key: true },
-    });
-    const existingKeys = new Set(existing.map((r) => r.key));
+    if (keys.length === 0) return;
 
-    const toInsert = keys.filter((k) => !existingKeys.has(k));
-    if (toInsert.length > 0) {
-      await this.prisma.notification_acknowledgements.createMany({
-        data: toInsert.map((key) => ({
-          user_id: BigInt(userId),
-          key,
-          read_at: new Date(),
-        })),
-      });
-    }
+    await this.prisma.notification_acknowledgements.createMany({
+      data: keys.map((key) => ({
+        user_id: BigInt(userId),
+        key,
+        read_at: new Date(),
+      })),
+      skipDuplicates: true,
+    });
   }
 
   /**
