@@ -2,23 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
-import { FilterReportsDto } from './dto/filter-reports.dto';
+import { FilterReportsDto, REPORT_STATUSES } from './dto/filter-reports.dto';
 import {
   deriveTemporalStatus,
   EXPIRATION_WARNING_DAYS,
   IN_FLIGHT_STATUSES,
 } from '../common/process.constants';
 
-const STATUS_LABELS = [
-  'En Trámite',
-  'Vigente',
-  'Por Vencer',
-  'Vencido',
-  'No Suscrito',
-  'Sin Fecha',
-] as const;
-
-/** Mapa UPPERCASE → etiqueta legible (coincide con STATUS_LABELS). */
+/** Mapa UPPERCASE → etiqueta legible (coincide con REPORT_STATUSES). */
 const TEMPORAL_STATUS_LABEL: Record<string, string> = {
   VIGENTE: 'Vigente',
   POR_VENCER: 'Por Vencer',
@@ -166,7 +157,7 @@ export class ReportsService {
       counts[status] = (counts[status] ?? 0) + 1;
     }
 
-    return STATUS_LABELS.map((estado) => ({
+    return REPORT_STATUSES.map((estado) => ({
       estado,
       cantidad: counts[estado] ?? 0,
     }));
