@@ -89,6 +89,8 @@ export class SeedUsersService implements OnModuleInit {
         updated_at: new Date(),
       },
     });
-    this.logger.log(`Usuario "${role}" (${email}) sincronizado desde el entorno`);
+    this.logger.log(
+      `Usuario "${role}" (${email}) sincronizado desde el entorno`,
+    );
   }
 }

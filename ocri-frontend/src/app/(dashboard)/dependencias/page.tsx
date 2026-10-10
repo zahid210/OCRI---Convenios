@@ -505,9 +505,11 @@ export default function DependenciasPage() {
                     onChange={(e) => handleKindChange(e.target.value as Kind)}
                     className="appearance-none w-full border border-gray-300 pl-3 pr-10 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
                   >
-                    <option value="RECTORADO">Rectorado</option>
-                    <option value="OCRI">OCRI</option>
-                    <option value="UNIDAD_ORGANICA">Unidad Orgánica</option>
+                    {KINDS.map((kind) => (
+                      <option key={kind} value={kind}>
+                        {KIND_LABELS[kind]}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 </div>

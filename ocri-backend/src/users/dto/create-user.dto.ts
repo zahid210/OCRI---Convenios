@@ -17,7 +17,7 @@ export class CreateUserDto {
   @MaxLength(255)
   name!: string;
 
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
   @IsEmail({}, { message: 'El correo no es válido' })

@@ -32,7 +32,9 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect((res) => {
         expect(res.body).toHaveProperty('status', 'ok');
-        expect(res.body).toHaveProperty('database', 'connected');
+        // El healthcheck es deliberadamente mínimo: no debe revelar el estado
+        // de la infraestructura (BD/storage) a un visitante anónimo.
+        expect(res.body).not.toHaveProperty('database');
       });
   });
 

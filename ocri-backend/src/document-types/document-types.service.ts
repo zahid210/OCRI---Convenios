@@ -40,7 +40,13 @@ export class DocumentTypesService {
   }
 
   async seed() {
-    const types = [
+    // Tipado explícito: así `direction` es el enum de Prisma y no se degrada a
+    // `string`, evitando un cast `any` (y su supresión de lint) en el upsert.
+    const types: Array<{
+      code: string;
+      name: string;
+      direction: document_direction;
+    }> = [
       // ─── Etapa 1: Propuesta de convenio ───────────────────────────────
       {
         code: 'OFICIO_SOLICITUD',
@@ -138,8 +144,7 @@ export class DocumentTypesService {
         create: {
           code: t.code,
           name: t.name,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          direction: t.direction as any,
+          direction: t.direction,
           is_active: true,
         },
       });

@@ -10,7 +10,7 @@ import { Transform } from 'class-transformer';
 export class LoginDto {
   // Normaliza siempre (trim + minúsculas) ANTES de validar, para que el login
   // acepte " OCRI@UNCP.EDU.PE " sin depender de que el usuario escriba exacto.
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
   @IsEmail({}, { message: 'El correo electrónico no es válido' })

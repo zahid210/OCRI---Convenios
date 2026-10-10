@@ -8,7 +8,7 @@ export class AppService {
    * configurado (revelaría detalles operativos). Los chequeos reales de
    * conectividad los hacen los healthchecks de docker-compose.
    */
-  async getHealth() {
+  getHealth(): { status: string } {
     return { status: 'ok' };
   }
 }
