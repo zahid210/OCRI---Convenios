@@ -47,18 +47,27 @@ export class ProcessController {
   // ─── Consulta ───────────────────────────────────────────────────────────────
 
   @Get(':agreementId/status')
-  getProcessStatus(@Param('agreementId', ParseIntPipe) agreementId: number) {
-    return this.processService.getProcessStatus(agreementId);
+  getProcessStatus(
+    @Param('agreementId', ParseIntPipe) agreementId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.getProcessStatus(agreementId, req.user?.role);
   }
 
   @Get(':agreementId/events')
-  getProcessEvents(@Param('agreementId', ParseIntPipe) agreementId: number) {
-    return this.processService.getProcessEvents(agreementId);
+  getProcessEvents(
+    @Param('agreementId', ParseIntPipe) agreementId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.getProcessEvents(agreementId, req.user?.role);
   }
 
   @Get(':agreementId/documents')
-  getProcessDocuments(@Param('agreementId', ParseIntPipe) agreementId: number) {
-    return this.processService.getProcessDocuments(agreementId);
+  getProcessDocuments(
+    @Param('agreementId', ParseIntPipe) agreementId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.getProcessDocuments(agreementId, req.user?.role);
   }
 
   // ─── E1 · Opiniones de dependencias ────────────────────────────────────────

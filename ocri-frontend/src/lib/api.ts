@@ -114,42 +114,23 @@ export const fetcher = <T = unknown>(
 ): Promise<T> => fetchApi<T>(endpoint, options);
 
 /**
- * Genera la URL del archivo en el backend. Apunta al controlador protegido
- * /resoluciones: la sesión viaja en la cookie httpOnly (el navegador la
- * adjunta solo) y el proxy la convierte en header `Authorization`, por lo que
- * esta URL por sí sola no sirve el archivo sin sesión válida.
+ * URL del documento por su id. El backend resuelve la ruta interna del objeto a
+ * partir de la fila `documents`, de modo que el cliente nunca manipula ni
+ * conoce `file_path` (evita exponer la ubicación del bucket y descarta el
+ * intercalado de rutas en el navegador). La sesión viaja en la cookie httpOnly
+ * y el proxy la convierte en header `Authorization`.
  */
-export function getFileUrl(filePath: string | null | undefined): string {
-  if (!filePath) return "";
-
-  // Si ya es una URL HTTP/HTTPS externa completa, la devolvemos tal cual
-  if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-    return filePath;
-  }
-
-  // Conserva la ruta relativa bajo uploads/ (p. ej. "2021/001-2021.pdf"),
-  // codificando cada segmento por separado para mantener el `/` legible.
-  const relativePath = filePath
-    .split("/")
-    .map((s) => encodeURIComponent(s))
-    .join("/");
-
-  const storageBaseUrl = process.env.NEXT_PUBLIC_STORAGE_URL || API_URL;
-
-  return `${storageBaseUrl}${apiPath(`/resoluciones/${relativePath}`)}`;
+export function getDocumentUrl(docId: number): string {
+  return `${API_URL}${apiPath(`/resoluciones/by-id/${docId}`)}`;
 }
 
 /**
- * Descarga los bytes de un archivo del repositorio protegido (/resoluciones).
- * En los orígenes propios la cookie httpOnly viaja sola y el proxy la
- * convierte en `Authorization`; los URL prefirmados externos del storage son
- * auto-validables y no llevan credenciales. Devuelve un Blob o lanza error.
+ * Descarga los bytes de un documento del repositorio protegido por su id. La
+ * cookie httpOnly viaja sola y el proxy la convierte en `Authorization`.
+ * Devuelve un Blob o lanza error.
  */
-export async function fetchFileBlob(filePath: string): Promise<Blob> {
-  const url = getFileUrl(filePath);
-  if (!url) throw new Error("Ruta de archivo vacía.");
-
-  const response = await fetch(url);
+export async function fetchDocumentBlob(docId: number): Promise<Blob> {
+  const response = await fetch(getDocumentUrl(docId));
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -170,8 +151,8 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
 }
 
 /**
- * Abre un archivo del repositorio en una pestaña nueva como vista previa. Los
- * bytes se obtienen con la cookie httpOnly (el proxy la convierte en header
+ * Abre un documento del repositorio en una pestaña nueva como vista previa.
+ * Los bytes se obtienen con la cookie httpOnly (el proxy la convierte en header
  * `Authorization`) y el backend los sirve con Content-Disposition:inline, por
  * lo que el blob siempre se muestra en el visor (independientemente de
  * metadatos o CORS del bucket). El token nunca está al alcance de la página.
@@ -179,13 +160,10 @@ export async function fetchFileBlob(filePath: string): Promise<Blob> {
  * La pestaña se abre ANTES de `await`: `window.open` llamado después de un
  * await pierde la activación del usuario y el navegador la bloquea como
  * popup, con lo que el click seemingly no hace nada. Además cualquier fallo
- * (401, 404, ruta no servible) se propaga como error para que el llamador
+ * (401, 404, documento inexistente) se propaga como error para que el llamador
  * pueda notificarlo en vez de fallar en silencio.
  */
-export async function openFilePreview(
-  filePath: string | null | undefined,
-): Promise<void> {
-  if (!filePath) return;
+export async function openDocumentPreview(docId: number): Promise<void> {
   if (typeof window === "undefined") return;
 
   const win = window.open("about:blank", "_blank");
@@ -198,7 +176,7 @@ export async function openFilePreview(
   }
 
   try {
-    const blob = await fetchFileBlob(filePath);
+    const blob = await fetchDocumentBlob(docId);
     const url = URL.createObjectURL(blob);
     if (win) {
       win.location.href = url;

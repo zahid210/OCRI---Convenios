@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Param,
+  ParseIntPipe,
   Req,
   Res,
   UnauthorizedException,
@@ -12,6 +14,8 @@ import type { Request, Response } from 'express';
 import { extname, basename, normalize } from 'path';
 import { Public } from '../auth/decorators/public.decorator';
 import { StorageService } from '../common/storage/storage.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { isRestrictedRole, isVisibleToRestricted } from '../common/visibility';
 
 /**
  * Repositorio institucional de documentos (protegido).
@@ -30,6 +34,7 @@ export class FilesController {
   constructor(
     private readonly jwtService: JwtService,
     private readonly storage: StorageService,
+    private readonly prisma: PrismaService,
   ) {}
 
   private resolveRelativePath(rawPath: string): string {
@@ -73,9 +78,7 @@ export class FilesController {
     return normalized;
   }
 
-  @Public()
-  @Get('*')
-  async serveFile(@Req() req: Request, @Res() res: Response) {
+  private extractBearerToken(req: Request): string {
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith('Bearer ')
       ? authHeader.slice(7)
@@ -84,11 +87,109 @@ export class FilesController {
     if (!bearerToken) {
       throw new UnauthorizedException('Token de acceso requerido.');
     }
+    return bearerToken;
+  }
 
+  private async verifyToken(
+    bearerToken: string,
+  ): Promise<{ role?: string; sub?: number }> {
     try {
-      await this.jwtService.verifyAsync(bearerToken);
+      return await this.jwtService.verifyAsync(bearerToken);
     } catch {
       throw new UnauthorizedException('Token inválido o expirado.');
+    }
+  }
+
+  /**
+   * Sirve los bytes del objeto desde el bucket a través del backend (sin 302).
+   * OBS ignora el override Content-Disposition:inline si el objeto fue subido
+   * con metadata de descarga y requiere CORS para leer bytes con fetch, así que
+   * redirigir al bucket rompería la vista previa (descargaría en vez de mostrar
+   * el PDF). Los PDF se sirven inline; el resto fuerza descarga.
+   */
+  private async pipeObject(
+    res: Response,
+    relPath: string,
+    downloadName?: string,
+  ) {
+    const remote = await this.storage.getObjectStream(relPath);
+    if (!remote) {
+      throw new NotFoundException(`El archivo "${relPath}" no existe.`);
+    }
+
+    res.setHeader('Content-Type', remote.contentType);
+    if (downloadName) {
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${downloadName.replace(/["\\]/g, '_')}"`,
+      );
+    } else if (extname(relPath).toLowerCase() === '.pdf') {
+      res.setHeader('Content-Disposition', 'inline');
+    } else {
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${basename(relPath).replace(/["\\]/g, '_')}"`,
+      );
+    }
+    if (remote.length) {
+      res.setHeader('Content-Length', String(remote.length));
+    }
+    return remote.stream.pipe(res);
+  }
+
+  /**
+   * Descarga por id de documento. El backend resuelve la ruta interna del
+   * objeto a partir de la fila `documents`, de modo que el cliente nunca
+   * manipula ni conoce `file_path` (Fase 2 · H2.2). El rol restringido solo
+   * accede a documentos de convenios formalizados.
+   *
+   * Debe declararse ANTES del wildcard `@Get('*')` para que Express lo
+   * resuelva primero.
+   */
+  @Public()
+  @Get('by-id/:docId')
+  async serveById(
+    @Param('docId', ParseIntPipe) docId: number,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const payload = await this.verifyToken(this.extractBearerToken(req));
+
+    const doc = await this.prisma.documents.findUnique({
+      where: { id: BigInt(docId) },
+      select: {
+        file_path: true,
+        agreements: { select: { process_status: true } },
+      },
+    });
+    if (!doc || !doc.file_path) {
+      throw new NotFoundException(`Documento #${docId} no encontrado.`);
+    }
+
+    if (
+      isRestrictedRole(payload.role) &&
+      !isVisibleToRestricted(doc.agreements?.process_status)
+    ) {
+      throw new NotFoundException(`Documento #${docId} no encontrado.`);
+    }
+
+    const rawName = req.query.name;
+    const downloadName =
+      typeof rawName === 'string' && rawName.length > 0 ? rawName : undefined;
+
+    return this.pipeObject(res, doc.file_path, downloadName);
+  }
+
+  @Public()
+  @Get('*')
+  async serveFile(@Req() req: Request, @Res() res: Response) {
+    const payload = await this.verifyToken(this.extractBearerToken(req));
+
+    // El rol restringido no puede saltarse el confinamiento de Fase 2 (H2.1)
+    // usando la ruta directa por `file_path`; para él solo existe la descarga
+    // por id, que valida el estado del convenio.
+    if (isRestrictedRole(payload.role)) {
+      throw new NotFoundException('El archivo solicitado no existe.');
     }
 
     const relPath = this.resolveRelativePath(
@@ -99,34 +200,6 @@ export class FilesController {
     const downloadName =
       typeof rawName === 'string' && rawName.length > 0 ? rawName : undefined;
 
-    // Modo normal: los bytes se sirven a través del backend con el JWT por
-    // header. Cuando el objeto está en S3/OBS se hace streaming (sin 302):
-    // OBS ignora el override Content-Disposition:inline si el objeto fue subido
-    // con metadata de descarga y requiere CORS para leer bytes con fetch, así
-    // que redirigir al bucket rompería la vista previa (descargaría en vez de
-    // mostrar el PDF). Los PDF se sirven inline; el resto fuerza descarga.
-    const remote = await this.storage.getObjectStream(relPath);
-    const setDisposition = (disposition: string) =>
-      res.setHeader('Content-Disposition', disposition);
-    if (!remote) {
-      throw new NotFoundException(`El archivo "${relPath}" no existe.`);
-    }
-
-    res.setHeader('Content-Type', remote.contentType);
-    if (downloadName) {
-      setDisposition(
-        `attachment; filename="${downloadName.replace(/["\\]/g, '_')}"`,
-      );
-    } else if (extname(relPath).toLowerCase() === '.pdf') {
-      setDisposition('inline');
-    } else {
-      setDisposition(
-        `attachment; filename="${basename(relPath).replace(/["\\]/g, '_')}"`,
-      );
-    }
-    if (remote.length) {
-      res.setHeader('Content-Length', String(remote.length));
-    }
-    return remote.stream.pipe(res);
+    return this.pipeObject(res, relPath, downloadName);
   }
 }

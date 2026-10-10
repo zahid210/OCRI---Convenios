@@ -7,7 +7,7 @@ import {
   completeMonitoring,
   downloadFile,
   evaluateDeliverable,
-  openFilePreview,
+  openDocumentPreview,
   regenerateRequestDocument,
   requestReport,
 } from "@/lib/api";
@@ -83,19 +83,11 @@ function DeliverableCard({
     deliverable.status === "SOLICITADO" && !hasSolicitudDoc;
 
   const handleDownloadDocument = async (doc: (typeof documents)[number]) => {
-    if (!doc.file_path) {
-      toast.error("Este documento no tiene un archivo asociado.");
-      return;
-    }
     try {
-      const relativePath = doc.file_path
-        .split("/")
-        .map((s) => encodeURIComponent(s))
-        .join("/");
-      const endpoint = `/resoluciones/${relativePath}`;
+      const endpoint = `/resoluciones/by-id/${doc.id}`;
       await downloadFile(
         endpoint,
-        fileName(doc.original_name, fileName(doc.file_path, doc.name || "")),
+        fileName(doc.original_name, doc.name || ""),
       );
       toast.success("Descarga iniciada.");
     } catch (err: unknown) {
@@ -125,7 +117,7 @@ function DeliverableCard({
       </span>
       <button
         type="button"
-        onClick={() => openFilePreview(doc.file_path)}
+        onClick={() => openDocumentPreview(doc.id)}
         className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
         title="Ver documento"
       >

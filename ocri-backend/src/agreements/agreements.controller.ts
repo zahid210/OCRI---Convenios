@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  Req,
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
@@ -20,6 +21,14 @@ import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { FLOW_ROLES, CREATOR_ROLES } from '../auth/role-sets';
 import { safeMulterOptions, UploadFile } from '../common/uploads.config';
+
+interface AuthenticatedRequest {
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+  };
+}
 
 @Controller('agreements')
 export class AgreementsController {
@@ -36,24 +45,33 @@ export class AgreementsController {
   }
 
   @Get()
-  findAll(@Query() filters: FilterAgreementsDto) {
-    return this.agreementsService.findAll(filters);
+  findAll(
+    @Query() filters: FilterAgreementsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.agreementsService.findAll(filters, req.user?.role);
   }
 
   @Get('search')
-  searchAgreements(@Query('q') q?: string) {
-    return this.agreementsService.search(q);
+  searchAgreements(
+    @Query('q') q: string | undefined,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.agreementsService.search(q, req.user?.role);
   }
 
   /** Semáforo de convenios registrados y vigentes */
   @Get('expiration-tracking')
-  getExpirationTracking() {
-    return this.agreementsService.getExpirationTracking();
+  getExpirationTracking(@Req() req: AuthenticatedRequest) {
+    return this.agreementsService.getExpirationTracking(req.user?.role);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.agreementsService.findOne(id);
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.agreementsService.findOne(id, req.user?.role);
   }
 
   /**

@@ -30,6 +30,11 @@ import {
 } from '../common/pdf-merger.service';
 import { StorageService } from '../common/storage/storage.service';
 import { buildOficioRectoradoReferencia } from './oficio-html';
+import { isRestrictedRole, isVisibleToRestricted } from '../common/visibility';
+import {
+  stripDocumentFilePaths,
+  stripDocumentFilePath,
+} from '../common/document-view';
 
 interface ActorEventOptions {
   actorUserId?: number;
@@ -98,6 +103,25 @@ export class ProcessService {
       throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
     }
     return agreement;
+  }
+
+  /**
+   * Restringe el acceso de lectura del rol `viewer` a convenios formalizados.
+   * Responde 404 (no 403) para no revelar la existencia de propuestas ni de
+   * trámites internos.
+   */
+  private async assertReadableByRole(
+    agreementId: number,
+    role?: string,
+  ): Promise<void> {
+    if (!isRestrictedRole(role)) return;
+    const agreement = await this.prisma.agreements.findUnique({
+      where: { id: BigInt(agreementId) },
+      select: { process_status: true },
+    });
+    if (!agreement || !isVisibleToRestricted(agreement.process_status)) {
+      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+    }
   }
 
   /** Aplica una transición de estado validada y registra el evento de auditoría. */
@@ -304,7 +328,7 @@ export class ProcessService {
 
   // ─── Estado del proceso ─────────────────────────────────────────────────────
 
-  async getProcessStatus(agreementId: number) {
+  async getProcessStatus(agreementId: number, role?: string) {
     const agreement = await this.prisma.agreements.findUnique({
       where: { id: BigInt(agreementId) },
       select: {
@@ -324,6 +348,14 @@ export class ProcessService {
     });
 
     if (!agreement) {
+      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+    }
+
+    // El rol restringido solo accede a convenios formalizados.
+    if (
+      isRestrictedRole(role) &&
+      !isVisibleToRestricted(agreement.process_status)
+    ) {
       throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
     }
 
@@ -388,7 +420,7 @@ export class ProcessService {
             r.status === 'RESPONDIDA',
         ),
       due_date: dueDate,
-      documents,
+      documents: stripDocumentFilePaths(documents),
       events,
       config: {
         warning_days: await this.appConfig.getWarningDays(),
@@ -1696,7 +1728,7 @@ export class ProcessService {
       { maxWait: 10000, timeout: 30000 },
     );
 
-    return serializeBigInt(document);
+    return serializeBigInt(stripDocumentFilePath(document));
   }
 
   // ─── E1 · Generar expediente técnico (merge automático de opiniones) ───────
@@ -1815,7 +1847,7 @@ export class ProcessService {
       }
     }
 
-    return serializeBigInt(document);
+    return serializeBigInt(stripDocumentFilePath(document));
   }
 
   // ─── E1 · Expediente técnico elaborado ──────────────────────────────────────
@@ -1941,7 +1973,9 @@ export class ProcessService {
 
   // ─── Historial y documentos ─────────────────────────────────────────────────
 
-  async getProcessEvents(agreementId: number) {
+  async getProcessEvents(agreementId: number, role?: string) {
+    await this.assertReadableByRole(agreementId, role);
+
     const events = await this.prisma.process_events.findMany({
       where: { agreement_id: BigInt(agreementId) },
       orderBy: { occurred_at: 'asc' },
@@ -1950,7 +1984,9 @@ export class ProcessService {
     return serializeBigInt(events);
   }
 
-  async getProcessDocuments(agreementId: number) {
+  async getProcessDocuments(agreementId: number, role?: string) {
+    await this.assertReadableByRole(agreementId, role);
+
     const documents = await this.prisma.documents.findMany({
       where: { agreement_id: BigInt(agreementId) },
       include: {
@@ -1964,7 +2000,7 @@ export class ProcessService {
       orderBy: { created_at: 'desc' },
     });
 
-    return serializeBigInt(documents);
+    return serializeBigInt(stripDocumentFilePaths(documents));
   }
 
   // ─── E2 · Decisión de Rectorado ────────────────────────────────────────────

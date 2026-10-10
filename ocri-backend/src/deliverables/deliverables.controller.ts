@@ -37,8 +37,14 @@ export class DeliverablesController {
   // ─── Consulta: listar entregables del convenio ─────────────────────────────
 
   @Get(':agreementId/deliverables')
-  getDeliverables(@Param('agreementId', ParseIntPipe) agreementId: number) {
-    return this.deliverablesService.getDeliverables(agreementId);
+  getDeliverables(
+    @Param('agreementId', ParseIntPipe) agreementId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.deliverablesService.getDeliverables(
+      agreementId,
+      req.user?.role,
+    );
   }
 
   // ─── E3 · OCRI solicita el Plan de Trabajo (inicia seguimiento) ────────────

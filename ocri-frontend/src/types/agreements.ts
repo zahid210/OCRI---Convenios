@@ -37,7 +37,6 @@ export interface AgreementDocument {
     id: number;
     agreement_id: number;
     name: string;
-    file_path: string;
     original_name?: string | null;
     extension?: string | null;
     direction?: 'ENTRADA' | 'SALIDA' | 'INTERNO' | null;

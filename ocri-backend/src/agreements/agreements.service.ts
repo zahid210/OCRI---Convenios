@@ -21,6 +21,11 @@ import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
 import { FilterAgreementsDto } from './dto/filter-agreements.dto';
 import { StorageService } from '../common/storage/storage.service';
+import {
+  isRestrictedRole,
+  isVisibleToRestricted,
+  restrictStatusList,
+} from '../common/visibility';
 
 const agreementIncludes: Prisma.agreementsInclude = {
   institutions: true,
@@ -235,7 +240,7 @@ export class AgreementsService {
 
   // ─── Consultas ─────────────────────────────────────────────────────────────
 
-  async findAll(filters: FilterAgreementsDto) {
+  async findAll(filters: FilterAgreementsDto, role?: string) {
     const page = Number(filters.page) || 1;
     const perPage = Number(filters.per_page) || 10;
     const skip = (page - 1) * perPage;
@@ -275,6 +280,14 @@ export class AgreementsService {
       };
     } else if (filters.process_status) {
       where.process_status = filters.process_status as ProcessStatus;
+    }
+
+    // El rol restringido (viewer) solo ve convenios formalizados; se intersecta
+    // con cualquier filtro ya aplicado para no ampliar nunca su alcance.
+    if (isRestrictedRole(role)) {
+      where.process_status = {
+        in: restrictStatusList(where.process_status) as ProcessStatus[],
+      };
     }
 
     if (filters.institution_id) {
@@ -323,7 +336,7 @@ export class AgreementsService {
     });
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, role?: string) {
     const agreement = await this.prisma.agreements.findUnique({
       where: { id: BigInt(id) },
       include: {
@@ -333,6 +346,15 @@ export class AgreementsService {
     });
 
     if (!agreement) {
+      throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
+    }
+
+    // El rol restringido no debe poder confirmar la existencia de propuestas ni
+    // de convenios en trámite: se responde 404 igual que si no existiera.
+    if (
+      isRestrictedRole(role) &&
+      !isVisibleToRestricted(agreement.process_status)
+    ) {
       throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
     }
 
@@ -512,19 +534,27 @@ export class AgreementsService {
   }
 
   /** Búsqueda liviana para el buscador del header. */
-  async search(q?: string) {
+  async search(q?: string, role?: string) {
     const term = (q ?? '').trim();
     if (!term) return [];
 
+    const where: Prisma.agreementsWhereInput = {
+      OR: [
+        { title: { contains: term } },
+        { name: { contains: term } },
+        { tramite_code: { contains: term } },
+        { resolution_number: { contains: term } },
+      ],
+    };
+
+    if (isRestrictedRole(role)) {
+      where.process_status = {
+        in: [...restrictStatusList(undefined)] as ProcessStatus[],
+      };
+    }
+
     const rows = await this.prisma.agreements.findMany({
-      where: {
-        OR: [
-          { title: { contains: term } },
-          { name: { contains: term } },
-          { tramite_code: { contains: term } },
-          { resolution_number: { contains: term } },
-        ],
-      },
+      where,
       select: {
         id: true,
         title: true,
@@ -543,21 +573,26 @@ export class AgreementsService {
 
   // ─── Semáforo de convenios (vigencia) ──────────────────────────────────────
 
-  async getExpirationTracking() {
+  async getExpirationTracking(role?: string) {
     // Directorio completo: todos los convenios firmados/suscritos (misma
     // población base que los reportes), ordenados del más reciente al antiguo
     // por fecha de registro. El semáforo (temporal_status) se deriva en vivo
     // de la fecha de fin para que aquí y en reportes coincidan.
+    const baseStatuses = [
+      'SUSCRITO',
+      'REGISTRADO',
+      'PUBLICADO',
+      'EN_SEGUIMIENTO',
+      'SEGUIMIENTO_CONCLUIDO',
+    ];
+    const statuses = isRestrictedRole(role)
+      ? restrictStatusList({ in: baseStatuses })
+      : baseStatuses;
+
     const agreements = await this.prisma.agreements.findMany({
       where: {
         process_status: {
-          in: [
-            'SUSCRITO',
-            'REGISTRADO',
-            'PUBLICADO',
-            'EN_SEGUIMIENTO',
-            'SEGUIMIENTO_CONCLUIDO',
-          ],
+          in: statuses as ProcessStatus[],
         },
       },
       include: {

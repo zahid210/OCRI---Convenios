@@ -21,6 +21,8 @@ import {
 } from '../common/pdf-merger.service';
 import { StorageService } from '../common/storage/storage.service';
 import { buildSolicitudHtml, SolicitudType } from './solicitud-html';
+import { isRestrictedRole, isVisibleToRestricted } from '../common/visibility';
+import { stripDocumentFilePaths } from '../common/document-view';
 
 const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
   PLAN_DE_TRABAJO: 'PLAN_DE_TRABAJO',
@@ -936,8 +938,16 @@ export class DeliverablesService {
     return serializeBigInt(deliverable);
   }
 
-  async getDeliverables(agreementId: number) {
-    await this.getAgreementOrThrow(agreementId);
+  async getDeliverables(agreementId: number, role?: string) {
+    const agreement = await this.getAgreementOrThrow(agreementId);
+
+    // El rol restringido solo accede a convenios formalizados.
+    if (
+      isRestrictedRole(role) &&
+      !isVisibleToRestricted(agreement.process_status)
+    ) {
+      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+    }
 
     const deliverables = await this.prisma.deliverables.findMany({
       where: { agreement_id: BigInt(agreementId) },
@@ -948,6 +958,12 @@ export class DeliverablesService {
       orderBy: [{ type: 'asc' }, { requested_at: 'asc' }],
     });
 
-    return serializeBigInt(deliverables);
+    // No se expone la ruta interna del storage; la descarga va por docId.
+    const sanitized = deliverables.map((deliverable) => ({
+      ...deliverable,
+      documents: stripDocumentFilePaths(deliverable.documents),
+    }));
+
+    return serializeBigInt(sanitized);
   }
 }

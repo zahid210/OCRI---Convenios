@@ -11,7 +11,7 @@ import {
   generateOpinionRequests,
   getDefaultOpinionTargets,
   generateOficioRectorado,
-  openFilePreview,
+  openDocumentPreview,
   respondOpinionRequest,
   sendToRectorado,
   uploadProcessDocument,
@@ -177,7 +177,7 @@ function oficioDocumentLabel(
 ): string | null {
   const doc = opinionDocument(documents, requestId, "OFICIO_SOLICITUD_OPINION");
   if (!doc) return null;
-  const base = fileName(doc.original_name, doc.file_path);
+  const base = fileName(doc.original_name, doc.name);
   return base.replace(/\.[^.]+$/, "").trim() || null;
 }
 
@@ -488,9 +488,9 @@ export default function Stage1Propuesta({
     }
   };
 
-  const handlePreviewDocument = async (filePath: string | null | undefined) => {
+  const handlePreviewDocument = async (docId: number) => {
     try {
-      await openFilePreview(filePath);
+      await openDocumentPreview(docId);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error al abrir el documento";
@@ -499,19 +499,11 @@ export default function Stage1Propuesta({
   };
 
   const handleDownloadDocument = async (doc: (typeof documents)[number]) => {
-    if (!doc.file_path) {
-      toast.error("Este documento no tiene un archivo asociado.");
-      return;
-    }
     try {
-      const relativePath = doc.file_path
-        .split("/")
-        .map((s) => encodeURIComponent(s))
-        .join("/");
-      const endpoint = `/resoluciones/${relativePath}`;
+      const endpoint = `/resoluciones/by-id/${doc.id}`;
       await downloadFile(
         endpoint,
-        fileName(doc.original_name, fileName(doc.file_path, doc.name || "")),
+        fileName(doc.original_name, doc.name || ""),
       );
       toast.success("Descarga iniciada.");
     } catch (err: unknown) {
@@ -1161,7 +1153,7 @@ export default function Stage1Propuesta({
                       <div className="flex items-center justify-end gap-3">
                         <button
                           type="button"
-                          onClick={() => handlePreviewDocument(doc.file_path)}
+                          onClick={() => handlePreviewDocument(doc.id)}
                           className="inline-flex items-center gap-1 text-primary hover:underline"
                           title="Ver documento"
                         >
