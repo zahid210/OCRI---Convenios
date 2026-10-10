@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { VIEWER_VISIBLE_STATUSES } from '../common/visibility';
 
 /**
  * Regresión de la auditoría de /notifications: los ack solo afectan al
@@ -282,6 +283,75 @@ describe('NotificationsService', () => {
       expect(
         prisma.notification_acknowledgements.createMany,
       ).not.toHaveBeenCalled();
+      expect(r).toEqual({ pending: 0 });
+    });
+  });
+
+  describe('confinamiento por rol (Fase 5 · H5.2)', () => {
+    const llamadas = () =>
+      prisma.agreements.findMany.mock.calls as Array<
+        [{ where: Record<string, unknown> }]
+      >;
+
+    it('el viewer no consulta propuestas en etapas internas', async () => {
+      mockQueries([], [], []);
+
+      await service.findAll(7, 'viewer');
+
+      const conOpinionesArgs = llamadas().find(
+        ([a]) => a.where.opinion_requests,
+      );
+      expect(conOpinionesArgs).toBeDefined();
+      expect(conOpinionesArgs?.[0].where.process_status).toEqual({ in: [] });
+    });
+
+    it('el viewer acota expiring/expired a los estados visibles', async () => {
+      mockQueries([], [], []);
+
+      await service.findAll(7, 'viewer');
+
+      const porVencer = llamadas().find(
+        ([a]) => !a.where.OR && !a.where.opinion_requests,
+      );
+      const vencidos = llamadas().find(([a]) => a.where.OR);
+
+      expect(porVencer?.[0].where.process_status).toEqual({
+        in: [...VIEWER_VISIBLE_STATUSES],
+      });
+      expect(vencidos?.[0].where.process_status).toEqual({
+        in: [...VIEWER_VISIBLE_STATUSES],
+      });
+    });
+
+    it('un rol de operación no recibe restricción de estado', async () => {
+      mockQueries(
+        [convenio(1, { end_date: enDias(30) })],
+        [convenio(2, { end_date: enDias(-5) })],
+        [conOpiniones(3, [])],
+      );
+
+      await service.findAll(7, 'admin');
+
+      // expiring (sin OR) y expired (con OR) no llevan filtro de rol...
+      const porVencer = llamadas().find(
+        ([a]) => !a.where.OR && !a.where.opinion_requests,
+      );
+      const vencidos = llamadas().find(([a]) => a.where.OR);
+      expect(porVencer?.[0].where.process_status).toBeUndefined();
+      expect(vencidos?.[0].where.process_status).toBeUndefined();
+
+      // ...y la consulta de opiniones mantiene su filtro base en trámite.
+      const opiniones = llamadas().find(([a]) => a.where.opinion_requests);
+      expect(opiniones?.[0].where.process_status).toEqual({
+        in: ['RECEPCIONADA', 'OPINIONES_EN_CURSO', 'OPINIONES_COMPLETAS'],
+      });
+    });
+
+    it('readAll del viewer tampoco persiste avisos de etapas internas', async () => {
+      mockQueries([], [], []);
+
+      const r = await service.readAll(7, 'viewer');
+
       expect(r).toEqual({ pending: 0 });
     });
   });

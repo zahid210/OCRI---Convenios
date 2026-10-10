@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   EXPIRATION_WARNING_DAYS,
+  ProcessStatus,
   serializeBigInt,
 } from '../common/process.constants';
+import { isRestrictedRole, restrictStatusList } from '../common/visibility';
 
 export type NotificationType = 'expiring' | 'expired' | 'pending_area';
 
@@ -49,12 +52,15 @@ export class NotificationsService {
    * usuario ya marcó como leídos se guardan en `notification_acknowledgements`
    * y se excluyen tanto del listado como de la cuenta `total`.
    */
-  async findAll(userId?: number) {
+  async findAll(userId?: number, role?: string) {
+    // Confinamiento de lectura por rol (Fase 5 · H5.2): el `viewer` no debe
+    // recibir avisos derivados de convenios en etapas internas.
+    const restricted = isRestrictedRole(role);
     // Cargas en paralelo: notificaciones derivadas + claves ya reconocidas.
     const [expiring, expired, withOpinions, ackRows] = await Promise.all([
-      this.queryExpiring(),
-      this.queryExpired(),
-      this.queryWithOpinions(),
+      this.queryExpiring(restricted),
+      this.queryExpired(restricted),
+      this.queryWithOpinions(restricted),
       this.loadAcknowledgedKeys(userId),
     ]);
 
@@ -174,19 +180,19 @@ export class NotificationsService {
    * usuario (independientemente del tope de ítems visibles en el dropdown).
    * Devuelve la cantidad que sigue pendiente (nuevas que surjan tras la marca).
    */
-  async readAll(userId: number): Promise<{ pending: number }> {
+  async readAll(userId: number, role?: string): Promise<{ pending: number }> {
     if (!userId) {
       throw new BadRequestException('Usuario autenticado requerido.');
     }
 
-    const keys = await this.collectAllKeys();
+    const keys = await this.collectAllKeys(role);
     if (keys.length === 0) {
       return { pending: 0 };
     }
 
     await this.persistAcknowledgedKeys(userId, keys);
 
-    const { total } = await this.findAll(userId);
+    const { total } = await this.findAll(userId, role);
     return { pending: total };
   }
 
@@ -195,7 +201,7 @@ export class NotificationsService {
    * borra sus acknowledgments para que vuelvan a aparecer como pendientes.
    * Devuelve la cantidad total de notificaciones que vuelve a estar pendiente.
    */
-  async resetRead(userId: number): Promise<{ pending: number }> {
+  async resetRead(userId: number, role?: string): Promise<{ pending: number }> {
     if (!userId) {
       throw new BadRequestException('Usuario autenticado requerido.');
     }
@@ -204,7 +210,7 @@ export class NotificationsService {
       where: { user_id: BigInt(userId) },
     });
 
-    const { total } = await this.findAll(userId);
+    const { total } = await this.findAll(userId, role);
     return { pending: total };
   }
 
@@ -216,6 +222,7 @@ export class NotificationsService {
   async acknowledge(
     userId: number,
     keys: string[],
+    role?: string,
   ): Promise<{ pending: number }> {
     if (!userId) {
       throw new BadRequestException('Usuario autenticado requerido.');
@@ -234,7 +241,7 @@ export class NotificationsService {
 
     await this.persistAcknowledgedKeys(userId, normalized);
 
-    const { total } = await this.findAll(userId);
+    const { total } = await this.findAll(userId, role);
     return { pending: total };
   }
 
@@ -263,11 +270,12 @@ export class NotificationsService {
   /**
    * Reúne todas las claves de notificaciones derivadas actualmente (sin tope).
    */
-  private async collectAllKeys(): Promise<string[]> {
+  private async collectAllKeys(role?: string): Promise<string[]> {
+    const restricted = isRestrictedRole(role);
     const [expiring, expired, withOpinions] = await Promise.all([
-      this.queryExpiring(),
-      this.queryExpired(),
-      this.queryWithOpinions(),
+      this.queryExpiring(restricted),
+      this.queryExpired(restricted),
+      this.queryWithOpinions(restricted),
     ]);
 
     const keys: string[] = [];
@@ -293,12 +301,29 @@ export class NotificationsService {
     return new Set(rows.map((r) => r.key));
   }
 
-  private queryExpiring() {
+  /**
+   * Filtro de estado que confina al rol restringido a los convenios visibles.
+   * Vacío para los roles de operación (ven todo).
+   */
+  private restrictedStatusWhere(
+    restricted: boolean,
+  ): Prisma.agreementsWhereInput {
+    return restricted
+      ? {
+          process_status: {
+            in: restrictStatusList(undefined) as ProcessStatus[],
+          },
+        }
+      : {};
+  }
+
+  private queryExpiring(restricted = false) {
     const now = this.startOfToday();
     const warningDate = new Date(now);
     warningDate.setDate(warningDate.getDate() + EXPIRATION_WARNING_DAYS);
     return this.prisma.agreements.findMany({
       where: {
+        ...this.restrictedStatusWhere(restricted),
         validity_status: { in: ['VIGENTE', 'SUSPENDIDO'] },
         end_date: { gte: now, lte: warningDate },
       },
@@ -313,10 +338,11 @@ export class NotificationsService {
     });
   }
 
-  private queryExpired() {
+  private queryExpired(restricted = false) {
     const now = this.startOfToday();
     return this.prisma.agreements.findMany({
       where: {
+        ...this.restrictedStatusWhere(restricted),
         OR: [
           { validity_status: 'VENCIDO' },
           {
@@ -336,12 +362,20 @@ export class NotificationsService {
     });
   }
 
-  private queryWithOpinions() {
+  private queryWithOpinions(restricted = false) {
+    const inFlight: ProcessStatus[] = [
+      'RECEPCIONADA',
+      'OPINIONES_EN_CURSO',
+      'OPINIONES_COMPLETAS',
+    ];
+    // El spread no sirve aquí: `process_status` quedaría sobrescrito. Se
+    // intersecta el conjunto en trámite con lo visible (vacío para viewer).
+    const statuses = restricted
+      ? (restrictStatusList({ in: inFlight }) as ProcessStatus[])
+      : inFlight;
     return this.prisma.agreements.findMany({
       where: {
-        process_status: {
-          in: ['RECEPCIONADA', 'OPINIONES_EN_CURSO', 'OPINIONES_COMPLETAS'],
-        },
+        process_status: { in: statuses },
         opinion_requests: { some: {} },
       },
       select: {

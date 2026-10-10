@@ -4,6 +4,7 @@ import { ReportsService } from './reports.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REPORT_STATUSES } from './dto/filter-reports.dto';
 import { IN_FLIGHT_STATUSES } from '../common/process.constants';
+import { VIEWER_VISIBLE_STATUSES } from '../common/visibility';
 
 /**
  * Regresión de la auditoría de /reports: los agregados derivan el estado
@@ -121,6 +122,50 @@ describe('ReportsService', () => {
       await service.summary({ agreement_type_id: 7, institution_id: 4 });
       expect(ultimoWhere().agreement_type_id).toBe(7n);
       expect(ultimoWhere().institution_id).toBe(4n);
+    });
+  });
+
+  describe('confinamiento por rol (Fase 5 · H5.1)', () => {
+    it('sin filtro de estado, el viewer queda acotado a los estados visibles', async () => {
+      await service.summary({}, 'viewer');
+      expect(ultimoWhere().process_status).toEqual({
+        in: [...VIEWER_VISIBLE_STATUSES],
+      });
+    });
+
+    it('un rol de operación no recibe restricción de estado', async () => {
+      await service.summary({}, 'admin');
+      expect(ultimoWhere().process_status).toBeUndefined();
+    });
+
+    it("'En Trámite' se intersecta con lo visible: el viewer no ve nada", async () => {
+      await service.summary({ status: 'En Trámite' }, 'viewer');
+      expect(ultimoWhere().process_status).toEqual({ in: [] });
+    });
+
+    it("'No Suscrito' (estado oculto) también se vacía para el viewer", async () => {
+      await service.summary({ status: 'No Suscrito' }, 'viewer');
+      expect(ultimoWhere().process_status).toEqual({ in: [] });
+    });
+
+    it("'Vigente' conserva solo los estados visibles para el viewer", async () => {
+      await service.summary({ status: 'Vigente' }, 'viewer');
+      expect(ultimoWhere().process_status).toEqual({
+        in: [...VIEWER_VISIBLE_STATUSES],
+      });
+    });
+
+    it('la exportación XLSX aplica el confinamiento a todas sus consultas', async () => {
+      await service.exportXlsx({}, 'viewer');
+      const llamadas = prisma.agreements.findMany.mock.calls as Array<
+        [{ where: Record<string, unknown> }]
+      >;
+      expect(llamadas.length).toBeGreaterThan(0);
+      for (const [args] of llamadas) {
+        expect(args.where.process_status).toEqual({
+          in: [...VIEWER_VISIBLE_STATUSES],
+        });
+      }
     });
   });
 

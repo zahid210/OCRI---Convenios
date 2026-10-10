@@ -18,7 +18,7 @@ export class NotificationsController {
 
   @Get()
   findAll(@Req() req: AuthenticatedRequest) {
-    return this.notificationsService.findAll(req.user?.id);
+    return this.notificationsService.findAll(req.user?.id, req.user?.role);
   }
 
   @Post('acknowledge')
@@ -29,16 +29,20 @@ export class NotificationsController {
     return this.notificationsService.acknowledge(
       req.user?.id ?? 0,
       body?.keys ?? [],
+      req.user?.role,
     );
   }
 
   @Post('read-all')
   readAll(@Req() req: AuthenticatedRequest) {
-    return this.notificationsService.readAll(req.user?.id ?? 0);
+    return this.notificationsService.readAll(req.user?.id ?? 0, req.user?.role);
   }
 
   @Post('reset-read')
   resetRead(@Req() req: AuthenticatedRequest) {
-    return this.notificationsService.resetRead(req.user?.id ?? 0);
+    return this.notificationsService.resetRead(
+      req.user?.id ?? 0,
+      req.user?.role,
+    );
   }
 }

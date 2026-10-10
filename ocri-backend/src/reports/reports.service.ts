@@ -7,7 +7,9 @@ import {
   deriveTemporalStatus,
   EXPIRATION_WARNING_DAYS,
   IN_FLIGHT_STATUSES,
+  ProcessStatus,
 } from '../common/process.constants';
+import { isRestrictedRole, restrictStatusList } from '../common/visibility';
 
 /** Mapa UPPERCASE → etiqueta legible (coincide con REPORT_STATUSES). */
 const TEMPORAL_STATUS_LABEL: Record<string, string> = {
@@ -41,7 +43,10 @@ export interface ReportSummary {
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private buildWhere(filter: FilterReportsDto): Prisma.agreementsWhereInput {
+  private buildWhere(
+    filter: FilterReportsDto,
+    role?: string,
+  ): Prisma.agreementsWhereInput {
     const where: Prisma.agreementsWhereInput = {};
 
     if (filter.country) {
@@ -103,14 +108,25 @@ export class ReportsService {
       }
     }
 
+    // Confinamiento de lectura por rol (Fase 5 · H5.1): el `viewer` nunca debe
+    // ver convenios en etapas internas. Se intersecta cualquier filtro de estado
+    // ya construido con los estados visibles; nunca lo amplía. Sin filtro previo
+    // de estado, queda restringido a todo lo visible.
+    if (isRestrictedRole(role)) {
+      where.process_status = {
+        in: restrictStatusList(where.process_status) as ProcessStatus[],
+      };
+    }
+
     return where;
   }
 
   private async getAgreements(
     filter: FilterReportsDto,
+    role?: string,
   ): Promise<AgreementWithRelations[]> {
     return this.prisma.agreements.findMany({
-      where: this.buildWhere(filter),
+      where: this.buildWhere(filter, role),
       include: {
         institutions: { select: { name: true, country: true } },
         agreement_types: { select: { name: true } },
@@ -128,8 +144,11 @@ export class ReportsService {
     return TEMPORAL_STATUS_LABEL[ts] ?? ts;
   }
 
-  async summary(filter: FilterReportsDto): Promise<ReportSummary> {
-    const agreements = await this.getAgreements(filter);
+  async summary(
+    filter: FilterReportsDto,
+    role?: string,
+  ): Promise<ReportSummary> {
+    const agreements = await this.getAgreements(filter, role);
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -148,8 +167,8 @@ export class ReportsService {
     };
   }
 
-  async byStatus(filter: FilterReportsDto) {
-    const agreements = await this.getAgreements(filter);
+  async byStatus(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -167,8 +186,8 @@ export class ReportsService {
     return (c ?? '').trim().toUpperCase() || 'SIN PAÍS';
   }
 
-  async byCountry(filter: FilterReportsDto) {
-    const agreements = await this.getAgreements(filter);
+  async byCountry(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -181,8 +200,8 @@ export class ReportsService {
       .sort((x, y) => y.cantidad - x.cantidad);
   }
 
-  async byType(filter: FilterReportsDto) {
-    const agreements = await this.getAgreements(filter);
+  async byType(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -195,8 +214,8 @@ export class ReportsService {
       .sort((x, y) => y.cantidad - x.cantidad);
   }
 
-  async byInstitution(filter: FilterReportsDto) {
-    const agreements = await this.getAgreements(filter);
+  async byInstitution(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
     const counts: Record<
       string,
       { institucion: string; pais: string; cantidad: number }
@@ -217,14 +236,14 @@ export class ReportsService {
     return Object.values(counts).sort((x, y) => y.cantidad - x.cantidad);
   }
 
-  async topInstitutions(filter: FilterReportsDto) {
+  async topInstitutions(filter: FilterReportsDto, role?: string) {
     const top = filter.top ?? 10;
-    const byInstitution = await this.byInstitution(filter);
+    const byInstitution = await this.byInstitution(filter, role);
     return byInstitution.slice(0, top);
   }
 
-  async expiring(filter: FilterReportsDto) {
-    const agreements = await this.getAgreements(filter);
+  async expiring(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
     return agreements
       .filter(
         (a) =>
@@ -234,8 +253,8 @@ export class ReportsService {
       .sort((x, y) => (x.fecha_fin ?? '').localeCompare(y.fecha_fin ?? ''));
   }
 
-  async expired(filter: FilterReportsDto) {
-    const agreements = await this.getAgreements(filter);
+  async expired(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
     return agreements
       .filter(
         (a) => deriveTemporalStatus(a.end_date).temporal_status === 'VENCIDO',
@@ -261,7 +280,7 @@ export class ReportsService {
     };
   }
 
-  async exportXlsx(filter: FilterReportsDto): Promise<Buffer> {
+  async exportXlsx(filter: FilterReportsDto, role?: string): Promise<Buffer> {
     const [
       summary,
       byStatus,
@@ -271,13 +290,13 @@ export class ReportsService {
       expiring,
       expired,
     ] = await Promise.all([
-      this.summary(filter),
-      this.byStatus(filter),
-      this.byCountry(filter),
-      this.byType(filter),
-      this.byInstitution(filter),
-      this.expiring(filter),
-      this.expired(filter),
+      this.summary(filter, role),
+      this.byStatus(filter, role),
+      this.byCountry(filter, role),
+      this.byType(filter, role),
+      this.byInstitution(filter, role),
+      this.expiring(filter, role),
+      this.expired(filter, role),
     ]);
 
     const workbook = new ExcelJS.Workbook();
