@@ -45,8 +45,12 @@ services:
       S3_PRESIGN_TTL: ${S3_PRESIGN_TTL:-300}
       S3_PREFIX: ${S3_PREFIX:-OCRI_convenios}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-ocri@uncp.edu.pe}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
-      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
+      # Contraseñas de arranque OBLIGATORIAS y únicas por cuenta: sin ellas
+      # compose no arranca, para no dejar una instancia operativa con el hash
+      # placeholder del dump. Asistente y procesador usan variables distintas.
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Defina SEED_ADMIN_PASSWORD en .env (única por cuenta)}
+      SEED_DEMO_PASSWORD_1: ${SEED_DEMO_PASSWORD_1:?Defina SEED_DEMO_PASSWORD_1 en .env (contraseña del asistente)}
+      SEED_DEMO_PASSWORD_2: ${SEED_DEMO_PASSWORD_2:?Defina SEED_DEMO_PASSWORD_2 en .env (contraseña del procesador)}
     depends_on:
       db:
         condition: service_healthy

@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
+import { AuditModule } from '../audit/audit.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -17,6 +18,7 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   imports: [
     UsersModule,
     PassportModule,
+    AuditModule,
     JwtModule.register({
       secret: JWT_SECRET,
       signOptions: { expiresIn: '8h' },

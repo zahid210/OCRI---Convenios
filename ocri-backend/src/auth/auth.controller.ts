@@ -32,6 +32,18 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  /**
+   * Logout real: incrementa `token_version` para invalidar el JWT actual y
+   * todos los emitidos para esta cuenta. El proxy del frontend invoca este
+   * endpoint y luego vacía las cookies de sesión.
+   */
+  @HttpCode(HttpStatus.OK)
+  @Post('logout')
+  async logout(@Request() req: RequestWithUser) {
+    await this.authService.revokeSession(req.user.id);
+    return { message: 'Sesión cerrada correctamente.' };
+  }
+
   @Get('me')
   getProfile(@Request() req: RequestWithUser): AuthenticatedUser {
     return req.user;

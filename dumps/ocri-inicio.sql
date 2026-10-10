@@ -2237,6 +2237,8 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('admin','viewer','asistente','procesador') NOT NULL DEFAULT 'viewer',
+  `token_version` int NOT NULL DEFAULT 0,
+  `password_changed_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -2253,12 +2255,15 @@ SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 REPLACE INTO `users` VALUES
--- Los hashes son contraseñas desconocibles (placeholder). En cada arranque el
--- backend las reemplaza con SEED_ADMIN_PASSWORD / SEED_DEMO_PASSWORD del env
--- (SeedUsersService), de modo que el repo no fija credenciales operativas.
-(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$12$LqEOxbJUtrb1yZxRiuPebeIgU9xQDbmQ/1W5RIG/iZytx5UuY8e4i','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
-(20,'Jesus','jesus@uncp.edu.pe','$2b$12$LqEOxbJUtrb1yZxRiuPebeIgU9xQDbmQ/1W5RIG/iZytx5UuY8e4i','asistente',NULL,'2026-09-09 06:04:21'),
-(21,'Berna','berna@uncp.edu.pe','$2b$12$LqEOxbJUtrb1yZxRiuPebeIgU9xQDbmQ/1W5RIG/iZytx5UuY8e4i','procesador',NULL,'2026-09-09 06:04:26');
+-- Los hashes son contraseñas desconocibles y ÚNICAS por usuario (placeholder):
+-- cada uno hashea un valor aleatorio distinto no documentado en el repo, así
+-- que no son crackeables offline ni comparten credencial. En cada arranque el
+-- backend las reemplaza con SEED_ADMIN_PASSWORD / SEED_DEMO_PASSWORD_1 /
+-- SEED_DEMO_PASSWORD_2 del env (SeedUsersService), de modo que el repo nunca
+-- fija credenciales operativas.
+(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$12$/SNMfHocoPItP83Mu/jwkefFm0qEp6Cn2od/jtwy.WUayPTMzey1G','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
+(20,'Jesus','jesus@uncp.edu.pe','$2b$12$FKaPwJomEwIGS7PX.2y17OSVLx38UOL/VzIEtpNMywqjHUbyxxewO','asistente',NULL,'2026-09-09 06:04:21'),
+(21,'Berna','berna@uncp.edu.pe','$2b$12$SFrGKnB2FOiIm7nmTuwWS.C.NnHRLw5WEUhkk1miBhqkf/PSNyNIa','procesador',NULL,'2026-09-09 06:04:26');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;

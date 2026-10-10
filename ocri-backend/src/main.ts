@@ -44,10 +44,23 @@ async function bootstrap() {
     next();
   });
 
-  // Cabeceras de seguridad básicas (CSP, nosniff, X-Frame-Options, etc.).
+  // Cabeceras de seguridad básicas. Helmet v4+ NO emite CSP por defecto, así
+  // que se define una política explícita para las respuestas del API: el
+  // backend solo sirve JSON y PDFs inline, por lo que se permite default-src
+  // 'none' (nada ejecutable) + frame-ancestors 'none' (anti clickjacking).
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'same-origin' },
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          defaultSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+          baseUri: ["'none'"],
+          formAction: ["'self'"],
+          objectSrc: ["'none'"],
+        },
+      },
     }),
   );
 

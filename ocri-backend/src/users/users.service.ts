@@ -23,13 +23,29 @@ export class UsersService {
 
   async findByEmail(email: string) {
     return this.prisma.users.findUnique({
-      where: { email },
+      where: { email: UsersService.normalizeEmail(email) },
     });
   }
 
   async findById(id: number) {
     return this.prisma.users.findUnique({
       where: { id: BigInt(id) },
+    });
+  }
+
+  /** Normaliza correos (trim + minúsculas) de forma consistente en altas/cambios. */
+  private static normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  /**
+   * Revoca las sesiones activas de un usuario incrementando su `token_version`.
+   * Lo usan el logout (POST /api/auth/logout) para invalidar el token actual.
+   */
+  async bumpTokenVersion(id: number) {
+    await this.prisma.users.update({
+      where: { id: BigInt(id) },
+      data: { token_version: { increment: 1 } },
     });
   }
 
@@ -77,8 +93,10 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto) {
+    const email = UsersService.normalizeEmail(dto.email);
+
     const existing = await this.prisma.users.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
 
     if (existing) {
@@ -90,9 +108,10 @@ export class UsersService {
     const user = await this.prisma.users.create({
       data: {
         name: dto.name,
-        email: dto.email,
+        email,
         password: hashedPassword,
         role: dto.role as user_role,
+        password_changed_at: new Date(),
       },
       select: {
         id: true,
@@ -116,12 +135,15 @@ export class UsersService {
       throw new NotFoundException(`Usuario con ID ${id} no encontrado.`);
     }
 
-    if (dto.email && dto.email !== user.email) {
-      const existing = await this.prisma.users.findUnique({
-        where: { email: dto.email },
-      });
-      if (existing) {
-        throw new ConflictException('Ya existe un usuario con ese correo.');
+    if (dto.email) {
+      const email = UsersService.normalizeEmail(dto.email);
+      if (email !== user.email) {
+        const existing = await this.prisma.users.findUnique({
+          where: { email },
+        });
+        if (existing) {
+          throw new ConflictException('Ya existe un usuario con ese correo.');
+        }
       }
     }
 
@@ -140,14 +162,30 @@ export class UsersService {
       email?: string;
       role?: user_role;
       password?: string;
+      token_version?: { increment: number };
+      password_changed_at?: Date;
       updated_at?: Date;
     } = { updated_at: new Date() };
 
     if (dto.name !== undefined) data.name = dto.name;
-    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.email !== undefined) {
+      data.email = UsersService.normalizeEmail(dto.email);
+      // Un cambio de correo también exige nueva sesión: rota el token_version.
+      if (data.email !== user.email) data.token_version = { increment: 1 };
+    }
     if (dto.role !== undefined) data.role = dto.role as user_role;
-    if (dto.password)
+    if (dto.role !== undefined && dto.role !== user.role) {
+      // Un cambio de rol debe reflejarse en las próximas peticiones: invalida
+      // las sesiones actuales en lugar de esperar a que expiren (8h).
+      data.token_version = { increment: 1 };
+    }
+    if (dto.password) {
       data.password = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+      // Cambio de contraseña: revoca todas las sesiones y registra la fecha
+      // para la política de caducidad (90 días).
+      data.token_version = { increment: 1 };
+      data.password_changed_at = new Date();
+    }
 
     const updated = await this.prisma.users.update({
       where: { id: BigInt(id) },

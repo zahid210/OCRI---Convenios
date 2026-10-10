@@ -1,24 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from './prisma/prisma.service';
-import { StorageService } from './common/storage/storage.service';
 
 @Injectable()
 export class AppService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly storage: StorageService,
-  ) {}
-
+  /**
+   * Healthcheck público y deliberadamente mínimo: un visitante anónimo solo
+   * tiene derecho a saber si la API está viva, no si el storage/bd está
+   * configurado (revelaría detalles operativos). Los chequeos reales de
+   * conectividad los hacen los healthchecks de docker-compose.
+   */
   async getHealth() {
-    const storage = await this.storage.healthCheck();
-
-    return {
-      status: 'ok',
-      database: 'connected',
-      storage: {
-        configured: storage.configured,
-        ok: storage.ok,
-      },
-    };
+    return { status: 'ok' };
   }
 }

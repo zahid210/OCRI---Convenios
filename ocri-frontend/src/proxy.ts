@@ -17,6 +17,11 @@ const USER_COOKIE = "user";
 // ocri-backend/src/auth/auth.module.ts). Si cambia uno, debe cambiar el otro.
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
+// Body máximo aceptado en el login: solo van email + contraseña (~200B). Un
+// límite estricto evita que el proxy bufferice cuerpos gigantes en memoria
+// antes de reenviarlos al backend (DoS sobre el nodo del frontend).
+const LOGIN_MAX_BODY_BYTES = 1024 * 1024;
+
 /** URL interna del backend (la misma variable que usa la rewrite de next.config.ts). */
 function backendUrl(): string | null {
     return process.env.API_PROXY_URL?.trim().replace(/\/+$/, "") || null;
@@ -41,6 +46,7 @@ interface JwtClaims {
     email?: string;
     role?: string;
     exp?: number;
+    nbf?: number;
 }
 
 const base64UrlToBuffer = (part: string): Buffer =>
@@ -103,6 +109,20 @@ function verifyJwt(token: string): JwtClaims | null {
     }
 
     if (typeof claims.exp === "number" && claims.exp * 1000 <= Date.now()) {
+        return null;
+    }
+    // `nbf` (not-before) futuro: el token aún no es válido.
+    if (typeof claims.nbf === "number" && claims.nbf * 1000 > Date.now()) {
+        return null;
+    }
+    // El `sub` debe ser un id de usuario numérico positivo (el backend lo firma
+    // como Number(user.id)); sin él la sesión no puede resolverse.
+    const sub = claims.sub;
+    if (
+        typeof sub !== "number" ||
+        !Number.isInteger(sub) ||
+        sub <= 0
+    ) {
         return null;
     }
     if (!claims.role) return null;
@@ -177,6 +197,16 @@ async function handleLogin(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json(
             { message: "Origen de la petición no permitido." },
             { status: 403 },
+        );
+    }
+
+    // Límite de tamaño: solo se espera email + contraseña. Rechazar antes de
+    // leer evita bufferizar cuerpos arbitrariamente grandes en el proxy.
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (contentLength > LOGIN_MAX_BODY_BYTES) {
+        return NextResponse.json(
+            { message: "Cuerpo de la petición demasiado grande." },
+            { status: 413 },
         );
     }
 
@@ -259,14 +289,35 @@ async function handleLogin(request: NextRequest): Promise<NextResponse> {
  * POST /api/auth/logout: única forma de vaciar la cookie httpOnly. Con la
  * misma comprobación de origen que el login para evitar que un sitio de
  * terceros cierre la sesión de la víctima (logout CSRF).
+ *
+ * Además revoca el JWT en el backend (incrementa `token_version` vía
+ * POST /api/auth/logout), de modo que el token deja de ser válido aunque
+ * alguien lo haya copiado: el logout no es solo "borrar la cookie".
  */
-function handleLogout(request: NextRequest): NextResponse {
+async function handleLogout(request: NextRequest): Promise<NextResponse> {
     if (!sameOriginOrNoOrigin(request)) {
         return NextResponse.json(
             { message: "Origen de la petición no permitido." },
             { status: 403 },
         );
     }
+
+    const backend = backendUrl();
+    const token = request.cookies.get(SESSION_COOKIE)?.value;
+
+    if (backend && token) {
+        try {
+            await fetch(`${backend}/api/auth/logout`, {
+                method: "POST",
+                headers: { authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(3000),
+            });
+        } catch {
+            // Sin red o backend caído: se limpia la cookie de todos modos; si el
+            // token quedó vivo, caducará en máximo 8h (su exp).
+        }
+    }
+
     return clearSession(NextResponse.json({ ok: true }));
 }
 

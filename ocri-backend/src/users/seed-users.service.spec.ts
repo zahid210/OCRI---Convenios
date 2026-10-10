@@ -11,6 +11,8 @@ describe('SeedUsersService', () => {
   const seedKeys = [
     'SEED_ADMIN_PASSWORD',
     'SEED_ADMIN_EMAIL',
+    'SEED_DEMO_PASSWORD_1',
+    'SEED_DEMO_PASSWORD_2',
     'SEED_DEMO_PASSWORD',
     'SEED_DEMO_EMAIL_1',
     'SEED_DEMO_EMAIL_2',
@@ -56,9 +58,10 @@ describe('SeedUsersService', () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
-  it('aplica la contraseña de seed (encriptada) al admin y a los dos demos', async () => {
+  it('aplica contraseñas de seed únicas y encriptadas a admin y a los dos demos', async () => {
     process.env.SEED_ADMIN_PASSWORD = 'admin-pass';
-    process.env.SEED_DEMO_PASSWORD = 'demo-pass';
+    process.env.SEED_DEMO_PASSWORD_1 = 'asistente-pass';
+    process.env.SEED_DEMO_PASSWORD_2 = 'procesador-pass';
     await service.onModuleInit();
 
     expect(upsert).toHaveBeenCalledTimes(3);
@@ -85,18 +88,22 @@ describe('SeedUsersService', () => {
 
     const jesus = byEmail.get('jesus@uncp.edu.pe')!;
     await expect(
-      bcrypt.compare('demo-pass', jesus.update.password),
+      bcrypt.compare('asistente-pass', jesus.update.password),
     ).resolves.toBe(true);
 
     const berna = byEmail.get('berna@uncp.edu.pe')!;
     await expect(
-      bcrypt.compare('demo-pass', berna.update.password),
+      bcrypt.compare('procesador-pass', berna.update.password),
     ).resolves.toBe(true);
+
+    // Nunca comparten credencial entre cuentas.
+    expect(jesus.update.password).not.toBe(berna.update.password);
   });
 
   it('usa los nombres/emails por defecto y roles correctos', async () => {
     process.env.SEED_ADMIN_PASSWORD = 'p1';
-    process.env.SEED_DEMO_PASSWORD = 'p2';
+    process.env.SEED_DEMO_PASSWORD_1 = 'p2';
+    process.env.SEED_DEMO_PASSWORD_2 = 'p3';
     await service.onModuleInit();
 
     const calls = upsert.mock.calls as Array<
@@ -124,7 +131,8 @@ describe('SeedUsersService', () => {
 
   it('respeta sobrescrituras por entorno (emails y nombres)', async () => {
     process.env.SEED_ADMIN_PASSWORD = 'p1';
-    process.env.SEED_DEMO_PASSWORD = 'p2';
+    process.env.SEED_DEMO_PASSWORD_1 = 'p2';
+    process.env.SEED_DEMO_PASSWORD_2 = 'p3';
     process.env.SEED_ADMIN_EMAIL = 'admin@x.pe';
     process.env.SEED_DEMO_EMAIL_2 = 'otra@x.pe';
     process.env.SEED_DEMO_NAME_2 = 'OtroNombre';
@@ -173,7 +181,8 @@ describe('SeedUsersService', () => {
 
   it('reemplaza el hash aunque exista usuario si la credencial difiere', async () => {
     process.env.SEED_ADMIN_PASSWORD = 'admin-pass';
-    process.env.SEED_DEMO_PASSWORD = 'demo-pass';
+    process.env.SEED_DEMO_PASSWORD_1 = 'demo-a-pass';
+    process.env.SEED_DEMO_PASSWORD_2 = 'demo-b-pass';
 
     // caso real: el dump versionado trae un hash público conocido, que no
     // debe coincidir con la contraseña del entorno.

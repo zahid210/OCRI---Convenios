@@ -6,6 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { USER_ROLES } from '../../auth/role-sets';
 
 export { USER_ROLES };
@@ -16,6 +17,9 @@ export class CreateUserDto {
   @MaxLength(255)
   name!: string;
 
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   @IsEmail({}, { message: 'El correo no es válido' })
   email!: string;
 

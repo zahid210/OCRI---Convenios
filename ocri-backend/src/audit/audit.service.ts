@@ -9,7 +9,13 @@ export interface AuditActor {
   role?: string;
 }
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'SEED';
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'SEED'
+  | 'LOGIN'
+  | 'LOGOUT';
 
 export interface AuditEntry {
   /** Entidad afectada, p. ej. `dependencias`. */

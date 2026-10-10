@@ -6,11 +6,7 @@ describe('AppController', () => {
   let appController: AppController;
 
   const mockAppService = {
-    getHealth: jest.fn().mockResolvedValue({
-      status: 'ok',
-      database: 'connected',
-      storage: { configured: false, ok: true },
-    }),
+    getHealth: jest.fn().mockResolvedValue({ status: 'ok' }),
   };
 
   beforeEach(async () => {
@@ -31,8 +27,6 @@ describe('AppController', () => {
     it('should return the health status', async () => {
       await expect(appController.getHealth()).resolves.toEqual({
         status: 'ok',
-        database: 'connected',
-        storage: { configured: false, ok: true },
       });
     });
   });

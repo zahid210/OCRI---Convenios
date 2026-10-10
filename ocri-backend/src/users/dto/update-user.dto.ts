@@ -6,6 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { USER_ROLES } from './create-user.dto';
 
 export class UpdateUserDto {
@@ -15,6 +16,9 @@ export class UpdateUserDto {
   name?: string;
 
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   @IsEmail({}, { message: 'El correo no es válido' })
   email?: string;
 
