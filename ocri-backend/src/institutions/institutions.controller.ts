@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,6 +18,11 @@ import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
 import { UpdateInstitutionDto } from './dto/update-institution.dto';
 import { InstitutionsService } from './institutions.service';
+
+/** req.user lo inyecta el JwtAuthGuard (mismo shape que en el resto de módulos). */
+interface AuthenticatedRequest {
+  user?: { id: number; email: string; role: string };
+}
 
 @UseGuards(JwtAuthGuard)
 @Controller('institutions')
@@ -52,8 +58,11 @@ export class InstitutionsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.institutionsService.findOne(id);
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.institutionsService.findOne(id, req.user?.role);
   }
 
   @Roles('admin')

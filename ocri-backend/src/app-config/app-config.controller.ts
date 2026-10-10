@@ -9,6 +9,11 @@ import { SetDaysDto } from './dto/set-days.dto';
 export class AppConfigController {
   constructor(private readonly appConfigService: AppConfigService) {}
 
+  // La configuración es material de administración: `getAll()` expone toda la
+  // tabla `app_config` (clave/valor). Deja de estar abierta a cualquier rol
+  // autenticado para que un `viewer` no pueda leer claves internas futuras
+  // (SMTP, tokens de integración, etc.).
+  @Roles('admin')
   @Get()
   getAll() {
     return this.appConfigService.getAll();

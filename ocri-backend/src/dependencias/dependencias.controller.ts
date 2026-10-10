@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { DependenciasService } from './dependencias.service';
 import { CreateDependenciaDto } from './dto/create-dependencia.dto';
+import { FilterDependenciasDto } from './dto/filter-dependencias.dto';
 import { UpdateDependenciaDto } from './dto/update-dependencia.dto';
 
 /** req.user lo inyecta el JwtAuthGuard (mismo shape que en el resto de módulos). */
@@ -38,12 +39,12 @@ export class DependenciasController {
   }
 
   @Get()
-  findAll(
-    @Query('kind') kind?: string,
-    @Query('is_active') is_active?: string,
-    @Query('search') search?: string,
-  ) {
-    return this.dependenciasService.findAll({ kind, is_active, search });
+  findAll(@Query() filters: FilterDependenciasDto) {
+    return this.dependenciasService.findAll({
+      kind: filters.kind,
+      is_active: filters.is_active,
+      search: filters.search,
+    });
   }
 
   @Get('default-opinions')

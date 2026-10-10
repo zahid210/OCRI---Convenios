@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProcessStatus } from '../common/process.constants';
+import { isRestrictedRole, restrictStatusList } from '../common/visibility';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
 import { UpdateInstitutionDto } from './dto/update-institution.dto';
@@ -229,11 +231,24 @@ export class InstitutionsService {
       .filter((c: string | null): c is string => Boolean(c));
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, role?: string) {
+    // El detalle incluye los convenios de la institución. Para un rol
+    // restringido (viewer) solo se anidan los estados formalizados; de lo
+    // contrario este endpoint sería un atajo para leer convenios en etapas
+    // internas y evadir el confinamiento de la Fase 2 (H2.1).
+    const restricted = isRestrictedRole(role);
+
     const institution = await this.prisma.institutions.findUnique({
       where: { id },
       include: {
         agreements: {
+          where: restricted
+            ? {
+                process_status: {
+                  in: restrictStatusList(undefined) as ProcessStatus[],
+                },
+              }
+            : undefined,
           include: {
             agreement_types: true,
           },
