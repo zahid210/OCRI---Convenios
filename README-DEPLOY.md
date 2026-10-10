@@ -77,8 +77,10 @@ La columna del hash es `users.password`.
 
 El bucket OBS es el **único** almacén. No hay copia local: los documentos se
 suben directo a `S3_PREFIX/` (`OCRI_convenios/…`) y se sirven en **streaming**
-por `/api/resoluciones/…`, que valida el JWT por header (sin redirecciones 302;
-un redirect rompería la vista previa en línea del frontend).
+por `/api/resoluciones/by-id/:docId`, que valida el JWT por header y resuelve la
+ruta interna desde la fila `documents` (sin redirecciones 302; un redirect
+rompería la vista previa en línea del frontend). No existe ninguna ruta que
+acepte rutas arbitrarias del bucket.
 
 Las cuatro variables `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` y
 `S3_ENDPOINT` son **obligatorias**:

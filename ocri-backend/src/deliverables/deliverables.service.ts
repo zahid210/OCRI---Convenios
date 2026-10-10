@@ -22,7 +22,10 @@ import {
 import { StorageService } from '../common/storage/storage.service';
 import { buildSolicitudHtml, SolicitudType } from './solicitud-html';
 import { isRestrictedRole, isVisibleToRestricted } from '../common/visibility';
-import { stripDocumentFilePaths } from '../common/document-view';
+import {
+  stripDocumentFilePath,
+  stripDocumentFilePaths,
+} from '../common/document-view';
 
 const DOC_TYPE_BY_DELIVERABLE: Record<string, string> = {
   PLAN_DE_TRABAJO: 'PLAN_DE_TRABAJO',
@@ -373,7 +376,9 @@ export class DeliverablesService {
       return created;
     });
 
-    return serializeBigInt(doc);
+    // No se expone la ruta interna del storage; la descarga va por docId
+    // (Fase 2 · H2.2 / Fase 3 · F3-2).
+    return serializeBigInt(stripDocumentFilePath(doc));
   }
 
   // ─── E3 · Solicitar Plan de Trabajo ────────────────────────────────────────
