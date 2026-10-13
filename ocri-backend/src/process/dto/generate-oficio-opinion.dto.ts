@@ -24,4 +24,9 @@ export class GenerateOficioOpinionDto {
   @IsOptional()
   @IsString()
   directed_to?: string;
+
+  /** Motivo de la corrección (uso interno, opcional en oficios de opinión). */
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }

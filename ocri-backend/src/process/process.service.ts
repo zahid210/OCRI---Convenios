@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../app-config/app-config.service';
 import {
   MAX_OPINION_OBSERVATIONS,
+  PROPOSAL_STATUSES,
   REQUIRED_DOCS_TO_SEND_TO_RECTORADO,
   serializeBigInt,
   STATUS_STAGE,
@@ -267,6 +268,35 @@ export class ProcessService {
     if (missing.length > 0) {
       throw new BadRequestException(`${message}: ${missing.join(', ')}`);
     }
+  }
+
+  /**
+   * Ventana de corrección: mientras el trámite sigue en Etapa 1 (propuesta) se
+   * pueden rehacer documentos, oficios y datos. Al remitirse a Rectorado
+   * (ENVIADO_A_RECTORADO) la propuesta queda congelada para conservar la
+   * correspondencia con lo efectivamente remitido.
+   */
+  private assertCorrectionAllowed(status: string, action: string) {
+    if (!(PROPOSAL_STATUSES as readonly string[]).includes(status)) {
+      throw new BadRequestException(
+        `Solo se pueden ${action} mientras el trámite está en Etapa 1 y aún no se remitió a Rectorado. Estado actual: ${status}`,
+      );
+    }
+  }
+
+  /**
+   * Documentos que produce el sistema y que NO deben reemplazarse por archivo:
+   * se regeneran para mantener sincronizados sus datos (fechas, número de
+   * oficio, merge del expediente). Los oficios de opinión se corrigen desde su
+   * solicitud ("Cambiar Oficio").
+   */
+  private isGeneratedDocument(code: string | null | undefined): boolean {
+    return (
+      code === 'EXPEDIENTE_TECNICO' ||
+      code === 'OFICIO_RESPUESTA_RECTORADO' ||
+      code === 'OFICIO_SOLICITUD_OPINION' ||
+      code === 'OFICIO_RESPUESTA_OPINION'
+    );
   }
 
   /**
@@ -672,6 +702,7 @@ export class ProcessService {
     dto: {
       response_date?: string;
       observations?: string;
+      reason?: string;
     },
     file?: UploadFile,
     userId?: number,
@@ -690,11 +721,26 @@ export class ProcessService {
       );
     }
 
-    const isCorrection = request.status === 'OBSERVADA';
+    // Corrección: una OBSERVADA recibe la enmienda de la dependencia, o una
+    // RESPONDIDA es reemplazada para rectificar la respuesta ya cargada.
+    const isObservationCorrection = request.status === 'OBSERVADA';
+    const isCorrection =
+      isObservationCorrection || request.status === 'RESPONDIDA';
 
-    if (request.status !== 'ENVIADA' && request.status !== 'OBSERVADA') {
+    if (
+      request.status !== 'ENVIADA' &&
+      request.status !== 'OBSERVADA' &&
+      request.status !== 'RESPONDIDA'
+    ) {
       throw new BadRequestException(
-        `La solicitud debe estar ENVIADA para registrar respuesta (o OBSERVADA para adjuntar la corrección). Estado actual: ${request.status}`,
+        `La solicitud debe estar ENVIADA para registrar respuesta (o OBSERVADA/RESPONDIDA para corregirla). Estado actual: ${request.status}`,
+      );
+    }
+
+    if (isCorrection) {
+      this.assertCorrectionAllowed(
+        request.agreements?.process_status ?? '',
+        'corregir la respuesta',
       );
     }
 
@@ -707,7 +753,7 @@ export class ProcessService {
     // Ciclo de corrección: si la opinión fue observada, esta nueva respuesta es
     // la enmienda de la dependencia. Se reinicia la marca de validación para que
     // OCRI deba re-validar la corrección (evita el bypass de validar sin corregir).
-    if (isCorrection) {
+    if (isObservationCorrection) {
       const revisits = await this.prisma.process_events.count({
         where: {
           opinion_request_id: BigInt(opinionRequestId),
@@ -721,6 +767,18 @@ export class ProcessService {
       }
     }
 
+    // Solo se retira la OFICIO_RESPUESTA_OPINION previa (nunca el oficio de
+    // solicitud) y su objeto en OBS se purga después del commit.
+    const previousResponseDocs = isCorrection
+      ? await this.prisma.documents.findMany({
+          where: {
+            opinion_request_id: BigInt(opinionRequestId),
+            document_types: { code: 'OFICIO_RESPUESTA_OPINION' },
+          },
+          select: { id: true, file_path: true },
+        })
+      : [];
+
     const updated = await this.prisma.$transaction(
       async (tx) => {
         // Update condicional por estado: evita que dos respuestas concurrentes
@@ -728,13 +786,15 @@ export class ProcessService {
         const updated = await tx.opinion_requests.updateMany({
           where: {
             id: BigInt(opinionRequestId),
-            status: { in: ['ENVIADA', 'OBSERVADA'] },
+            status: { in: ['ENVIADA', 'OBSERVADA', 'RESPONDIDA'] },
           },
           data: {
             status: 'RESPONDIDA',
             response_date: dto.response_date
               ? new Date(dto.response_date)
-              : new Date(),
+              : isCorrection
+                ? (request.response_date ?? new Date())
+                : new Date(),
             observations: dto.observations ?? null,
             validated_at: isCorrection ? null : request.validated_at,
             updated_at: new Date(),
@@ -743,7 +803,7 @@ export class ProcessService {
 
         if (updated.count === 0) {
           throw new ConflictException(
-            'La solicitud ya no está en estado ENVIADA/OBSERVADA y no puede registrar una respuesta nuevamente.',
+            'La solicitud ya no está en estado ENVIADA/OBSERVADA/RESPONDIDA y no puede registrar una respuesta nuevamente.',
           );
         }
 
@@ -751,54 +811,43 @@ export class ProcessService {
           where: { id: BigInt(opinionRequestId) },
         });
 
-        if (file) {
-          // Si es una corrección (desde OBSERVADA), eliminar el documento
-          // anterior de la respuesta observada tanto en disco como en BD.
-          if (isCorrection) {
-            const oldDocs = await tx.documents.findMany({
-              where: {
-                opinion_request_id: BigInt(opinionRequestId),
-              },
-              orderBy: { created_at: 'desc' },
-            });
-            for (const oldDoc of oldDocs) {
-              try {
-                await this.storage.removeRel(oldDoc.file_path);
-              } catch (err) {
-                const e = err as NodeJS.ErrnoException;
-                if (e.code !== 'ENOENT') {
-                  this.logger.warn(
-                    `No se pudo eliminar archivo observado: ${oldDoc.file_path} — ${e.message}`,
-                  );
-                }
-              }
-              await tx.documents.delete({ where: { id: oldDoc.id } });
-            }
-          }
-
-          await this.persistUploadedDocument(tx, request.agreements, file, {
-            agreementId: request.agreement_id,
-            code: 'OFICIO_RESPUESTA_OPINION',
-            name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
-            direction: 'ENTRADA',
-            stage: 'ETAPA_1_PROPUESTA',
-            userId,
-            now: new Date(),
-            opinionRequestId: BigInt(opinionRequestId),
+        if (previousResponseDocs.length > 0) {
+          await tx.documents.deleteMany({
+            where: { id: { in: previousResponseDocs.map((d) => d.id) } },
           });
         }
 
+        await this.persistUploadedDocument(tx, request.agreements, file, {
+          agreementId: request.agreement_id,
+          code: 'OFICIO_RESPUESTA_OPINION',
+          name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
+          direction: 'ENTRADA',
+          stage: 'ETAPA_1_PROPUESTA',
+          userId,
+          now: new Date(),
+          opinionRequestId: BigInt(opinionRequestId),
+        });
+
         await this.logEvent(
           request.agreement_id,
-          isCorrection ? 'RESPUESTA_CORREGIDA' : 'RESPUESTA_REGISTRADA',
-          isCorrection
-            ? `La dependencia ${request.dependencias?.name ?? ''} adjuntó la corrección de su opinión.`.trim()
-            : `Respuesta/opinión recibida de ${request.dependencias?.name ?? 'la dependencia'}.`,
+          request.status === 'RESPONDIDA'
+            ? 'RESPUESTA_REEMPLAZADA'
+            : isCorrection
+              ? 'RESPUESTA_CORREGIDA'
+              : 'RESPUESTA_REGISTRADA',
+          request.status === 'RESPONDIDA'
+            ? `Respuesta de ${request.dependencias?.name ?? 'la dependencia'} reemplazada (corrección).`
+            : isCorrection
+              ? `La dependencia ${request.dependencias?.name ?? ''} adjuntó la corrección de su opinión.`.trim()
+              : `Respuesta/opinión recibida de ${request.dependencias?.name ?? 'la dependencia'}.`,
           {
             actorUserId: userId,
             fromValue: request.status,
             toValue: 'RESPONDIDA',
             opinionRequestId: BigInt(opinionRequestId),
+            metadata: dto.reason?.trim()
+              ? { reason: dto.reason.trim() }
+              : undefined,
           },
           undefined,
           tx,
@@ -819,6 +868,22 @@ export class ProcessService {
       },
       { maxWait: 10000, timeout: 30000 },
     );
+
+    // Purga las respuestas reemplazadas en OBS, después del commit.
+    for (const doc of previousResponseDocs) {
+      if (doc.file_path) {
+        try {
+          await this.storage.removeRel(doc.file_path);
+        } catch (e) {
+          const err = e as NodeJS.ErrnoException;
+          if (err.code !== 'ENOENT') {
+            this.logger.warn(
+              `No se pudo eliminar la respuesta anterior: ${doc.file_path} — ${err.message}`,
+            );
+          }
+        }
+      }
+    }
 
     return serializeBigInt(updated);
   }
@@ -1265,6 +1330,7 @@ export class ProcessService {
       adesa_number?: string;
       oficio_number?: string;
       directed_to?: string;
+      reason?: string;
     },
     userId?: number,
   ) {
@@ -1279,9 +1345,18 @@ export class ProcessService {
       );
     }
 
-    if (request.status !== 'GENERADA') {
+    const isCorrection = request.status === 'ENVIADA';
+
+    if (request.status !== 'GENERADA' && !isCorrection) {
       throw new BadRequestException(
-        `La solicitud debe estar GENERADA para generar su oficio. Estado actual: ${request.status}`,
+        `La solicitud debe estar GENERADA para generar su oficio, o ENVIADA para corregirlo. Estado actual: ${request.status}`,
+      );
+    }
+
+    if (isCorrection) {
+      this.assertCorrectionAllowed(
+        request.agreements?.process_status ?? '',
+        'corregir el oficio',
       );
     }
 
@@ -1307,9 +1382,29 @@ export class ProcessService {
 
     const agreementId = request.agreement_id;
 
+    // En una corrección se retira el oficio previo de esta solicitud y, tras el
+    // commit, su objeto en OBS. Nunca se borra antes de crear el nuevo.
+    const previousDocs = isCorrection
+      ? await this.prisma.documents.findMany({
+          where: {
+            opinion_request_id: BigInt(opinionRequestId),
+            document_types: { code: 'OFICIO_SOLICITUD_OPINION' },
+          },
+          select: { id: true, file_path: true },
+        })
+      : [];
+
+    const newPath = storePath(filename);
+
     try {
       const result = await this.prisma.$transaction(
         async (tx) => {
+          if (previousDocs.length > 0) {
+            await tx.documents.deleteMany({
+              where: { id: { in: previousDocs.map((d) => d.id) } },
+            });
+          }
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
@@ -1317,7 +1412,7 @@ export class ProcessService {
               name:
                 'Oficio de Solicitud de Opinión - ' +
                 (request.dependencias?.name ?? 'Dependencia'),
-              file_path: storePath(filename),
+              file_path: newPath,
               original_name: basename(filename),
               extension: 'pdf',
               document_types: docType
@@ -1342,27 +1437,35 @@ export class ProcessService {
               adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
               oficio_number: dto.oficio_number ?? request.oficio_number,
               directed_to: dto.directed_to ?? request.directed_to,
-              sent_at: new Date(),
+              sent_at: isCorrection ? request.sent_at : new Date(),
               updated_at: new Date(),
             },
           });
 
           await this.logEvent(
             BigInt(agreementId),
-            'SOLICITUD_ENVIADA',
-            'Oficio de solicitud de opinión generado y adjuntado automáticamente.',
+            isCorrection ? 'OFICIO_SOLICITUD_CORREGIDO' : 'SOLICITUD_ENVIADA',
+            isCorrection
+              ? 'Oficio de solicitud de opinión regenerado (corrección).'
+              : 'Oficio de solicitud de opinión generado y adjuntado automáticamente.',
             {
               actorUserId: userId,
-              fromValue: 'GENERADA',
+              fromValue: request.status,
               toValue: 'ENVIADA',
               opinionRequestId: BigInt(opinionRequestId),
-              metadata: { sent_via: dto.sent_via ?? null },
+              metadata: {
+                sent_via: dto.sent_via ?? null,
+                reason: dto.reason?.trim() || null,
+              },
             },
             'ETAPA_1_PROPUESTA',
             tx,
           );
 
-          if (request.agreements.process_status === 'RECEPCIONADA') {
+          if (
+            !isCorrection &&
+            request.agreements.process_status === 'RECEPCIONADA'
+          ) {
             await this.applyTransition(
               tx,
               BigInt(agreementId),
@@ -1377,6 +1480,21 @@ export class ProcessService {
         },
         { maxWait: 10000, timeout: 30000 },
       );
+
+      // Purga los oficios reemplazados en OBS, después del commit.
+      for (const doc of previousDocs) {
+        if (doc.file_path && doc.file_path !== newPath) {
+          try {
+            await this.storage.removeRel(doc.file_path);
+          } catch (e) {
+            if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+              this.logger?.warn?.(
+                `No se pudo eliminar el oficio anterior: ${doc.file_path}`,
+              );
+            }
+          }
+        }
+      }
 
       return serializeBigInt(result);
     } catch (err) {
@@ -1407,6 +1525,7 @@ export class ProcessService {
       sent_at?: string;
       sent_via?: string;
       directed_to?: string;
+      reason?: string;
     },
     userId?: number,
   ) {
@@ -1421,9 +1540,18 @@ export class ProcessService {
       );
     }
 
-    if (request.status !== 'GENERADA') {
+    const isCorrection = request.status === 'ENVIADA';
+
+    if (request.status !== 'GENERADA' && !isCorrection) {
       throw new BadRequestException(
-        `La solicitud debe estar GENERADA para cargar su oficio. Estado actual: ${request.status}`,
+        `La solicitud debe estar GENERADA para cargar su oficio, o ENVIADA para corregirlo. Estado actual: ${request.status}`,
+      );
+    }
+
+    if (isCorrection) {
+      this.assertCorrectionAllowed(
+        request.agreements?.process_status ?? '',
+        'corregir el oficio',
       );
     }
 
@@ -1465,9 +1593,27 @@ export class ProcessService {
       ? parseLocalCalendarDate(dto.sent_at)
       : new Date();
 
+    // En una corrección se retira el oficio previo de esta solicitud y, tras el
+    // commit, su objeto en OBS. Nunca se borra antes de crear el nuevo.
+    const previousDocs = isCorrection
+      ? await this.prisma.documents.findMany({
+          where: {
+            opinion_request_id: BigInt(opinionRequestId),
+            document_types: { code: 'OFICIO_SOLICITUD_OPINION' },
+          },
+          select: { id: true, file_path: true },
+        })
+      : [];
+
     try {
       const result = await this.prisma.$transaction(
         async (tx) => {
+          if (previousDocs.length > 0) {
+            await tx.documents.deleteMany({
+              where: { id: { in: previousDocs.map((d) => d.id) } },
+            });
+          }
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(request.agreement_id) } },
@@ -1493,21 +1639,26 @@ export class ProcessService {
           // Update condicional por estado: evita que dos cargas concurrentes
           // sobre la misma solicitud avancen ambas (guard de integridad).
           const updated = await tx.opinion_requests.updateMany({
-            where: { id: BigInt(opinionRequestId), status: 'GENERADA' },
+            where: {
+              id: BigInt(opinionRequestId),
+              status: isCorrection ? 'ENVIADA' : 'GENERADA',
+            },
             data: {
-              status: 'ENVIADA',
+              ...(isCorrection ? {} : { status: 'ENVIADA' }),
               oficio_number: dto.oficio_number ?? request.oficio_number,
               adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
               sent_via: dto.sent_via ?? request.sent_via,
               directed_to: dto.directed_to ?? request.directed_to,
-              sent_at: sentAt,
+              sent_at: isCorrection ? (request.sent_at ?? sentAt) : sentAt,
               updated_at: new Date(),
             },
           });
 
           if (updated.count === 0) {
             throw new ConflictException(
-              'La solicitud ya no está en estado GENERADA y no puede cargarse su oficio.',
+              isCorrection
+                ? 'La solicitud ya no está en estado ENVIADA y no puede corregirse su oficio.'
+                : 'La solicitud ya no está en estado GENERADA y no puede cargarse su oficio.',
             );
           }
 
@@ -1517,17 +1668,20 @@ export class ProcessService {
 
           await this.logEvent(
             request.agreement_id,
-            'SOLICITUD_ENVIADA',
-            'Oficio de solicitud de opinión cargado manualmente y adjuntado al expediente.',
+            isCorrection ? 'OFICIO_SOLICITUD_CORREGIDO' : 'SOLICITUD_ENVIADA',
+            isCorrection
+              ? 'Oficio de solicitud de opinión reemplazado (corrección).'
+              : 'Oficio de solicitud de opinión cargado manualmente y adjuntado al expediente.',
             {
               actorUserId: userId,
-              fromValue: 'GENERADA',
+              fromValue: request.status,
               toValue: 'ENVIADA',
               opinionRequestId: BigInt(opinionRequestId),
               metadata: JSON.parse(
                 JSON.stringify({
                   sent_via: dto.sent_via ?? null,
-                  source: 'carga_manual',
+                  reason: dto.reason?.trim() || null,
+                  source: isCorrection ? 'correccion' : 'carga_manual',
                   original_name: originalName,
                 }),
               ) as Record<string, unknown>,
@@ -1536,7 +1690,7 @@ export class ProcessService {
             tx,
           );
 
-          if (agreement.process_status === 'RECEPCIONADA') {
+          if (!isCorrection && agreement.process_status === 'RECEPCIONADA') {
             await this.applyTransition(
               tx,
               request.agreement_id,
@@ -1551,6 +1705,21 @@ export class ProcessService {
         },
         { maxWait: 10000, timeout: 30000 },
       );
+
+      // Purga los oficios reemplazados en OBS, después del commit.
+      for (const doc of previousDocs) {
+        if (doc.file_path && doc.file_path !== relPath) {
+          try {
+            await this.storage.removeRel(doc.file_path);
+          } catch (e) {
+            if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+              this.logger?.warn?.(
+                `No se pudo eliminar el oficio anterior: ${doc.file_path}`,
+              );
+            }
+          }
+        }
+      }
 
       return serializeBigInt(result);
     } catch (err) {
@@ -1573,7 +1742,7 @@ export class ProcessService {
    */
   async generateOficioRectorado(
     agreementId: number,
-    dto: { bodyHtml: string; oficio_number?: string },
+    dto: { bodyHtml: string; oficio_number?: string; reason?: string },
     userId?: number,
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
@@ -1606,14 +1775,41 @@ export class ProcessService {
       where: { code: 'OFICIO_RESPUESTA_RECTORADO' },
     });
 
+    // Idempotencia por tipo: si el oficio ya fue generado, esto es una
+    // regeneración (corrección) y solo aplica dentro de la ventana E1.
+    const previousDocs = await this.prisma.documents.findMany({
+      where: {
+        agreement_id: BigInt(agreementId),
+        document_types: { code: 'OFICIO_RESPUESTA_RECTORADO' },
+      },
+      select: { id: true, file_path: true },
+    });
+
+    const isCorrection = previousDocs.length > 0;
+
+    if (isCorrection) {
+      this.assertCorrectionAllowed(
+        agreement.process_status,
+        'regenerar el oficio a Rectorado',
+      );
+    }
+
+    const newPath = storePath(filename);
+
     try {
       await this.prisma.$transaction(
         async (tx) => {
+          if (previousDocs.length > 0) {
+            await tx.documents.deleteMany({
+              where: { id: { in: previousDocs.map((d) => d.id) } },
+            });
+          }
+
           await tx.documents.create({
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               name: 'Oficio de Respuesta a Rectorado',
-              file_path: storePath(filename),
+              file_path: newPath,
               original_name: basename(filename),
               extension: 'pdf',
               document_types: docType
@@ -1632,11 +1828,18 @@ export class ProcessService {
 
           await this.logEvent(
             BigInt(agreementId),
-            'OFICIO_ENVIADO_RECTORADO',
-            'Oficio de envío del expediente técnico a Rectorado generado y adjuntado automáticamente.',
+            isCorrection
+              ? 'OFICIO_RECTORADO_REEMPLAZADO'
+              : 'OFICIO_ENVIADO_RECTORADO',
+            isCorrection
+              ? 'Oficio de envío del expediente técnico a Rectorado regenerado (corrección).'
+              : 'Oficio de envío del expediente técnico a Rectorado generado y adjuntado automáticamente.',
             {
               actorUserId: userId,
-              metadata: { oficio_number: dto.oficio_number ?? null },
+              metadata: {
+                oficio_number: dto.oficio_number ?? null,
+                reason: dto.reason?.trim() || null,
+              },
             },
             'ETAPA_1_PROPUESTA',
             tx,
@@ -1644,6 +1847,21 @@ export class ProcessService {
         },
         { maxWait: 10000, timeout: 30000 },
       );
+
+      // Purga los oficios reemplazados en OBS, después del commit.
+      for (const doc of previousDocs) {
+        if (doc.file_path && doc.file_path !== newPath) {
+          try {
+            await this.storage.removeRel(doc.file_path);
+          } catch (e) {
+            if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+              this.logger?.warn?.(
+                `No se pudo eliminar el oficio a Rectorado anterior: ${doc.file_path}`,
+              );
+            }
+          }
+        }
+      }
 
       return serializeBigInt({ id: BigInt(agreementId), ok: true });
     } catch (err) {
@@ -1676,6 +1894,23 @@ export class ProcessService {
     if (!docType) {
       throw new BadRequestException(
         `Tipo de documento "${dto.document_type_code}" no registrado en el catálogo.`,
+      );
+    }
+
+    // Idempotencia por tipo: en la propuesta cada tipo de documento es único.
+    // Si ya existe uno, la corrección se hace con "Reemplazar" (con motivo y
+    // trazabilidad) en lugar de acumular duplicados.
+    const alreadyExists = await this.prisma.documents.findFirst({
+      where: {
+        agreement_id: BigInt(agreementId),
+        document_types: { code: dto.document_type_code },
+      },
+      select: { id: true },
+    });
+
+    if (alreadyExists) {
+      throw new ConflictException(
+        `Ya existe un documento de tipo "${docType.name}" en este trámite. Use "Reemplazar" para corregirlo.`,
       );
     }
 
@@ -1729,6 +1964,182 @@ export class ProcessService {
     );
 
     return serializeBigInt(stripDocumentFilePath(document));
+  }
+
+  /**
+   * Reemplaza el archivo de un documento ya incorporado al expediente,
+   * conservando su `id` (y por tanto sus vínculos y su lugar en el proceso).
+   *
+   * Pensado para corregir un documento cargado por error. Solo aplica dentro de
+   * la ventana de corrección (Etapa 1), exige un motivo y deja traza en
+   * `process_events`. Además colapsa los duplicados del mismo tipo para que el
+   * expediente quede con una sola copia por tipo.
+   *
+   * Los documentos generados por el sistema (expediente, oficios) y los
+   * oficios de opinión quedan fuera: se corrigen regenerándolos o desde la
+   * solicitud, respectivamente.
+   */
+  async replaceProcessDocument(
+    agreementId: number,
+    docId: number,
+    file: UploadFile,
+    dto: { direction?: string; reason?: string },
+    userId?: number,
+  ) {
+    const agreement = await this.getAgreementOrThrow(agreementId);
+    this.assertCorrectionAllowed(
+      agreement.process_status,
+      'reemplazar documentos',
+    );
+
+    if (!file) {
+      throw new BadRequestException('Debe adjuntar el archivo de reemplazo.');
+    }
+
+    const doc = await this.prisma.documents.findFirst({
+      where: { id: BigInt(docId), agreement_id: BigInt(agreementId) },
+      include: { document_types: { select: { code: true, name: true } } },
+    });
+
+    if (!doc) {
+      throw new NotFoundException(
+        `Documento #${docId} no encontrado en el trámite #${agreementId}.`,
+      );
+    }
+
+    if (doc.opinion_request_id) {
+      throw new BadRequestException(
+        'El oficio de opinión se corrige desde su solicitud ("Cambiar Oficio"), no reemplazando el archivo.',
+      );
+    }
+
+    const code = doc.document_types?.code ?? null;
+    if (this.isGeneratedDocument(code)) {
+      throw new BadRequestException(
+        'Este documento lo genera el sistema automáticamente: use "Regenerar" para rehacerlo con los datos actuales.',
+      );
+    }
+
+    const reason = dto.reason?.trim();
+    if (!reason) {
+      throw new BadRequestException(
+        'Indique el motivo de la corrección (motivo es requerido).',
+      );
+    }
+
+    const originalName = normalizeUploadName(file.originalname);
+    const ext = '.' + (originalName.split('.').pop()?.toLowerCase() ?? '');
+    const requiredExts = code ? DOC_TYPE_EXTENSIONS[code] : undefined;
+    if (requiredExts && !requiredExts.has(ext)) {
+      throw new BadRequestException(
+        `El documento "${doc.document_types?.name ?? code}" solo acepta archivos ${[...requiredExts].join(', ')}. Archivo recibido: ${ext || '(sin extensión)'}`,
+      );
+    }
+
+    const relPath = await storeUploadedDocument(
+      this.storage,
+      file,
+      agreement.tramite_code,
+      agreement.created_at,
+    );
+
+    // Duplicados históricos del mismo tipo (p. ej. de cargas repetidas antes de
+    // esta corrección): se colapsan para dejar una sola copia por tipo.
+    const duplicates = await this.prisma.documents.findMany({
+      where: {
+        agreement_id: BigInt(agreementId),
+        id: { not: doc.id },
+        ...(code ? { document_types: { code } } : {}),
+      },
+      select: { id: true, file_path: true },
+    });
+
+    const now = new Date();
+    const dupNote =
+      duplicates.length > 0
+        ? ` Se descartaron ${duplicates.length} copia(s) duplicada(s).`
+        : '';
+
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          await tx.documents.update({
+            where: { id: doc.id },
+            data: {
+              file_path: relPath,
+              original_name: originalName,
+              extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+              ...(dto.direction ? { direction: dto.direction as never } : {}),
+              uploaded_by:
+                userId != null
+                  ? { connect: { id: BigInt(userId) } }
+                  : undefined,
+              updated_at: now,
+            },
+          });
+
+          if (duplicates.length > 0) {
+            await tx.documents.deleteMany({
+              where: { id: { in: duplicates.map((d) => d.id) } },
+            });
+          }
+
+          await this.logEvent(
+            BigInt(agreementId),
+            'DOCUMENTO_REEMPLAZADO',
+            `Se reemplazó el documento "${doc.name}".${dupNote}`,
+            {
+              actorUserId: userId,
+              metadata: {
+                document_id: Number(doc.id),
+                document_type: code,
+                previous_name: doc.original_name ?? doc.name,
+                new_name: originalName,
+                duplicates_removed: duplicates.length,
+                reason,
+              },
+            },
+            'ETAPA_1_PROPUESTA',
+            tx,
+          );
+        },
+        { maxWait: 10000, timeout: 30000 },
+      );
+    } catch (err) {
+      // Si falla la transacción, el archivo nuevo queda huérfano: se purga.
+      try {
+        await this.storage.removeRel(relPath);
+      } catch {
+        // best-effort
+      }
+      throw err as Error;
+    }
+
+    // Purga en OBS de los archivos sustituidos, SIEMPRE después del commit: si
+    // el borrado falla solo queda un PDF huérfano, nunca un documento perdido.
+    const stale: string[] = [];
+    if (doc.file_path && doc.file_path !== relPath) stale.push(doc.file_path);
+    for (const dup of duplicates) {
+      if (dup.file_path && dup.file_path !== relPath) stale.push(dup.file_path);
+    }
+    for (const path of stale) {
+      try {
+        await this.storage.removeRel(path);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+          this.logger?.warn?.(
+            `No se pudo eliminar el archivo anterior: ${path}`,
+          );
+        }
+      }
+    }
+
+    const updated = await this.prisma.documents.findUniqueOrThrow({
+      where: { id: doc.id },
+      include: { document_types: { select: { code: true, name: true } } },
+    });
+
+    return serializeBigInt(stripDocumentFilePath(updated));
   }
 
   // ─── E1 · Generar expediente técnico (merge automático de opiniones) ───────

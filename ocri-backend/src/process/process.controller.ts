@@ -27,6 +27,7 @@ import { GenerateOficioOpinionDto } from './dto/generate-oficio-opinion.dto';
 import { UploadOficioOpinionDto } from './dto/upload-oficio-opinion.dto';
 import { GenerateOficioRectoradoDto } from './dto/generate-oficio-rectorado.dto';
 import { UploadProcessDocumentDto } from './dto/upload-process-document.dto';
+import { ReplaceProcessDocumentDto } from './dto/replace-process-document.dto';
 import { RectorateDecisionDto } from './dto/rectorate-decision.dto';
 import { RegisterAgreementDto } from './dto/register-agreement.dto';
 import { SetValidityDto } from './dto/set-validity.dto';
@@ -172,6 +173,7 @@ export class ProcessController {
         adesa_number: body.adesa_number,
         oficio_number: body.oficio_number,
         directed_to: body.directed_to,
+        reason: body.reason,
       },
       req.user?.id,
     );
@@ -201,6 +203,7 @@ export class ProcessController {
         sent_at: body.sent_at,
         sent_via: body.sent_via,
         directed_to: body.directed_to,
+        reason: body.reason,
       },
       req.user?.id,
     );
@@ -229,6 +232,7 @@ export class ProcessController {
       {
         bodyHtml: body.bodyHtml,
         oficio_number: body.oficio_number,
+        reason: body.reason,
       },
       req.user?.id,
     );
@@ -260,6 +264,32 @@ export class ProcessController {
       agreementId,
       file,
       body,
+      req.user?.id,
+    );
+  }
+
+  /**
+   * Reemplaza el archivo de un documento ya cargado en el trámite (corrección
+   * con motivo obligatorio y traza en la bitácora). No aplica a documentos
+   * generados por el sistema ni a oficios de opinión, que tienen su propio flujo
+   * de corrección.
+   */
+  @Roles(...FLOW_ROLES)
+  @Post(':agreementId/documents/:docId/replace')
+  @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
+  replaceProcessDocument(
+    @Param('agreementId', ParseIntPipe) agreementId: number,
+    @Param('docId', ParseIntPipe) docId: number,
+    @UploadedFile() file: UploadFile,
+    @Body()
+    body: ReplaceProcessDocumentDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.replaceProcessDocument(
+      agreementId,
+      docId,
+      file,
+      { direction: body.direction, reason: body.reason },
       req.user?.id,
     );
   }

@@ -8,4 +8,9 @@ export class RespondOpinionRequestDto {
   @IsOptional()
   @IsString()
   observations?: string;
+
+  /** Motivo de la corrección (uso interno, opcional). */
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }

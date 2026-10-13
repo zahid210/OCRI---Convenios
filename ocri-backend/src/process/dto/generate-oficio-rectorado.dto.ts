@@ -12,4 +12,9 @@ export class GenerateOficioRectoradoDto {
   @IsOptional()
   @IsString()
   oficio_number?: string;
+
+  /** Motivo de la corrección (uso interno, opcional en regeneraciones). */
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }
