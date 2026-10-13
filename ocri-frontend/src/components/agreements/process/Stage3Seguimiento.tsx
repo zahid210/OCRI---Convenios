@@ -379,14 +379,10 @@ export default function Stage3Seguimiento({
     title: string;
     decision: "APPROVED" | "OBSERVED";
   } | null>(null);
-  const [docEditor, setDocEditor] = useState<{
-    id: number;
-    title: string;
-  } | null>(null);
-  const [cargarSolicitudModal, setCargarSolicitudModal] = useState<{
-    id: number;
-    title: string;
-  } | null>(null);
+  const [docEditor, setDocEditor] = useState<number | null>(null);
+  const [cargarSolicitudModal, setCargarSolicitudModal] = useState<number | null>(
+    null,
+  );
   const [isCompletingMonitoring, setIsCompletingMonitoring] = useState(false);
 
   const workPlans = deliverables.filter((d) => d.type === "PLAN_DE_TRABAJO");
@@ -424,9 +420,9 @@ export default function Stage3Seguimiento({
     bodyHtml: string,
     oficioNumber: string,
   ) => {
-    if (!docEditor) return;
+    if (docEditor == null) return;
     try {
-      await regenerateRequestDocument(docEditor.id, bodyHtml, oficioNumber);
+      await regenerateRequestDocument(docEditor, bodyHtml, oficioNumber);
       toast.success("Documento de solicitud generado y adjuntado.");
       setDocEditor(null);
       await onRefresh();
@@ -441,7 +437,7 @@ export default function Stage3Seguimiento({
   };
 
   const handleCargarSolicitud = async (deliverableId: number, file: File) => {
-    if (!cargarSolicitudModal) return;
+    if (cargarSolicitudModal == null) return;
     try {
       await cargarSolicitud(deliverableId, file);
       toast.success("Oficio de solicitud cargado y adjuntado.");
@@ -552,12 +548,8 @@ export default function Stage3Seguimiento({
                     deliverable={d}
                     canManage={canManage}
                     onAccept={handleAcceptRequest}
-                    onOpenDocEditor={(dl) =>
-                      setDocEditor({ id: dl.id, title: dl.title })
-                    }
-                    onCargarSolicitud={(dl) =>
-                      setCargarSolicitudModal({ id: dl.id, title: dl.title })
-                    }
+                    onOpenDocEditor={(dl) => setDocEditor(dl.id)}
+                    onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -579,12 +571,8 @@ export default function Stage3Seguimiento({
                     deliverable={d}
                     canManage={canManage}
                     onAccept={handleAcceptRequest}
-                    onOpenDocEditor={(dl) =>
-                      setDocEditor({ id: dl.id, title: dl.title })
-                    }
-                    onCargarSolicitud={(dl) =>
-                      setCargarSolicitudModal({ id: dl.id, title: dl.title })
-                    }
+                    onOpenDocEditor={(dl) => setDocEditor(dl.id)}
+                    onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -683,19 +671,17 @@ export default function Stage3Seguimiento({
         />
       )}
 
-      {docEditor && (
+      {docEditor !== null && (
         <GenerarSolicitudModal
-          deliverableId={docEditor.id}
-          deliverableTitle={docEditor.title}
+          deliverableId={docEditor}
           onGenerate={handleGenerateDocument}
           onCancel={() => setDocEditor(null)}
         />
       )}
 
-      {cargarSolicitudModal && (
+      {cargarSolicitudModal !== null && (
         <CargarSolicitudModal
-          deliverableId={cargarSolicitudModal.id}
-          deliverableTitle={cargarSolicitudModal.title}
+          deliverableId={cargarSolicitudModal}
           onUpload={handleCargarSolicitud}
           onCancel={() => setCargarSolicitudModal(null)}
         />

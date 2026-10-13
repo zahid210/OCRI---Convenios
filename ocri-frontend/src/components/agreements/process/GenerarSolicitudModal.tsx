@@ -10,14 +10,12 @@ import { applyOficioNumberToBody } from "./oficio-number";
 
 interface GenerarSolicitudModalProps {
   deliverableId: number;
-  deliverableTitle?: string;
   onGenerate: (bodyHtml: string, oficioNumber: string) => Promise<void>;
   onCancel: () => void;
 }
 
 export default function GenerarSolicitudModal({
   deliverableId,
-  deliverableTitle,
   onGenerate,
   onCancel,
 }: GenerarSolicitudModalProps) {
@@ -110,11 +108,6 @@ export default function GenerarSolicitudModal({
         }
       >
         <div className="p-6 space-y-4">
-          <p className="text-sm text-gray-600">
-            Se generará el oficio de solicitud
-            {deliverableTitle ? ` de ${deliverableTitle}` : ""} con el membrete
-            institucional y el contenido precargado.
-          </p>
           <div>
             <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
               Documento a generar

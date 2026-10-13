@@ -7,7 +7,6 @@ import { FilePicker, ModalShell } from "./shared";
 
 interface CargarSolicitudModalProps {
   deliverableId: number;
-  deliverableTitle: string;
   onUpload: (deliverableId: number, file: File) => Promise<void>;
   onCancel: () => void;
 }
@@ -20,7 +19,6 @@ interface CargarSolicitudModalProps {
  */
 export default function CargarSolicitudModal({
   deliverableId,
-  deliverableTitle,
   onUpload,
   onCancel,
 }: CargarSolicitudModalProps) {
@@ -69,10 +67,6 @@ export default function CargarSolicitudModal({
       }
     >
       <div className="p-6 space-y-4">
-        <p className="text-sm text-gray-600">
-          Seleccione el oficio de solicitud de {deliverableTitle} ya elaborado
-          para adjuntarlo como documento del entregable.
-        </p>
         <div>
           <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
             Documento a cargar <span className="text-red-500">*</span>
