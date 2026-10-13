@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   acceptDeliverableRequest,
+  cargarSolicitud,
   completeMonitoring,
   downloadFile,
   evaluateDeliverable,
@@ -29,6 +30,7 @@ import {
   Info,
   Loader2,
   Plus,
+  Upload,
 } from "lucide-react";
 import {
   DELIVERABLE_TYPE_LABELS,
@@ -38,6 +40,7 @@ import {
 } from "./shared";
 import EvaluarEntregableModal from "./EvaluarEntregableModal";
 import GenerarSolicitudModal from "./GenerarSolicitudModal";
+import CargarSolicitudModal from "./CargarSolicitudModal";
 
 function DeliverableCard({
   deliverable,
@@ -45,6 +48,7 @@ function DeliverableCard({
   onEvaluate,
   onAccept,
   onOpenDocEditor,
+  onCargarSolicitud,
 }: {
   deliverable: Deliverable;
   canManage: boolean;
@@ -55,6 +59,7 @@ function DeliverableCard({
   ) => void;
   onAccept: (deliverable: Deliverable) => Promise<void>;
   onOpenDocEditor: (deliverable: Deliverable) => void;
+  onCargarSolicitud: (deliverable: Deliverable) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [busyAction, setBusyAction] = useState<null | "accept">(null);
@@ -272,14 +277,25 @@ function DeliverableCard({
           {canManage && (
             <div className="flex flex-wrap gap-2 pt-2">
               {deliverable.status === "SOLICITADO" && !hasSolicitudDoc && (
-                <button
-                  type="button"
-                  onClick={() => onOpenDocEditor(deliverable)}
-                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  Generar Documento de Solicitud
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onCargarSolicitud(deliverable)}
+                    title="Cargar un oficio de solicitud ya elaborado"
+                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Cargar solicitud
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onOpenDocEditor(deliverable)}
+                    className="inline-flex items-center gap-1.5 border border-gold text-gold hover:bg-gold/10 px-3 py-1.5 text-sm transition-colors"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Generar Documento de Solicitud
+                  </button>
+                </>
               )}
               {canAcceptRequest && (
                 <button
@@ -367,6 +383,10 @@ export default function Stage3Seguimiento({
     id: number;
     title: string;
   } | null>(null);
+  const [cargarSolicitudModal, setCargarSolicitudModal] = useState<{
+    id: number;
+    title: string;
+  } | null>(null);
   const [isCompletingMonitoring, setIsCompletingMonitoring] = useState(false);
 
   const workPlans = deliverables.filter((d) => d.type === "PLAN_DE_TRABAJO");
@@ -415,6 +435,23 @@ export default function Stage3Seguimiento({
         err instanceof Error
           ? err.message
           : "Error al generar el documento de solicitud";
+      toast.error(message);
+      throw err;
+    }
+  };
+
+  const handleCargarSolicitud = async (deliverableId: number, file: File) => {
+    if (!cargarSolicitudModal) return;
+    try {
+      await cargarSolicitud(deliverableId, file);
+      toast.success("Oficio de solicitud cargado y adjuntado.");
+      setCargarSolicitudModal(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Error al cargar el oficio de solicitud";
       toast.error(message);
       throw err;
     }
@@ -518,6 +555,9 @@ export default function Stage3Seguimiento({
                     onOpenDocEditor={(dl) =>
                       setDocEditor({ id: dl.id, title: dl.title })
                     }
+                    onCargarSolicitud={(dl) =>
+                      setCargarSolicitudModal({ id: dl.id, title: dl.title })
+                    }
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -541,6 +581,9 @@ export default function Stage3Seguimiento({
                     onAccept={handleAcceptRequest}
                     onOpenDocEditor={(dl) =>
                       setDocEditor({ id: dl.id, title: dl.title })
+                    }
+                    onCargarSolicitud={(dl) =>
+                      setCargarSolicitudModal({ id: dl.id, title: dl.title })
                     }
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
@@ -646,6 +689,15 @@ export default function Stage3Seguimiento({
           deliverableTitle={docEditor.title}
           onGenerate={handleGenerateDocument}
           onCancel={() => setDocEditor(null)}
+        />
+      )}
+
+      {cargarSolicitudModal && (
+        <CargarSolicitudModal
+          deliverableId={cargarSolicitudModal.id}
+          deliverableTitle={cargarSolicitudModal.title}
+          onUpload={handleCargarSolicitud}
+          onCancel={() => setCargarSolicitudModal(null)}
         />
       )}
     </SectionCard>

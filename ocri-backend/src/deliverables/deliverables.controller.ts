@@ -141,6 +141,19 @@ export class DeliverablesController {
     });
   }
 
+  // ─── E3 · Carga el oficio de solicitud ya elaborado (sin editor) ──────────
+
+  @Roles(...FLOW_ROLES)
+  @Post('deliverables/:id/cargar-solicitud')
+  @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
+  cargarSolicitud(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file?: UploadFile,
+    @Req() req?: AuthenticatedRequest,
+  ) {
+    return this.deliverablesService.cargarSolicitud(id, file!, req?.user?.id);
+  }
+
   // ─── E3 · OCRI evalúa (adjuntando el doc recibido): registra u observa ─────
 
   @Roles(...FLOW_ROLES)

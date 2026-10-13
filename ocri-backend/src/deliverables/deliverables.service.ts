@@ -381,6 +381,106 @@ export class DeliverablesService {
     return serializeBigInt(stripDocumentFilePath(doc));
   }
 
+  // ─── E3 · Cargar oficio de solicitud ya elaborado (sin editor) ──────────────
+
+  /**
+   * Adjunta el oficio de solicitud de un entregable cuando el usuario ya lo
+   * tiene elaborado (redactado y firmado fuera del sistema), en lugar de
+   * generarlo con el editor. Solo se permite mientras el entregable está
+   * `SOLICITADO` y aún no existe ningún documento de solicitud: el reemplazo
+   * de un oficio ya adjuntado sigue pasando por `generateRequestDocument`.
+   */
+  async cargarSolicitud(
+    deliverableId: number,
+    file: UploadFile,
+    userId?: number,
+  ) {
+    const deliverable = await this.prisma.deliverables.findUnique({
+      where: { id: BigInt(deliverableId) },
+      include: {
+        agreements: {
+          select: { tramite_code: true, created_at: true },
+        },
+      },
+    });
+
+    if (!deliverable) {
+      throw new NotFoundException(`Entregable #${deliverableId} no encontrado`);
+    }
+
+    await this.assertInMonitoringByDeliverable(deliverable.agreement_id);
+
+    if (deliverable.status !== 'SOLICITADO') {
+      throw new BadRequestException(
+        `El oficio de solicitud solo puede cargarse mientras el entregable está en SOLICITADO. Estado actual: ${deliverable.status}`,
+      );
+    }
+
+    const existing = await this.prisma.documents.findFirst({
+      where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        'Este entregable ya tiene un oficio de solicitud. Use la edición del documento para reemplazarlo.',
+      );
+    }
+
+    if (!file) {
+      throw new BadRequestException(
+        'Debe adjuntar el archivo del oficio de solicitud.',
+      );
+    }
+
+    const originalName = normalizeUploadName(file.originalname);
+    const type = deliverable.type;
+
+    const relPath = await storeUploadedDocument(
+      this.storage,
+      file,
+      deliverable.agreements?.tramite_code ?? '',
+      deliverable.agreements?.created_at ?? null,
+    );
+
+    const docType = await this.prisma.document_types.findUnique({
+      where: { code: SOLICITUD_DOC_TYPE_BY_DELIVERABLE[type] },
+    });
+
+    const doc = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.documents.create({
+        data: {
+          agreements: { connect: { id: deliverable.agreement_id } },
+          deliverables: { connect: { id: deliverable.id } },
+          name: `Oficio de Solicitud de ${
+            SOLICITUD_NAME_BY_DELIVERABLE[type]
+          }${deliverable.period ? ` (${deliverable.period})` : ''}`,
+          file_path: relPath,
+          original_name: originalName,
+          extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+          document_types: docType ? { connect: { id: docType.id } } : undefined,
+          direction: 'SALIDA',
+          stage: 'ETAPA_3_SEGUIMIENTO',
+          uploaded_by:
+            userId != null ? { connect: { id: BigInt(userId) } } : undefined,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+
+      await this.logEvent(
+        tx,
+        deliverable.agreement_id,
+        'DOCUMENTO_SOLICITUD_CARGADO',
+        `${created.name} cargado por OCRI (sin editar).`,
+        userId,
+        { deliverable_type: type, original_name: originalName },
+      );
+
+      return created;
+    });
+
+    return serializeBigInt(stripDocumentFilePath(doc));
+  }
+
   // ─── E3 · Solicitar Plan de Trabajo ────────────────────────────────────────
 
   async requestWorkPlan(agreementId: number, userId?: number) {

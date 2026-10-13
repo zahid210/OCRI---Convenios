@@ -611,6 +611,19 @@ export async function regenerateRequestDocument(
   );
 }
 
+/** Carga el oficio de solicitud de un entregable ya elaborado (sin editor) */
+export async function cargarSolicitud(deliverableId: number, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetchApi(
+    `/agreements/deliverables/${deliverableId}/cargar-solicitud`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+}
+
 /** OCRI evalúa un entregable: APRUEBA (adjunta el doc recibido y registra) u OBSERVA (comentario) */
 export async function evaluateDeliverable(
   deliverableId: number,
