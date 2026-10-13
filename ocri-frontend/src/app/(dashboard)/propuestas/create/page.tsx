@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/components/user-provider";
 import { useToast } from "@/components/ui/toast";
 import { ModalShell } from "@/components/agreements/process/shared";
+import AdjuntarDictamenModal from "@/components/agreements/process/AdjuntarDictamenModal";
 
 const MAX_ORIGEN_FILES = 20;
 const ACCEPTED_EXTENSIONS = /\.(pdf|doc|docx)$/i;
@@ -36,7 +37,6 @@ export default function CreatePropuestaPage() {
   const router = useRouter();
   const toast = useToast();
   const user = useUser();
-  const dictamenInputRef = useRef<HTMLInputElement>(null);
   const origenInputRef = useRef<HTMLInputElement>(null);
 
   const [types, setTypes] = useState<AgreementType[]>([]);
@@ -70,6 +70,7 @@ export default function CreatePropuestaPage() {
   const [origenFiles, setOrigenFiles] = useState<File[]>([]);
   const [isDraggingOrigen, setIsDraggingOrigen] = useState(false);
   const [isDictamenPreviewOpen, setIsDictamenPreviewOpen] = useState(false);
+  const [isDictamenModalOpen, setIsDictamenModalOpen] = useState(false);
 
   const origenDragDepth = useRef(0);
 
@@ -199,22 +200,20 @@ export default function CreatePropuestaPage() {
     };
   }, [dictamenPreviewUrl]);
 
-  const handleDictamenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const handleConfirmDictamen = (file: File, number: string) => {
     if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
     setDictamenFile(file);
-    if (file && file.type === "application/pdf") {
-      setDictamenPreviewUrl(URL.createObjectURL(file));
-    } else {
-      setDictamenPreviewUrl(null);
-    }
+    setRectorateOficioNumber(number);
+    setDictamenPreviewUrl(
+      file.type === "application/pdf" ? URL.createObjectURL(file) : null,
+    );
+    setIsDictamenModalOpen(false);
   };
 
   const handleClearDictamen = () => {
     if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
     setDictamenPreviewUrl(null);
     setDictamenFile(null);
-    if (dictamenInputRef.current) dictamenInputRef.current.value = "";
   };
 
   const addOrigenFiles = (fileList: FileList | File[]) => {
@@ -274,7 +273,6 @@ export default function CreatePropuestaPage() {
     if (dictamenPreviewUrl) URL.revokeObjectURL(dictamenPreviewUrl);
     setDictamenPreviewUrl(null);
     setDictamenFile(null);
-    if (dictamenInputRef.current) dictamenInputRef.current.value = "";
     setOrigenFiles([]);
     if (origenInputRef.current) origenInputRef.current.value = "";
   };
@@ -506,44 +504,23 @@ export default function CreatePropuestaPage() {
           <div className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label
-                  htmlFor="rectorateOficioNumber"
-                  className="block text-xs font-semibold uppercase text-gray-600"
-                >
-                  N° Dictamen <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold uppercase text-gray-600">
+                  Dictamen <span className="text-red-500">*</span>
                 </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="rectorateOficioNumber"
-                    type="text"
-                    required
-                    value={rectorateOficioNumber}
-                    onChange={(e) => setRectorateOficioNumber(e.target.value)}
-                    placeholder="EJ: DICTAMEN N° 02236-2024-R-UNCP"
-                    className="flex-1 px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
-                  />
-                  <input
-                    ref={dictamenInputRef}
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    className="hidden"
-                    onChange={handleDictamenChange}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => dictamenInputRef.current?.click()}
-                    title="Adjuntar dictamen (obligatorio)"
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-2 text-sm border transition-colors shrink-0 cursor-pointer",
-                      dictamenFile
-                        ? "border-primary text-primary bg-primary/5 hover:bg-primary/10"
-                        : "border-primary text-white bg-primary hover:bg-primary-dark",
-                    )}
-                  >
-                    <Gavel className="h-4 w-4" />
-                    {dictamenFile ? "Dictamen adjunto ✓" : "Adjuntar dictamen"}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDictamenModalOpen(true)}
+                  title="Adjuntar dictamen (obligatorio)"
+                  className={cn(
+                    "h-10 w-full inline-flex items-center justify-center gap-2 text-sm border transition-colors cursor-pointer",
+                    dictamenFile
+                      ? "border-primary text-primary bg-primary/5 hover:bg-primary/10"
+                      : "border-gold bg-gold hover:bg-gold-dark text-white",
+                  )}
+                >
+                  <Gavel className="h-4 w-4" />
+                  {dictamenFile ? "Dictamen adjunto ✓" : "Adjuntar Dictamen"}
+                </button>
               </div>
 
               <div className="space-y-1.5">
@@ -600,6 +577,11 @@ export default function CreatePropuestaPage() {
                 <span className="text-primary font-medium truncate max-w-[220px]">
                   {dictamenFile.name}
                 </span>
+                {rectorateOficioNumber && (
+                  <span className="text-gray-500 truncate max-w-[240px]">
+                    · {rectorateOficioNumber}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={handleClearDictamen}
@@ -1088,6 +1070,15 @@ export default function CreatePropuestaPage() {
             )}
           </form>
         </ModalShell>
+      )}
+
+      {isDictamenModalOpen && (
+        <AdjuntarDictamenModal
+          initialNumber={rectorateOficioNumber}
+          initialFile={dictamenFile}
+          onConfirm={handleConfirmDictamen}
+          onCancel={() => setIsDictamenModalOpen(false)}
+        />
       )}
 
       {isDictamenPreviewOpen && dictamenFile && (
