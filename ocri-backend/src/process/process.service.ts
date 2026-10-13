@@ -11,7 +11,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../app-config/app-config.service';
 import {
   MAX_OPINION_OBSERVATIONS,
-  PROPOSAL_STATUSES,
   REQUIRED_DOCS_TO_SEND_TO_RECTORADO,
   serializeBigInt,
   STATUS_STAGE,
@@ -267,20 +266,6 @@ export class ProcessService {
     const missing = required.filter((code) => !uploadedCodes.has(code));
     if (missing.length > 0) {
       throw new BadRequestException(`${message}: ${missing.join(', ')}`);
-    }
-  }
-
-  /**
-   * Ventana de corrección: mientras el trámite sigue en Etapa 1 (propuesta) se
-   * pueden rehacer documentos, oficios y datos. Al remitirse a Rectorado
-   * (ENVIADO_A_RECTORADO) la propuesta queda congelada para conservar la
-   * correspondencia con lo efectivamente remitido.
-   */
-  private assertCorrectionAllowed(status: string, action: string) {
-    if (!(PROPOSAL_STATUSES as readonly string[]).includes(status)) {
-      throw new BadRequestException(
-        `Solo se pueden ${action} mientras el trámite está en Etapa 1 y aún no se remitió a Rectorado. Estado actual: ${status}`,
-      );
     }
   }
 
@@ -721,28 +706,11 @@ export class ProcessService {
       );
     }
 
-    // Corrección: una OBSERVADA recibe la enmienda de la dependencia, o una
-    // RESPONDIDA es reemplazada para rectificar la respuesta ya cargada.
+    // Corrección: la primera respuesta llega con la solicitud ENVIADA; cualquier
+    // estado posterior (OBSERVADA, RESPONDIDA, VALIDADA…) es una rectificación de
+    // la respuesta ya cargada. La edición está disponible en todo momento.
     const isObservationCorrection = request.status === 'OBSERVADA';
-    const isCorrection =
-      isObservationCorrection || request.status === 'RESPONDIDA';
-
-    if (
-      request.status !== 'ENVIADA' &&
-      request.status !== 'OBSERVADA' &&
-      request.status !== 'RESPONDIDA'
-    ) {
-      throw new BadRequestException(
-        `La solicitud debe estar ENVIADA para registrar respuesta (o OBSERVADA/RESPONDIDA para corregirla). Estado actual: ${request.status}`,
-      );
-    }
-
-    if (isCorrection) {
-      this.assertCorrectionAllowed(
-        request.agreements?.process_status ?? '',
-        'corregir la respuesta',
-      );
-    }
+    const isCorrection = request.status !== 'ENVIADA';
 
     if (!file) {
       throw new BadRequestException(
@@ -786,7 +754,6 @@ export class ProcessService {
         const updated = await tx.opinion_requests.updateMany({
           where: {
             id: BigInt(opinionRequestId),
-            status: { in: ['ENVIADA', 'OBSERVADA', 'RESPONDIDA'] },
           },
           data: {
             status: 'RESPONDIDA',
@@ -803,7 +770,7 @@ export class ProcessService {
 
         if (updated.count === 0) {
           throw new ConflictException(
-            'La solicitud ya no está en estado ENVIADA/OBSERVADA/RESPONDIDA y no puede registrar una respuesta nuevamente.',
+            'La solicitud ya no existe y no puede registrar una respuesta nuevamente.',
           );
         }
 
@@ -1341,20 +1308,10 @@ export class ProcessService {
       );
     }
 
-    const isCorrection = request.status === 'ENVIADA';
-
-    if (request.status !== 'GENERADA' && !isCorrection) {
-      throw new BadRequestException(
-        `La solicitud debe estar GENERADA para generar su oficio, o ENVIADA para corregirlo. Estado actual: ${request.status}`,
-      );
-    }
-
-    if (isCorrection) {
-      this.assertCorrectionAllowed(
-        request.agreements?.process_status ?? '',
-        'corregir el oficio',
-      );
-    }
+    // Sin oficio previo (GENERADA) es la primera emisión; en cualquier otro
+    // estado se regenera el oficio existente conservando el estado de la
+    // solicitud. La edición está disponible en todo momento.
+    const isCorrection = request.status !== 'GENERADA';
 
     if (!dto.bodyHtml || !dto.bodyHtml.trim()) {
       throw new BadRequestException(
@@ -1428,7 +1385,7 @@ export class ProcessService {
           const updated = await tx.opinion_requests.update({
             where: { id: BigInt(opinionRequestId) },
             data: {
-              status: 'ENVIADA',
+              status: isCorrection ? request.status : 'ENVIADA',
               sent_via: dto.sent_via ?? request.sent_via ?? null,
               adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
               oficio_number: dto.oficio_number ?? request.oficio_number,
@@ -1447,7 +1404,7 @@ export class ProcessService {
             {
               actorUserId: userId,
               fromValue: request.status,
-              toValue: 'ENVIADA',
+              toValue: isCorrection ? request.status : 'ENVIADA',
               opinionRequestId: BigInt(opinionRequestId),
               metadata: {
                 sent_via: dto.sent_via ?? null,
@@ -1534,20 +1491,10 @@ export class ProcessService {
       );
     }
 
-    const isCorrection = request.status === 'ENVIADA';
-
-    if (request.status !== 'GENERADA' && !isCorrection) {
-      throw new BadRequestException(
-        `La solicitud debe estar GENERADA para cargar su oficio, o ENVIADA para corregirlo. Estado actual: ${request.status}`,
-      );
-    }
-
-    if (isCorrection) {
-      this.assertCorrectionAllowed(
-        request.agreements?.process_status ?? '',
-        'corregir el oficio',
-      );
-    }
+    // Sin oficio previo (GENERADA) es la primera carga; en cualquier otro estado
+    // se reemplaza el oficio existente conservando el estado de la solicitud.
+    // La edición está disponible en todo momento.
+    const isCorrection = request.status !== 'GENERADA';
 
     if (!file) {
       throw new BadRequestException('Debe adjuntar el archivo del oficio.');
@@ -1635,7 +1582,6 @@ export class ProcessService {
           const updated = await tx.opinion_requests.updateMany({
             where: {
               id: BigInt(opinionRequestId),
-              status: isCorrection ? 'ENVIADA' : 'GENERADA',
             },
             data: {
               ...(isCorrection ? {} : { status: 'ENVIADA' }),
@@ -1650,9 +1596,7 @@ export class ProcessService {
 
           if (updated.count === 0) {
             throw new ConflictException(
-              isCorrection
-                ? 'La solicitud ya no está en estado ENVIADA y no puede corregirse su oficio.'
-                : 'La solicitud ya no está en estado GENERADA y no puede cargarse su oficio.',
+              'La solicitud ya no existe y no puede actualizarse su oficio.',
             );
           }
 
@@ -1669,7 +1613,7 @@ export class ProcessService {
             {
               actorUserId: userId,
               fromValue: request.status,
-              toValue: 'ENVIADA',
+              toValue: isCorrection ? request.status : 'ENVIADA',
               opinionRequestId: BigInt(opinionRequestId),
               metadata: JSON.parse(
                 JSON.stringify({
@@ -1740,15 +1684,6 @@ export class ProcessService {
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
 
-    if (
-      agreement.process_status !== 'OPINIONES_COMPLETAS' &&
-      agreement.process_status !== 'EXPEDIENTE_TECNICO_LISTO'
-    ) {
-      throw new BadRequestException(
-        `El oficio a Rectorado se genera con las opiniones completas. Estado actual: ${agreement.process_status}`,
-      );
-    }
-
     if (!dto.bodyHtml || !dto.bodyHtml.trim()) {
       throw new BadRequestException(
         'El cuerpo del oficio no puede estar vacío.',
@@ -1769,7 +1704,7 @@ export class ProcessService {
     });
 
     // Idempotencia por tipo: si el oficio ya fue generado, esto es una
-    // regeneración (corrección) y solo aplica dentro de la ventana E1.
+    // regeneración (corrección) y solo se reemplaza el archivo existente.
     const previousDocs = await this.prisma.documents.findMany({
       where: {
         agreement_id: BigInt(agreementId),
@@ -1779,13 +1714,6 @@ export class ProcessService {
     });
 
     const isCorrection = previousDocs.length > 0;
-
-    if (isCorrection) {
-      this.assertCorrectionAllowed(
-        agreement.process_status,
-        'regenerar el oficio a Rectorado',
-      );
-    }
 
     const newPath = storePath(filename);
 
@@ -1962,8 +1890,8 @@ export class ProcessService {
    * Reemplaza el archivo de un documento ya incorporado al expediente,
    * conservando su `id` (y por tanto sus vínculos y su lugar en el proceso).
    *
-   * Pensado para corregir un documento cargado por error. Solo aplica dentro de
-   * la ventana de corrección (Etapa 1) y deja traza en `process_events`. Además
+   * Pensado para corregir un documento cargado por error. Disponible en
+   * cualquier estado del trámite y deja traza en `process_events`. Además
    * colapsa los duplicados del mismo tipo para que el expediente quede con una
    * sola copia por tipo.
    *
@@ -1979,10 +1907,6 @@ export class ProcessService {
     userId?: number,
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
-    this.assertCorrectionAllowed(
-      agreement.process_status,
-      'reemplazar documentos',
-    );
 
     if (!file) {
       throw new BadRequestException('Debe adjuntar el archivo de reemplazo.');
@@ -2135,15 +2059,6 @@ export class ProcessService {
    */
   async generateExpediente(agreementId: number, userId?: number) {
     const agreement = await this.getAgreementOrThrow(agreementId);
-
-    if (
-      agreement.process_status !== 'OPINIONES_COMPLETAS' &&
-      agreement.process_status !== 'EXPEDIENTE_TECNICO_LISTO'
-    ) {
-      throw new BadRequestException(
-        `El expediente se genera desde OPINIONES_COMPLETAS. Estado actual: ${agreement.process_status}`,
-      );
-    }
 
     const opinionRequests = await this.assertOpinionsResolved(
       agreementId,

@@ -75,17 +75,6 @@ const ACTION_STATUSES = [
   "OPINIONES_COMPLETAS",
 ];
 
-/**
- * Ventana de corrección de Etapa 1: mientras el trámite aún no se remitió a
- * Rectorado (ENVIADO_A_RECTORADO), los documentos/oficios se pueden rehacer.
- */
-const CORRECTION_STATUSES = [
-  "RECEPCIONADA",
-  "OPINIONES_EN_CURSO",
-  "OPINIONES_COMPLETAS",
-  "EXPEDIENTE_TECNICO_LISTO",
-];
-
 function formatDateOnly(value?: string | null) {
   if (!value) return "—";
   const d = new Date(value);
@@ -556,12 +545,11 @@ export default function Stage1Propuesta({
   /**
    * La acción "Editar" de cada fila de la tabla se resuelve por el tipo del
    * documento: cada tipo abre su modal "clásico" (archivo, N° de dictamen,
-   * oficio de opinión, respuesta, regeneración…).
+   * oficio de opinión, respuesta, regeneración…). La edición está disponible en
+   * cualquier momento del trámite; solo el rol condiciona el permiso.
    */
-  const correctionOpen =
-    canManage && CORRECTION_STATUSES.includes(processStatus);
-  const frozenTooltip =
-    "Solo se pueden corregir documentos mientras el trámite está en Etapa 1 y aún no se remitió a Rectorado.";
+  const canEditDocuments = canManage;
+  const roleTooltip = "Su rol no permite editar los documentos del proceso.";
 
   type DocEditKind =
     | "replace"
@@ -578,73 +566,47 @@ export default function Stage1Propuesta({
     tooltip: string;
   } => {
     const code = doc.document_types?.code ?? "";
-    const request = doc.opinion_request_id
-      ? opinion_requests.find((r) => r.id === doc.opinion_request_id)
-      : undefined;
 
     switch (code) {
-      case "OFICIO_SOLICITUD_OPINION": {
-        const enabled = correctionOpen && request?.status === "ENVIADA";
+      case "OFICIO_SOLICITUD_OPINION":
         return {
           kind: "oficio",
-          disabled: !enabled,
-          tooltip: enabled
+          disabled: !canEditDocuments,
+          tooltip: canEditDocuments
             ? "Regenerar o subir otro oficio de solicitud de esta dependencia"
-            : request
-              ? `El oficio solo puede editarse mientras la solicitud está ENVIADA (estado: ${request.status}).`
-              : frozenTooltip,
+            : roleTooltip,
         };
-      }
-      case "OFICIO_RESPUESTA_OPINION": {
-        const enabled =
-          correctionOpen &&
-          (request?.status === "RESPONDIDA" ||
-            request?.status === "OBSERVADA");
+      case "OFICIO_RESPUESTA_OPINION":
         return {
           kind: "respuesta",
-          disabled: !enabled,
-          tooltip: enabled
+          disabled: !canEditDocuments,
+          tooltip: canEditDocuments
             ? "Reemplazar la respuesta de esta dependencia"
-            : request &&
-                (request.status === "VALIDADA" ||
-                  request.status === "CANCELADA")
-              ? "La opinión ya fue validada o cancelada y no se modifica."
-              : request
-                ? `La respuesta solo puede reemplazarse en estado RESPONDIDA u OBSERVADA (estado: ${request.status}).`
-                : frozenTooltip,
+            : roleTooltip,
         };
-      }
       case "DICTAMEN":
         return {
           kind: "dictamen",
-          disabled: !correctionOpen,
-          tooltip: correctionOpen
+          disabled: !canEditDocuments,
+          tooltip: canEditDocuments
             ? "Reemplazar el dictamen y su N°"
-            : frozenTooltip,
+            : roleTooltip,
         };
       case "EXPEDIENTE_TECNICO":
         return {
           kind: "expediente",
-          disabled: !correctionOpen,
-          tooltip: correctionOpen
+          disabled: !canEditDocuments,
+          tooltip: canEditDocuments
             ? "Regenerar el expediente con las opiniones actuales"
-            : frozenTooltip,
+            : roleTooltip,
         };
       case "OFICIO_RESPUESTA_RECTORADO":
         return {
           kind: "rectorado",
-          disabled:
-            !correctionOpen ||
-            !["OPINIONES_COMPLETAS", "EXPEDIENTE_TECNICO_LISTO"].includes(
-              processStatus,
-            ),
-          tooltip:
-            processStatus === "ENVIADO_A_RECTORADO" ||
-            !["OPINIONES_COMPLETAS", "EXPEDIENTE_TECNICO_LISTO"].includes(
-              processStatus,
-            )
-              ? "El oficio se regenera con las opiniones completas ya consolidadas."
-              : frozenTooltip,
+          disabled: !canEditDocuments,
+          tooltip: canEditDocuments
+            ? "Regenerar el oficio de envío a Rectorado"
+            : roleTooltip,
         };
       case "CONVENIO_FIRMADO":
       case "PUBLICACION":
@@ -652,10 +614,10 @@ export default function Stage1Propuesta({
       default:
         return {
           kind: "replace",
-          disabled: !correctionOpen,
-          tooltip: correctionOpen
+          disabled: !canEditDocuments,
+          tooltip: canEditDocuments
             ? "Sustituir el archivo del documento"
-            : frozenTooltip,
+            : roleTooltip,
         };
     }
   };

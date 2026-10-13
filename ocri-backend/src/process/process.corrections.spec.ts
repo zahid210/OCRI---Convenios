@@ -1,9 +1,5 @@
 import { Test } from '@nestjs/testing';
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ProcessService } from './process.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../app-config/app-config.service';
@@ -106,15 +102,15 @@ describe('ProcessService · replaceProcessDocument', () => {
 
   afterEach(() => logEvent.mockRestore());
 
-  it('bloquea la corrección cuando el trámite ya salió de Etapa 1', async () => {
+  it('permite reemplazar documentos aunque el trámite ya salió de Etapa 1', async () => {
     prisma.agreements.findUnique.mockResolvedValueOnce(
       agreementWith('ENVIADO_A_RECTORADO'),
     );
 
-    await expect(
-      service.replaceProcessDocument(1, 7, file, {}),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(putUnique).not.toHaveBeenCalled();
+    await service.replaceProcessDocument(1, 7, file, {});
+
+    expect(tx.documents.update).toHaveBeenCalledTimes(1);
+    expect(putUnique).toHaveBeenCalled();
   });
 
   it('rechaza un documento que no pertenece al trámite', async () => {
@@ -398,15 +394,17 @@ describe('ProcessService · respondOpinionRequest (corrección RESPONDIDA)', () 
     expect(calls[0][1]).toBe('RESPUESTA_REEMPLAZADA');
   });
 
-  it('bloquea la corrección cuando el trámite ya fue remitido a Rectorado', async () => {
+  it('permite corregir la respuesta aunque el trámite ya fue remitido a Rectorado', async () => {
     buildService('RESPONDIDA', 1);
     prisma.opinion_requests.findUnique.mockResolvedValue(
       baseRequest('RESPONDIDA', 'ENVIADO_A_RECTORADO'),
     );
 
-    await expect(
-      service.respondOpinionRequest(3, {}, file, 1),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(putUnique).not.toHaveBeenCalled();
+    await service.respondOpinionRequest(3, {}, file, 1);
+
+    expect(prisma.documents.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: [10n] } },
+    });
+    expect(putUnique).toHaveBeenCalled();
   });
 });
