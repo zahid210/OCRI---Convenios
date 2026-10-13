@@ -2,8 +2,9 @@ name: ocri
 
 services:
   # ─── MariaDB ───────────────────────────────────────────────────────────────
-  # Sobre el primer arranque (volumen vacío) ejecuta ./dumps/*.sql, que crea la
-  # base y carga datos iniciales (catálogos + 447 convenios históricos).
+  # El esquema lo migra el backend al arrancar (prisma migrate deploy) y los
+  # datos iniciales (catálogos + 447 convenios históricos) los siembra la propia
+  # app desde prisma/seed-data/. MariaDB solo conserva el volumen de datos.
   db:
     image: mariadb:10.11
     restart: unless-stopped
@@ -14,7 +15,6 @@ services:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Defina DB_ROOT_PASSWORD en .env}
     volumes:
       - db-data:/var/lib/mysql
-      - ./dumps:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
       interval: 10s
@@ -46,8 +46,8 @@ services:
       S3_PREFIX: ${S3_PREFIX:-OCRI_convenios}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-ocri@uncp.edu.pe}
       # Contraseñas de arranque OBLIGATORIAS y únicas por cuenta: sin ellas
-      # compose no arranca, para no dejar una instancia operativa con el hash
-      # placeholder del dump. Asistente y procesador usan variables distintas.
+      # compose no arranca, para no dejar una instancia operativa con
+      # credenciales conocidas. Asistente y procesador usan variables distintas.
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Defina SEED_ADMIN_PASSWORD en .env (única por cuenta)}
       SEED_DEMO_PASSWORD_1: ${SEED_DEMO_PASSWORD_1:?Defina SEED_DEMO_PASSWORD_1 en .env (contraseña del asistente)}
       SEED_DEMO_PASSWORD_2: ${SEED_DEMO_PASSWORD_2:?Defina SEED_DEMO_PASSWORD_2 en .env (contraseña del procesador)}

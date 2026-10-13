@@ -13,6 +13,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { DependenciasModule } from './dependencias/dependencias.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { CatalogsModule } from './catalogs/catalogs.module';
+import { SeedDataModule } from './seed-data/seed-data.module';
 import { AppConfigModule } from './app-config/app-config.module';
 import { ProcessModule } from './process/process.module';
 import { DeliverablesModule } from './deliverables/deliverables.module';
@@ -33,6 +34,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     DependenciasModule,
     DocumentTypesModule,
     CatalogsModule,
+    SeedDataModule,
     AppConfigModule,
     ProcessModule,
     DeliverablesModule,

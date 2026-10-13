@@ -1,0 +1,3106 @@
+[
+ {
+  "id": 1,
+  "name": "BANCO DE COMERCIO",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 2,
+  "name": "BANCO CONTINENTAL",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 3,
+  "name": "CALIDAD VISUAL SAC",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 4,
+  "name": "CENTRO DE ESTUDIOS LATINOAMERICANOS DE EDUCACIÓN INCLUSIVA (CELEI)",
+  "country": "CHILE",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 5,
+  "name": "HOSPITAL DOMINGO OLAVEGOYA DE JAUJA",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 6,
+  "name": "INSTITUCION EDUCATIVA TECNICA MARÍA INMACULADA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 7,
+  "name": "COMUNIDAD CAMPESINA DE PACA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 8,
+  "name": "COMUNIDAD CAMPESINA DE ULLUSCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 9,
+  "name": "COMUNIDAD CAMPESINA DEL TINGO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 10,
+  "name": "COMUNIDAD CAMPESINA DE TINGO PACCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 11,
+  "name": "COMUNIDAD CAMPESINA DE POMACANCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 12,
+  "name": "COMUNIDAD CAMPESINA DE TRAGADERO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 13,
+  "name": "IE CORY COYLLOR",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 14,
+  "name": "UNIVERSIDAD CONTINENTAL SAC",
+  "country": "PERÚ",
+  "type": "Universidad Privada",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 15,
+  "name": "INSTITUCION EDUCATIVA POLITÉCNINO TUPAC AMARU",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 16,
+  "name": "ESCUELA SUPERIOR DE AGRICULTURA LUIZ DE QUEIROZ",
+  "country": "BRASIL",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 17,
+  "name": "INSTITUTO PEDAGÓGICO TEODORO PEÑALOZA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 18,
+  "name": "COMUNIDAD CAMPESINA DE CHONGOS BAJO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 19,
+  "name": "COMUNIDAD CAMPESINA DE AHUAC",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 20,
+  "name": "COMUNIDAD CAMPESINA DE CHACAPAMPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 21,
+  "name": "COMUNIDAD CAMPESINA DE CHUPURO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 22,
+  "name": "COMUNIDAD CAMPESINA DE COLCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 23,
+  "name": "COMUNIDAD CAMPESINA DE HUAMANMARCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 24,
+  "name": "COMUNIDAD CAMPESINA DE HUASICANCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 25,
+  "name": "COMUNIDAD CAMPESINA DE HUAYUCACHI",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 26,
+  "name": "COMUNIDAD CAMPESINA DE PUCARA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 27,
+  "name": "COMUNIDAD CAMPESINA DE QUILCAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 28,
+  "name": "COMUNIDAD CAMPESINA DE SAPALLANGA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 29,
+  "name": "COMUNIDAD CAMPESINA DE VIQUES",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 30,
+  "name": "I.E. N° 30637 ANDRES AVELINO CACERES",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 31,
+  "name": "IE EIB ALIPIO PONCE VASQUEZ",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 32,
+  "name": "IE CEBA SAN MARTIN",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 33,
+  "name": "IE JOSÉ CARLOS MARIATEGUI",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 34,
+  "name": "IE RAFAEL HOYOS RUBIO",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 35,
+  "name": "IE SAN MARTIN DE PANGOA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 36,
+  "name": "IE SANTA ROSA DE SANGARENI",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 37,
+  "name": "MUNICIPALIDAD DISTRITAL DE PANGOA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 38,
+  "name": "OCAREP",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 39,
+  "name": "KANUJA",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 40,
+  "name": "UNIVERSIDAD CATÓLICA DEL PERÚ",
+  "country": "PERÚ",
+  "type": "Universidad Privada",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 41,
+  "name": "IREN CENTRO",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 42,
+  "name": "CENTRO DE EDUCACIÓN TÉCNICO PRODUCTIVA CHUPACA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 43,
+  "name": "CAREC",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 44,
+  "name": "COMANDO DE SALUD DEL EJÉRCITO (COSALE)",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 45,
+  "name": "UNIVERSIDAD NACIONAL INTERCULTURAL SELVA CENTRAL",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 46,
+  "name": "RED DE SALUD VALLE DEL MANTARO",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 47,
+  "name": "COMUNIDAD CAMPESINA DE CHOCON",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 48,
+  "name": "COMUNIDAD CAMPESINA DE HUALHUAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 49,
+  "name": "COMUNIDAD CAMPESINA DE MARCAPOMACOCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 50,
+  "name": "I.E. SAN RAMON",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 51,
+  "name": "COMUNIDAD CAMPESINA DE LA BREÑA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 52,
+  "name": "COMUNIDAD CAMPESINA DE LLOCLLAPAMPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 53,
+  "name": "COMUNIDAD CAMPESINA DE SANTA ROSA DE SACCO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 54,
+  "name": "COMUNIDAD CAMPESINA DE SAN FRANCISCO DE ASIS DE YANTAC",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 55,
+  "name": "COMUNIDAD CAMPESINA DE SUITUCANCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 56,
+  "name": "COMUNIDAD CAMPESINA DE SAN JERÓNIMO DE LA OROYA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 57,
+  "name": "COMUNIDAD CAMPESINA DE PACHACHACA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 58,
+  "name": "COMUNIDAD CAMPESINA DE HUAYPACHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 59,
+  "name": "COMUNIDAD CAMPESINA DE CARHUACAYAN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 60,
+  "name": "COMUNIDAD CAMPESINA DE PURISIMA CONCEPCIÓN PACCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 61,
+  "name": "COMUNIDAD CAMPESINA DE CHUQUIQUIRPAY",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 62,
+  "name": "COMUNIDAD CAMPESINA DE HUAYNACANCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 63,
+  "name": "COMUNIDAD CAMPESINA DE HUAYHUAY",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 64,
+  "name": "COMUNIDAD CAMPESINA DE CHACAPALPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 65,
+  "name": "COMUNIDAD CAMPESINA DE HUARIPAMPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 66,
+  "name": "COMUNIDAD CAMPESINA DE MARCO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 67,
+  "name": "COMUNIDAD CAMPESINA DE NUEVA ESPERANZA DE APATA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 68,
+  "name": "COMUNIDAD CAMPESINA DE 3ER CUARTEL-ACOLLA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 69,
+  "name": "COMUNIDAD CAMPESINA DE 2DO CUARTEL ACOLLA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 70,
+  "name": "COMUNIDAD CAMPESINA DE SALLAHUACHAC",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 71,
+  "name": "COMUNIDAD CAMPESINA DE ARAMACHAY",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 72,
+  "name": "COMUNIDAD CAMPESINA DE MOLINOS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 73,
+  "name": "COMUNIDAD CAMPESINA DE HUERTAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 74,
+  "name": "UNIVERSIDAD DE ESTUDIOS INTERNACIONALES DE HEBEI",
+  "country": "CHINA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 75,
+  "name": "FUNDACIÓN PARA EL DESARROLLO DEL CENTRO DEL PERÚ (FUDEC)",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 76,
+  "name": "RED DE SALUD DE SATIPO",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 77,
+  "name": "MINISTERIO DE EDUCACION",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 78,
+  "name": "CAJA HUANCAYO",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 79,
+  "name": "CENTRO INTERNACIONAL DE LA PAPA - CIP",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 80,
+  "name": "UNIDAD EJECUTORA N°118",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 81,
+  "name": "INSTITUTO TECNOLÓGICO DE LA PRODUCCIÓN - ITP",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 82,
+  "name": "PROGRAMA NACIONAL DE INNOVACIÓN EN PESCA Y ACUICULTURA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 83,
+  "name": "CLINICA DENTAL PREMIUM EIRL",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 84,
+  "name": "PROVIAS NACIONAL - MTC",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 85,
+  "name": "RED NACIONAL DE CATI EN PERÚ",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 86,
+  "name": "INSTITUCION EDUCATIVA UNIÓN LATINO INNOVA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 87,
+  "name": "DESCOCENTRO",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 88,
+  "name": "OSITRAN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 89,
+  "name": "MUNICIPALIDAD PROVINCIAL DE SATIPO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 90,
+  "name": "ENGIE ENERGÍA PERÚ",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 91,
+  "name": "FUNDACIÓN SER MAESTRO",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 92,
+  "name": "MUNICIPALIDAD DISTRITAL DE SAN PEDRO DE CAJAS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 93,
+  "name": "COMUNIDAD CAMPESINA DE YAROCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 94,
+  "name": "COMUNIDAD CAMPESINA DE URAUCHOC",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 95,
+  "name": "INSTITUCIÓN EDUCATIVA INDUSTRIAL N° 32",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 96,
+  "name": "COMUNIDAD CAMPESINA DE PALCAMAYO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 97,
+  "name": "COMUNIDAD CAMPESINA ERAHUAY",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 98,
+  "name": "COMUNIDAD CAMPESINA HUAYLAHUICHAN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 99,
+  "name": "COMUNIDAD CAMPESINA SAN CRISTOBAL DE PACCHAC",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 100,
+  "name": "COMUNIDAD CAMPESINA DE YURACMAYO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 101,
+  "name": "COMUNIDAD CAMPESINA DE SAN ANTONIO DE ATAQUERO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 102,
+  "name": "COMUNIDAD CAMPESINA DE TUPIN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 103,
+  "name": "COMUNIDAD CAMPESINA DE NINATAMBO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 104,
+  "name": "COMUNIDAD CAMPESINA DE COCHAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 105,
+  "name": "MUNICIPALIDAD DISTRITAL DE CHUPURO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 106,
+  "name": "MUNICIPALIDAD DISTRITAL DE CARHUACALLANGA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 107,
+  "name": "INSTITUTO DE EDUCACIÓN SUPERIOR TECNOLÓGICO PÚBLICO ASHANINKA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 108,
+  "name": "SOCIEDAD DE BENEFICENCIA DE HUANCAYO",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 109,
+  "name": "SEGURO SOCIAL DE SALUD - ESSALUD",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 110,
+  "name": "PODER JUDICIAL - CORTE SUPERIOR DE JUSTICIA DE JUNÍN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 111,
+  "name": "RED DE SALUD DEL VALLE DEL MANTARO",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 112,
+  "name": "RED ASISTENCIAL JUNIN",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 113,
+  "name": "UNIVERSIDAD NACIONAL JOSÉ MARÍA ARGUEDAS",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 114,
+  "name": "EMPRESA SIERRA POLI SAC",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 115,
+  "name": "COMUNIDAD CAMPESINA DE CULLHUAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 116,
+  "name": "MUNICIPALIDAD DE CHACAPAMPA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 117,
+  "name": "MINISTERIO DE SALUD, GOBIERNO REGIONAL DE JUNÍN",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 118,
+  "name": "MINISTERIO DE SALUD, GOBIERNO REGIONAL DE HUANCAVELICA",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 119,
+  "name": "UNIVERSIDAD PERUANA LOS ANDES - UPLA",
+  "country": "PERÚ",
+  "type": "Universidad Privada",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 120,
+  "name": "RDJ INGENIEROS SAC",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 121,
+  "name": "LECKER PREMIUM BIER SAC",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 122,
+  "name": "MINISTERIO DE SALUD, GOBIERNO REGIONAL DEL CALLAO",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 123,
+  "name": "INSTITUCIÓN EDUCATIVA SEIS DE AGOSTO",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 124,
+  "name": "UNIVERSIDAD AUTÓNOMA METROPOLITANA",
+  "country": "MÉXICO",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 125,
+  "name": "INSTITUCIÓN EDUCATIVA SALESIANO DON BOSCO",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 126,
+  "name": "CAJA RURAL DE AHORRO Y CRÉDITO DEL CENTRO",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 127,
+  "name": "UNIVERSIDAD NACIONAL AMAZÓNICA DE MADRE DE DIOS",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 128,
+  "name": "UNIVERSIDAD NACIONAL DE FRONTERA",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 129,
+  "name": "DIRECCIÓN REGIONAL DE AGRICULTURA JUNÍN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 130,
+  "name": "EMPRESA MISKY FOOD S.A.C.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 131,
+  "name": "UNIVERSIDAD NACIONAL DE JAÉN",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 132,
+  "name": "COMUNIDAD CAMPESINA DE CHONGOS ALTO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 133,
+  "name": "INSTITUCIÓN EDUCATIVA JOSÉ CARLOS MARIÁTEGUI",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 134,
+  "name": "EMPRESA UEA COMPAÑÍA MINERA MARMOLES SCRL",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 135,
+  "name": "COMUNIDAD NATIVA DE TEORIA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 136,
+  "name": "INSTITUTO NACIONAL DE INVESTIGACIÓN EN GLACIARES",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 137,
+  "name": "RED DE SALUD DE CHANCHAMAYO",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 138,
+  "name": "HOSPITAL DANIEL ALCIDES CARRION",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 139,
+  "name": "COMUNIDAD CAMPESINA DE HUAMANCACA GRANDE",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 140,
+  "name": "MINISTERIO DE ENERGÌA Y MINAS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 141,
+  "name": "INDECOPI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 142,
+  "name": "UNIVERSIDAD DEL PACÍFICO",
+  "country": "PERÚ",
+  "type": "Universidad Privada",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 143,
+  "name": "COMUNIDAD MUNICIPAL DEL NORTE DEL VRAEM",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 144,
+  "name": "ENGIE ENERGÍA PERÚ S.A.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 145,
+  "name": "MUNICIPALIDAD DISTRITAL DE ULCUMAYO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 146,
+  "name": "COMUNIDADES CAMPESINAS ZONA SUR",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 147,
+  "name": "UNIVERSIDAD NACIONAL AUTÓNOMA DE TAYACAJA",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 148,
+  "name": "CÁMARA DE COMERCIO DE HUANCAYO",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 149,
+  "name": "CAJA MUNICIPAL DE HUANCAYO",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 150,
+  "name": "EMPRESA SIERRA POLI S.A.C.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 151,
+  "name": "MUNICIPALIDAD DISTRITAL DE COCHAS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 152,
+  "name": "RED PRESTACIONAL REBAGLIATI",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 153,
+  "name": "MINISTERIO DE SALUD",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 154,
+  "name": "COMUNIDAD CAMPESINA DE ACOLLA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 155,
+  "name": "FUNDACIÓN UNIVERSITARIA MONSERRATE",
+  "country": "COLOMBIA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 156,
+  "name": "EMPRESA MAKCROMF",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 157,
+  "name": "COMUNIDAD CAMPESINA DE HUAYCHULA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 158,
+  "name": "HOSPITAL EL CARMEN",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 159,
+  "name": "COMUNIDAD CAMPESINA DE MUQUIYAUYO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 160,
+  "name": "MUNICIPALIDAD DISTRITAL DE QUILCAS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 161,
+  "name": "COMUNIDAD CAMPESINA DE SAN JERÓNIMO DE TUNÁN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 162,
+  "name": "FUNDACIÓN FUDEC",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 163,
+  "name": "MUNICIPALIDAD DISTRITAL DE CHINCHIHUASI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 164,
+  "name": "BANCO BBVA PERU",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 165,
+  "name": "INSTITUCION PEDAGOGICO JUAN ENRIQUE PESTALOZZI",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 166,
+  "name": "UGEL TARMA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 167,
+  "name": "COMUNIDAD CAMPESINA DE CANAYCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 168,
+  "name": "COMUNIDAD CAMPESINA DE PUMARANRA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 169,
+  "name": "COMUNIDAD CAMPESINA DE ANGASMAYO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 170,
+  "name": "MUNICIPALIDAD DISTRITAL DE PACHAMARCA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 171,
+  "name": "MUNICIPALIDAD DISTRITAL DE PAUCARBAMBA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 172,
+  "name": "COMUNIDAD CAMPESINA DE PUCUCHO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 173,
+  "name": "MUNICIPALIDADES VALLE PAMPAS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 174,
+  "name": "MUNICIPALIDAD DISTRITAL DE CULLHUAS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 175,
+  "name": "MUNICIPALIDAD DISTRITAL DE LLOCLLAPAMPA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 176,
+  "name": "COMUNIDAD CAMPESINA DE SICAYA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 177,
+  "name": "DISTRITOS DE SAN MARCOS DE ROCCHAC",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 178,
+  "name": "COMUNIDAD CAMPESINA DE TODOS LOS SANTOS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 179,
+  "name": "COMUNIDAD DE SAN AGUSTÍN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 180,
+  "name": "GOBIERNO REGIONAL DE JUNIN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 181,
+  "name": "GOLDEN DUCK MINING S.A.C.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 182,
+  "name": "SOCIEMC",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 183,
+  "name": "UNIVERSIDAD NACIONAL DE ARTE DIEGO QUISPE TITO",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 184,
+  "name": "SERFOR",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 185,
+  "name": "CEPLAN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 186,
+  "name": "SENAMHI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 187,
+  "name": "ANA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 188,
+  "name": "UNIVERSIDAD NACIONAL DE CAÑETE",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 189,
+  "name": "UNIVERSIDAD NACIONAL SANTIAGO ANTÚÑEZ DE MAYOLO",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 190,
+  "name": "UNIVERSIDAD NACIONAL HERMILIO VALDIZAN",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 191,
+  "name": "UNIVERSIDAD PRIVADA DE HUANCAYO FRANKLIN ROOSVELT",
+  "country": "PERÚ",
+  "type": "Universidad Privada",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 192,
+  "name": "COMUNIDAD CAMPESINA DE HUACRAPUQUIO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 193,
+  "name": "MUNICIPALIDAD DISTRITAL DE EL CARMEN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 194,
+  "name": "COMUNIDAD CAMPESINA DE HUAYAO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 195,
+  "name": "MUNICIPALIDAD DISTRITAL DE PANCAN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 196,
+  "name": "SUNAFIL",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 197,
+  "name": "INSTITUTO TECNOLOGICO LA OROYA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 198,
+  "name": "FUNDACION UNIVERSITARIA EUROPEA",
+  "country": "ESPAÑA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 199,
+  "name": "COMUNIDAD CAMPESINA DE CANCHAPALCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 200,
+  "name": "COMUNIDAD CAMPESINA DE TUNSO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 201,
+  "name": "COMUNIDAD CAMPESINA DE JATUN HUASI",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 202,
+  "name": "COMUNIDAD CAMPESINA DE POMAMANTA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 203,
+  "name": "COMUNIDAD CAMPESINA DE RACRACALLA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 204,
+  "name": "MUNICIPALIDAD DISTRITAL DE SAN JOSE QUERO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 205,
+  "name": "INSTITUCIÓN EDUCATIVA JUAN HILDEBRANDO GONZALES",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 206,
+  "name": "INEI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 207,
+  "name": "BANCO PICHINCHA",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 208,
+  "name": "COMUNIDAD CAMPESINA DE UÑAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 209,
+  "name": "COMUNIDAD CAMPESINA DE AZAPAMPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 210,
+  "name": "COMUNIDAD CAMPESINA DE COCHAS GRANDE",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 211,
+  "name": "COMUNIDAD CAMPESINA DE QUICHUAY",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 212,
+  "name": "COMUNIDAD CAMPESINA DE ISCOS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 213,
+  "name": "COLEGIO DE POSTGRADUADOS - COLPOS",
+  "country": "MÉXICO",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 214,
+  "name": "COMUNIDAD CAMPESINA DE PUNPUNYA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 215,
+  "name": "MUNICIPALIDAD DISTRITAL DE CURICACA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 216,
+  "name": "MUNICIPALIDAD DISTRITAL DE HUAMALI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 217,
+  "name": "MUNICIPALIDAD DISTRITAL DE COLCABAMBA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 218,
+  "name": "CEDINTER",
+  "country": "COLOMBIA",
+  "type": "Empresa Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 219,
+  "name": "COLEGIO DE INGENIEROS DEL PERÚ",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 220,
+  "name": "COMUNIDAD CAMPESINA DE CHAMBARÁ",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 221,
+  "name": "COMUNIDAD CAMPESINA DE CHICCHE",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 222,
+  "name": "COMUNIDAD CAMPESINA DE CULLPAS Y COCHAS CHICO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 223,
+  "name": "COMUNIDAD CAMPESINA DE TARMATAMBO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 224,
+  "name": "COMUNIDAD CAMPESINA DE SAN JOSE DE APATA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 225,
+  "name": "COMUNIDAD CAMPESINA DE SANTA CRUZ DE RANRA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 226,
+  "name": "COMUNIDAD CAMPESINA DE MISQUIPATA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 227,
+  "name": "COMUNIDAD CAMPESINA SAN JUAN DE JARPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 228,
+  "name": "COMUNIDAD CAMPESINA DE SANTA ROSA DE HUACRAMASANA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 229,
+  "name": "COMUNIDAD CAMPESINA DE SANTA MAGDALENA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 230,
+  "name": "COMUNIDAD CAMPESINA DE CONCHO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 231,
+  "name": "COMUNIDAD CAMPESINA DE APATA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 232,
+  "name": "COMUNIDAD CAMPESINA DE CANCHAYLLO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 233,
+  "name": "COMUNIDAD CAMPESINA DE CURICACA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 234,
+  "name": "COMUNIDAD CAMPESINA DE PANCAN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 235,
+  "name": "COMUNIDAD CAMPESINA DE HUALA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 236,
+  "name": "COMUNIDAD CAMPESINA DE HUASQUICHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 237,
+  "name": "COMUNIDAD CAMPESINA DE SAUSA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 238,
+  "name": "COMUNIDAD CAMPESINA DE MATAGRANDE",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 239,
+  "name": "COMUNIDAD CAMPESINA DE MATACHICO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 240,
+  "name": "COMUNIDAD CAMPESINA DE CASABLANCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 241,
+  "name": "COMUNIDAD CAMPESINA DE TINGO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 242,
+  "name": "COMUNIDAD CAMPESINA DE SAN JOSE",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 243,
+  "name": "COMUNIDAD CAMPESINA DE PACHASCUCHO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 244,
+  "name": "COMUNIDAD CAMPESINA DE LLACUARIPAMPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 245,
+  "name": "COMUNIDAD CAMPESINA DE CAYAO MISARRURSHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 246,
+  "name": "COMUNIDAD CAMPESINA DE YAULI",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 247,
+  "name": "COMUNIDAD CAMPESINA DE RICRAN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 248,
+  "name": "COMUNIDAD CAMPESINA DE CURIMARCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 249,
+  "name": "COMUNIDAD CAMPESINA DE ANDAMARCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 250,
+  "name": "COMUNIDAD CAMPESINA DE ANDAMARCA CURIS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 251,
+  "name": "COMUNIDAD CAMPESINA DE AYAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 252,
+  "name": "COMUNIDAD CAMPESINA DE JANJAILLO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 253,
+  "name": "COMUNIDAD CAMPESINA DE MUQUI",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 254,
+  "name": "COMUNIDAD CAMPESINA DE JULCAN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 255,
+  "name": "COMUNIDAD CAMPESINA LLACUAS HUACHAC",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 256,
+  "name": "COMUNIDAD CAMPESINA DE PACCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 257,
+  "name": "COMUNIDAD CAMPESINA DE HUANCAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 258,
+  "name": "INSTITUCIÓN EDUCATIVA LA VICTORIA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 259,
+  "name": "INPE",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 260,
+  "name": "COMUNIDAD CAMPESINA DE HUARI",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 261,
+  "name": "UNIVERSIDAD NACIONAL DE SAN MARTÍN",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 262,
+  "name": "MUNICIPALIDAD DISTRITAL DE MAZAMARI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 263,
+  "name": "GRUPO ASEZ - IGLESIA DE DIOS",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 264,
+  "name": "COMUNIDAD CAMPESINA SANTA ROSA DE TOLDOPAMPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 265,
+  "name": "COMUNIDAD CAMPESINA DE SAN JUAN DE ONDORES",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 266,
+  "name": "COMUNIDADES NATIVAS DE PICHANAKI - ACECONAP",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 267,
+  "name": "ASOCIACIÓN NACIÓN PUMPUSH - JUNÍN",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 268,
+  "name": "CENTRO DE ESTUDIOS PERUANO-CHINO",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 269,
+  "name": "MUNICIPALIDAD CENTRO POBLADO VILLA TINQUERCCASA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 270,
+  "name": "COMUNIDAD CAMPESINA YAURINGA-CONCEPCIÓN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 271,
+  "name": "COMUNIDAD DE HUANUCO - CONCEPCION",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 272,
+  "name": "COMUNIDAD DE SANTA ROSA DE RUNATULLO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 273,
+  "name": "COMUNIDAD DE CAÑA ANDAMAYO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 274,
+  "name": "COMUNIDAD DE PUNCO - CONCEPCIÓN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 275,
+  "name": "COMUNIDAD DE HUATA - CONCEPCIÓN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 276,
+  "name": "COMUNIDAD DE UYO - CONCEPCION",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 277,
+  "name": "COMUNIDAD DE ANTACALLA - CONCEPCIÓN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 278,
+  "name": "COMUNIDAD UNIÓN TORREO DE PACAYBAMBA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 279,
+  "name": "COMUNIDAD DE TALHUIS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 280,
+  "name": "COMUNIDAD DE PUCACOCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 281,
+  "name": "COMUNIDAD SAN JOSÉ DE CHALLHUA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 282,
+  "name": "UNIVERSIDAD FEDERAL DE MINAS GERAIS (UFMG)",
+  "country": "BRASIL",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 283,
+  "name": "MUNICIPALIDAD DISTRITAL DE ANCO - HUANCAVELICA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 284,
+  "name": "SAIS PACHACUTEC",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 285,
+  "name": "COMUNIDAD CAMPESINA DE ACO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 286,
+  "name": "MUNICIPALIDAD DISTRITAL DE SAPALLANGA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 287,
+  "name": "ESSALUD",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 288,
+  "name": "COMUNIDAD DE HUANCAMACHAY",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 289,
+  "name": "BALDE K S.A.C.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 290,
+  "name": "COMUNIDAD DE SAN ANTONIO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 291,
+  "name": "EGIS VILLE ET TRANSPORTS SUCURSAL DEL PERÚ",
+  "country": "FRANCIA",
+  "type": "Empresa Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 292,
+  "name": "MUNICIPALIDAD DISTRITAL DE LLAYLLA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 293,
+  "name": "MUNICIPALIDAD DISTRITAL DE RIO NEGRO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 294,
+  "name": "MUNICIPALIDAD DISTRITAL DE RIO TAMBO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 295,
+  "name": "MUNICIPALIDAD DISTRITAL DE ACOBAMBILLA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 296,
+  "name": "EMPRESA COMUNAL SMELTER S.A.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 297,
+  "name": "I.E.P. NUESTRA SEÑORA DE FÁTIMA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 298,
+  "name": "CENTRO DE SALUD DE HUAYUCACHI",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 299,
+  "name": "IESTP SANTIAGO ANTUNEZ DE MAYOLO",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 300,
+  "name": "EMPRESA ELECTROCENTRO S.A.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 301,
+  "name": "CORPORACIÓN UNIVERSITARIA REMINGTON",
+  "country": "COLOMBIA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 302,
+  "name": "UNIVERSIDAD NACIONAL AUTONOMA DE HUANTA",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 303,
+  "name": "GRUPO DESARROLLO RURAL SOSTENIBLE",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 304,
+  "name": "EESP TEODORO PEÑALOZA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 305,
+  "name": "UNIVERSIDAD HISU DE HEBEI",
+  "country": "CHINA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 306,
+  "name": "MUNICIPALIDAD DISTRITAL DE HUASICANCHA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 307,
+  "name": "MUNICIPALIDAD DISTRITAL DE AHUAC",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 308,
+  "name": "COMUNIDAD CAMPESINA DE SAÑO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 309,
+  "name": "HACIENDA ROMA OQUORS S.A.C.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 310,
+  "name": "MUNICIPALIDAD DISTRITAL DE MARCAPOMACOCHA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 311,
+  "name": "HOSPITAL REGIONAL DOCENTE DANIEL ALCIDES CARRIÓN",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 312,
+  "name": "EMPRESA SHIMA AZUL SAC",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 313,
+  "name": "ASOCIACION DE PRODUCTORES AGROECOLOGICOS NUEVO POZUZO",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 314,
+  "name": "EMPRESA VIVERO HUANDO E.I.R.L.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 315,
+  "name": "COMPAÑÍA CAFETALERA DEL CENTRO SAC",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 316,
+  "name": "COLEGIO DE ABOGADOS JUNIN",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 317,
+  "name": "UNIVERSIDAD NACIONAL DE COLOMBIA",
+  "country": "COLOMBIA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 318,
+  "name": "UNIVERSIDAD NACIONAL DE EDUCACIÓN ENRIQUE GUZMÁN Y VALLE",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 319,
+  "name": "MUNICIPALIDAD DISTRITAL DE MITO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 320,
+  "name": "COMUNIDAD CAMPESINA DE MARIAMOYA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 321,
+  "name": "COMUNIDAD CAMPESINA NUEVA LIBERTAD DE PUNTO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 322,
+  "name": "COMUNIDAD CAMPESINA DE VILCACOTO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 323,
+  "name": "COMUNIDAD CAMPESINA DE ACOPALCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 324,
+  "name": "COMUNIDAD CAMPESINA DE COMAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 325,
+  "name": "COMUNIDAD CAMPESINA DE YANACANCHA-CHUPACA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 326,
+  "name": "INSTITUCIÓN EDUCATIVA 30239 REYNALDO ZANABRIA ZAMUDIO",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 327,
+  "name": "INSTITUTO SUPERIOR PEDAGOGICO PRIVADO CHARLES DICKENS",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 328,
+  "name": "PODER JUDICIAL - CORTE SUPERIOR DE JUSTICIA DE LA SELVA CENTRAL",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 329,
+  "name": "COMUNIDAD CAMPESINA DE PANTACHI",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 330,
+  "name": "COMUNIDAD CAMPESINA DE SANTA ROSA DE CEDRUYO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 331,
+  "name": "MINISTERIO DEL INTERIOR",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 332,
+  "name": "COMUNIDAD CAMPESINA DE ACORIA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 333,
+  "name": "MUNICIPALIDAD DISTRITAL SAN PEDRO DE CAJAS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 334,
+  "name": "DIRECCIÓN REGIONAL DE TRABAJO Y PROMOCIÓN DEL EMPLEO - JUNIN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 335,
+  "name": "MUNICIPALIDAD DISTRITAL DE VILCA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 336,
+  "name": "MUNICIPALIDAD DISTRITAL DE YAUYOS - JAUJA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 337,
+  "name": "MUNICIPALIDAD DISTRITAL DE CONAYCA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 338,
+  "name": "COMUNIDAD CAMPESINA DE MATAHUASI",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 339,
+  "name": "ESCUELA SUPERIOR POLITECNICA DE CHIMBORAZO",
+  "country": "ECUADOR",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 340,
+  "name": "CORTE VASCA DE ARBITRAJE",
+  "country": "ESPAÑA",
+  "type": "Empresa Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 341,
+  "name": "MUNICIPALIDAD DEL CENTRO POBLADO DE CASACANCHA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 342,
+  "name": "SOCIEDAD NACIONAL DE INDUSTRIAS - SNI",
+  "country": "PERÚ",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 343,
+  "name": "UNIVERSIDAD NACIONAL DANIEL ALCIDES CARRION",
+  "country": "PERÚ",
+  "type": "Universidad Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 344,
+  "name": "INDUSTRIAS GSAA E.I.R.L.",
+  "country": "PERÚ",
+  "type": "Empresa Nacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 345,
+  "name": "RED ASISTENCIAL JUNIN - ESSALUD",
+  "country": "PERÚ",
+  "type": "Salud",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 346,
+  "name": "UNIVERSIDAD DE CASTILLA-LA MANCHA",
+  "country": "ESPAÑA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 347,
+  "name": "COLEGIO AGROINDUSTRIAL INA18 - SAN RAMON",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 348,
+  "name": "IESPP GUSTAVO ALLENDE LLAVERIA - TARMA",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 349,
+  "name": "UNIVERSIDAD DE MALAGA",
+  "country": "ESPAÑA",
+  "type": "Universidad Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 350,
+  "name": "MUNICIPALIDAD PROVINCIAL DE TARMA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 351,
+  "name": "RED CONTABLE US LLC",
+  "country": "ESTADOS UNIDOS",
+  "type": "Empresa Internacional",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 352,
+  "name": "THE CORE WORL FOUNDATION CORPORATION",
+  "country": "ESTADOS UNIDOS",
+  "type": "Otros",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 353,
+  "name": "INSTITUTO NACIONAL PENITENCIARIO - INPE",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 354,
+  "name": "IESTP JAIME CERRON PALOMINO",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 355,
+  "name": "MUNICIPALIDAD DISTRITAL DE HUACHAC",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 356,
+  "name": "MUNICIPALIDAD DE HUACHAC",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 357,
+  "name": "COMUNIDAD CAMPESINA DE MACON",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 358,
+  "name": "MUNICIPALIDAD DISTRITAL DE CUENCA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 359,
+  "name": "COMUNIDAD CAMPESINA DE ANTAPAMPA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 360,
+  "name": "COMUNIDAD DE POMACANCHA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 361,
+  "name": "COMUNIDAD DE ACOLLA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 362,
+  "name": "COMUNIDAD DE PUCUCHO DE EL MANTARO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 363,
+  "name": "COMUNIDAD TRAGADERO DE MARCO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 364,
+  "name": "COMUNIDAD DE RICRAN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 365,
+  "name": "COMUNIDAD DE TUNANMARCA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 366,
+  "name": "COMUNIDAD DE SINCOS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 367,
+  "name": "COMUNIDAD DE HUANCAS",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 368,
+  "name": "COMUNIDAD CAMPESINA DE MASMA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 369,
+  "name": "COMUNIDAD DE CURICACA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 370,
+  "name": "COMUNIDAD DE HUALA",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 371,
+  "name": "COMUNIDAD DE JULCAN",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 372,
+  "name": "COMUNIDAD DE MARCO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 373,
+  "name": "COMUNIDAD DE PARCO",
+  "country": "PERÚ",
+  "type": "Comunidades",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 374,
+  "name": "MUNICIPALIDAD DE EL MANTARO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 375,
+  "name": "MUNICIPALIDAD DISTRITAL DE HUARIPAMPA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 376,
+  "name": "MUNICIPALIDAD DISTRITAL DE JULCAN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 377,
+  "name": "MUNICIPALIDAD DISTRITAL DE LEONOR ORDOÑEZ",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 378,
+  "name": "MUNICIPALIDAD DISTRITAL MASMA CHICCHE",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 379,
+  "name": "MUNICIPALIDAD DISTRITAL DE MUQUI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 380,
+  "name": "MUNICIPALIDAD DISTRITAL DE MUQUIYAUYO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 381,
+  "name": "MUNICIPALIDAD DISTRITAL DE PACA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 382,
+  "name": "MUNICIPALIDAD DISTRITAL POMACANCHA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 383,
+  "name": "MUNICIPALIDAD DISTRITAL DE SAN LORENZO",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 384,
+  "name": "MUNICIPALIDAD DISTRITAL DE TUNANMARCA",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 385,
+  "name": "MUNICIPALIDAD DISTRITAL DE YAULI",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 386,
+  "name": "MUNICIPALIDAD DISTRITAL MOLINOS",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 387,
+  "name": "UNIDAD DE GESTIÓN EDUCATIVA LOCAL - HUANCAYO",
+  "country": "PERÚ",
+  "type": "Educación",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ },
+ {
+  "id": 388,
+  "name": "AGRO RURAL - JUNIN",
+  "country": "PERÚ",
+  "type": "Sector Público",
+  "created_at": "2026-09-01 04:54:57",
+  "updated_at": "2026-09-01 04:54:57"
+ }
+]

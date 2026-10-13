@@ -187,9 +187,9 @@ export class DependenciasService {
   }
 
   async seed(actor?: AuditActor) {
-    // Los valores canónicos (code, name, kind, is_default_opinion) DEBEN
-    // coincidir con los del catálogo del dump (dumps/ocri-inicio.sql): si los
-    // códigos difieren, el seed duplica unidades con otro código (p. ej.
+    // Los valores canónicos (code, name, kind, is_default_opinion) son la fuente
+    // única (dependencias.data.ts). El seed deduplica por código/nombre: si los
+    // códigos difieren, se duplican unidades con otro código (p. ej.
     // "Vicerrectorado de Investigación" como VRI y VICINV), y si difieren los
     // flags, ejecutar el seed revierte configuraciones de producción (p. ej.
     // CEPRE/CEID como opinión por defecto). sort_order e is_active sí son

@@ -4,11 +4,11 @@ import { document_direction } from '@prisma/client';
 // Catálogos canónicos (fuente única de verdad).
 //
 // Los consumen CatalogsService.seedAll() (app) y scripts/seed-catalogs.ts. Antes
-// había tres listas distintas de tipos de documento (el servicio, el script y el
-// dump) y dos de dependencias, lo que provocaba altas faltantes (SOLICITUD_*) y
-// duplicados. Estas listas son el único origen: cualquier cambio aquí se propaga
-// a la app y al script. Las dependencias viven en dependencias.data.ts porque su
-// seed tiene lógica propia (dedupe por nombre).
+// había varias listas distintas de tipos de documento (servicio y script) y dos
+// de dependencias, lo que provocaba altas faltantes (SOLICITUD_*) y duplicados.
+// Estas listas son el único origen: cualquier cambio aquí se propaga a la app y
+// al script. Las dependencias viven en dependencias.data.ts porque su seed tiene
+// lógica propia (dedupe por nombre).
 // -----------------------------------------------------------------------------
 
 export interface DocumentTypeSeed {
@@ -142,8 +142,8 @@ export interface AppConfigSeed {
 }
 
 /**
- * Configuración inicial. Se conservan las claves que ya traía el dump para no
- * cambiar comportamiento; ojo: `AppConfigService` lee `opinion_default_days` y
+ * Configuración inicial. Se conservan las claves históricas para no cambiar
+ * comportamiento; ojo: `AppConfigService` lee `opinion_default_days` y
  * `opinion_warning_days`, claves que NO están aquí (por eso hoy cae a sus
  * valores por defecto). Ver nota en el commit: no se toca para no alterar plazos.
  */

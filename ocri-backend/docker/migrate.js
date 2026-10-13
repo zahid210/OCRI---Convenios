@@ -1,7 +1,8 @@
 /* eslint-disable */
-// Baseline idempotente para bases creadas por el dump (esquema sin historial de
-// migraciones). No ejecuta DDL: solo marca la migración inicial como aplicada,
-// para que `prisma migrate deploy` no intente volver a crear las tablas.
+// Baseline idempotente para bases preexistentes con el esquema creado pero sin
+// historial de migraciones (p. ej. bases anteriores a versionar el esquema). No
+// ejecuta DDL: solo marca la migración inicial como aplicada, para que
+// `prisma migrate deploy` no intente volver a crear las tablas.
 const mariadb = require('mariadb');
 const { execFileSync } = require('child_process');
 

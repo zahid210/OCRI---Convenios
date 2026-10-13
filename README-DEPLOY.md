@@ -35,21 +35,23 @@ Genera los secretos con:
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-- El primer arranque crea la base de datos a partir de `dumps/ocri-inicio.sql`
-  (catálogos + 447 convenios históricos 2021-2025). El import corre **solo la
-  primera vez** (volumen `db-data` vacío); después el volumen persiste.
+- El **primer arranque es autocontenido**: el backend aplica el esquema
+  (`prisma migrate deploy`) y luego siembra los datos iniciales (catálogos +
+  447 convenios históricos 2021-2025) desde `ocri-backend/prisma/seed-data/`.
+  La siembra de los históricos corre **solo si la tabla `agreements` está
+  vacía**, de modo que nunca pisa una base en uso.
 - Los catálogos base (tipos de documento, dependencias, tipos de convenio y
   configuración) tienen **una sola fuente** en código
-  (`ocri-backend/src/catalogs/catalogs.data.ts` y `dependencias.data.ts`) y se
-  pueden re-sembrar de forma idempotente con `POST /api/catalogs/seed` (admin) o
-  `npm run seed`. Un test de consistencia compara esas listas con el dump para
-  que no puedan divergir.
+  (`ocri-backend/src/catalogs/catalogs.data.ts` y `dependencias.data.ts`), se
+  siembran en cada arranque y se pueden re-sembrar de forma idempotente con
+  `POST /api/catalogs/seed` (admin) o `npm run seed`. Un test comprueba que esas
+  listas no contengan duplicados ni valores inválidos.
 - El **esquema** está versionado en `ocri-backend/prisma/migrations` y el backend
   lo aplica al arrancar (`ocri-backend/docker/entrypoint.sh`): si la base ya
-  tiene tablas pero no historial de migraciones (primer arranque desde el dump),
-  marca la migración inicial como aplicada (baseline, sin re-ejecutarla) y luego
-  corre `prisma migrate deploy`. Así un cambio de esquema se entrega como una
-  migración nueva, sin recrear la base.
+  tiene tablas pero no historial de migraciones (una base creada antes de
+  versionar el esquema), marca la migración inicial como aplicada (baseline, sin
+  re-ejecutarla) y luego corre `prisma migrate deploy`. Así un cambio de esquema
+  se entrega como una migración nueva, sin recrear la base.
 - Ver estado y arranque:
 
 ```bash
@@ -70,24 +72,26 @@ npx prisma migrate dev --name <cambio>   # genera la migración y la aplica en l
 ```
 
 - El baseline `20261013000000_init` reproduce el esquema actual. En bases ya
-  creadas por el dump se marca como aplicado automáticamente (no se re-ejecuta).
-- Mientras el dump siga creando el esquema, cualquier cambio de `schema.prisma`
-  debe reflejarse también en `dumps/ocri-inicio.sql`; el test
-  `ocri-backend/src/common/schema-dump.consistency.spec.ts` falla si divergen.
+  creadas se marca como aplicado automáticamente (no se re-ejecuta).
+- El esquema tiene **una sola fuente**: `schema.prisma`. Los cambios se entregan
+  como migraciones nuevas; no hay ningún `.sql` de esquema que mantener a mano.
+  El test `ocri-backend/src/seed-data/seed-data.consistency.spec.ts` comprueba la
+  integridad del seed de datos (referencias entre convenios, documentos,
+  instituciones y usuarios).
 - El CLI de Prisma solo entiende `mysql://`; `prisma.config.ts` normaliza el
   `mariadb://` de `DATABASE_URL` (el runtime sí usa el adaptador de MariaDB).
 
 ### Credenciales iniciales
 
-El dump `dumps/ocri-inicio.sql` solo trae la **estructura y los datos históricos**
-(usuarios con hashes no operativos). En cada arranque el backend reescribe las
-contraseñas de los usuarios por defecto con las variables de entorno `.env`:
+El seed de datos históricos (`ocri-backend/prisma/seed-data/*.json`) **no trae
+usuarios**: las cuentas las crea el backend en cada arranque con las variables de
+entorno `.env`, y los datos que referencian usuarios lo hacen por email.
 
 | Variable | Usuario | Rol por defecto |
 |---|---|---|
 | `SEED_ADMIN_PASSWORD` | `ocri@uncp.edu.pe` | admin |
-| `SEED_DEMO_PASSWORD` | `jesus@uncp.edu.pe` | asistente |
-| `SEED_DEMO_PASSWORD` | `berna@uncp.edu.pe` | procesador |
+| `SEED_DEMO_PASSWORD_1` | `jesus@uncp.edu.pe` | asistente |
+| `SEED_DEMO_PASSWORD_2` | `berna@uncp.edu.pe` | procesador |
 
 Si se dejan vacías, el backend **no** modifica las contraseñas existentes. Para
 restablecer manualmente la contraseña de cualquier usuario:
@@ -123,7 +127,7 @@ Las cuatro variables `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` y
 Único material local: las plantillas de oficio en `ocri-backend/uploads/templates/`,
 montadas de solo lectura para generar los PDF.
 
-Los 447 convenios históricos del dump traen sus rutas en la columna `file_path`
+Los 447 convenios históricos del seed traen sus rutas en la columna `file_path`
 pero **no** los archivos. Para que sus documentos se puedan ver hay que subirlos
 al bucket, con el mismo prefijo y nombre que figura en la BD, por ejemplo:
 
@@ -155,7 +159,7 @@ Ajusta el año y el nombre del bucket a los de tu `.env`.
    `file_path` de la BD apuntan a rutas relativas dentro del prefijo.
 3. `docker compose up -d --build`.
 4. Subir los PDFs históricos al bucket (ver «Almacenamiento de archivos») para que
-   los convenios del dump tengan documento visible.
+   los convenios históricos tengan documento visible.
 
 ## Verificación tras desplegar
 

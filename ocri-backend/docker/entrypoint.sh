@@ -2,9 +2,11 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Arranque del backend: aplica migraciones Prisma y luego inicia la aplicación.
 #
-# - Primer arranque desde el dump: la base ya trae el esquema pero no el
-#   historial de migraciones. `migrate.js` marca la migración inicial como
-#   aplicada (baseline) SIN re-ejecutarla (evita "table already exists").
+# - Base preexistente sin historial de migraciones: `migrate.js` marca la
+#   migración inicial como aplicada (baseline) SIN re-ejecutarla (evita
+#   "table already exists"); cubre bases creadas antes de versionar el esquema.
+# - Base vacía: `prisma migrate deploy` crea el esquema y la app siembra los
+#   datos iniciales (catálogos + históricos) desde prisma/seed-data/.
 # - En adelante, `prisma migrate deploy` aplica solo las migraciones pendientes.
 # ─────────────────────────────────────────────────────────────────────────────
 set -e

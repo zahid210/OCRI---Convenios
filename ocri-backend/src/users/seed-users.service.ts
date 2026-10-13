@@ -12,8 +12,9 @@ import { BCRYPT_ROUNDS } from '../auth/auth.constants';
 //   SEED_DEMO_PASSWORD_2    → procesador (demo)
 // SEED_DEMO_PASSWORD (singular, legado) funciona como respaldo del asistente y
 // del procesador si las variables nuevas no están definidas.
-// El dump versionado en el repo trae hashes placeholder únicos; este reemplazo
-// evita que una instancia quede operativa con una credencial conocida.
+// El backend crea las cuentas por defecto y reescribe sus contraseñas desde el
+// entorno en cada arranque (SeedUsersService). Este reemplazo evita que una
+// instancia quede operativa con una credencial conocida.
 @Injectable()
 export class SeedUsersService implements OnModuleInit {
   private readonly logger = new Logger(SeedUsersService.name);
@@ -57,8 +58,8 @@ export class SeedUsersService implements OnModuleInit {
     // simultáneos (MariaDB "Record has changed since last read in table
     // 'users'", error 1020, que hacía fallar el login concurrente) y un
     // hasheo bcrypt inútil. La comparación mantiene la garantía de seguridad
-    // (un hash conocido del dump versionado NO coincide con `raw`, así que
-    // sigue siendo reemplazado).
+    // (una credencial previa distinta NO coincide con `raw`, así que sigue
+    // siendo reemplazada).
     const existing = await this.prisma.users.findUnique({
       where: { email },
       select: { password: true },

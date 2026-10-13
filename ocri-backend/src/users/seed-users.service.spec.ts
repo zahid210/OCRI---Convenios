@@ -184,9 +184,9 @@ describe('SeedUsersService', () => {
     process.env.SEED_DEMO_PASSWORD_1 = 'demo-a-pass';
     process.env.SEED_DEMO_PASSWORD_2 = 'demo-b-pass';
 
-    // caso real: el dump versionado trae un hash público conocido, que no
-    // debe coincidir con la contraseña del entorno.
-    const ajeno = await bcrypt.hash('otra-credencial-del-dump', 4);
+    // caso real: una credencial previa conocida no debe coincidir con la del
+    // entorno, por lo que se reescribe.
+    const ajeno = await bcrypt.hash('otra-credencial-previa', 4);
     findUnique.mockResolvedValue({ password: ajeno });
 
     await service.onModuleInit();

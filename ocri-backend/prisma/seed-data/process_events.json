@@ -1,0 +1,62 @@
+[
+ {
+  "id": 1,
+  "agreement_id": 447,
+  "stage": null,
+  "event_type": "DOCUMENTO_SUBIDO",
+  "description": "Se incorporó al expediente el documento \"Dictamen de Rectorado\".",
+  "from_value": null,
+  "to_value": null,
+  "occurred_at": "2026-09-09 07:59:22",
+  "metadata": null,
+  "actor_email": "ocri@uncp.edu.pe"
+ },
+ {
+  "id": 2,
+  "agreement_id": 447,
+  "stage": null,
+  "event_type": "DOCUMENTO_SUBIDO",
+  "description": "Se incorporó al expediente el documento \"Dictamen de Rectorado\".",
+  "from_value": null,
+  "to_value": null,
+  "occurred_at": "2026-09-09 07:59:54",
+  "metadata": null,
+  "actor_email": "ocri@uncp.edu.pe"
+ },
+ {
+  "id": 3,
+  "agreement_id": 447,
+  "stage": null,
+  "event_type": "DOCUMENTO_SUBIDO",
+  "description": "Se incorporó al expediente el documento \"Dictamen de Rectorado\".",
+  "from_value": null,
+  "to_value": null,
+  "occurred_at": "2026-09-09 08:00:18",
+  "metadata": null,
+  "actor_email": "ocri@uncp.edu.pe"
+ },
+ {
+  "id": 4,
+  "agreement_id": 447,
+  "stage": null,
+  "event_type": "DOCUMENTO_SUBIDO",
+  "description": "Se incorporó al expediente el documento \"Dictamen de Rectorado\".",
+  "from_value": null,
+  "to_value": null,
+  "occurred_at": "2026-09-09 08:00:30",
+  "metadata": null,
+  "actor_email": "ocri@uncp.edu.pe"
+ },
+ {
+  "id": 5,
+  "agreement_id": 447,
+  "stage": null,
+  "event_type": "DOCUMENTO_SUBIDO",
+  "description": "Se incorporó al expediente el documento \"Dictamen de Rectorado\".",
+  "from_value": null,
+  "to_value": null,
+  "occurred_at": "2026-09-09 08:00:48",
+  "metadata": null,
+  "actor_email": "ocri@uncp.edu.pe"
+ }
+]
