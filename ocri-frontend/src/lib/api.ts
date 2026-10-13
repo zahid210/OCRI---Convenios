@@ -272,13 +272,12 @@ export async function generateOpinionRequests(
 /** Registra la respuesta de una dependencia (con archivo opcional) */
 export async function respondOpinionRequest(
   requestId: number,
-  data: { response_date?: string; observations?: string; reason?: string },
+  data: { response_date?: string; observations?: string },
   file?: File,
 ) {
   const formData = new FormData();
   if (data.response_date) formData.append("response_date", data.response_date);
   if (data.observations) formData.append("observations", data.observations);
-  if (data.reason) formData.append("reason", data.reason);
   if (file) formData.append("file", file);
 
   return fetchApi(`/process/opinion-requests/${requestId}/respond`, {
@@ -326,7 +325,6 @@ export async function generateOficioOpinion(
     adesa_number?: string;
     oficio_number?: string;
     directed_to?: string;
-    reason?: string;
   },
 ) {
   return fetchApi(`/process/opinion-requests/${requestId}/oficio/generate`, {
@@ -348,7 +346,6 @@ export async function uploadOficioOpinion(
     adesa_number?: string;
     oficio_number?: string;
     sent_at?: string;
-    reason?: string;
   },
 ) {
   const formData = new FormData();
@@ -357,7 +354,6 @@ export async function uploadOficioOpinion(
   if (data.adesa_number) formData.append("adesa_number", data.adesa_number);
   if (data.oficio_number) formData.append("oficio_number", data.oficio_number);
   if (data.sent_at) formData.append("sent_at", data.sent_at);
-  if (data.reason) formData.append("reason", data.reason);
 
   return fetchApi(`/process/opinion-requests/${requestId}/oficio/upload`, {
     method: "POST",
@@ -373,7 +369,7 @@ export async function getOficioRectoradoTemplate(agreementId: number) {
 /** Genera el oficio a Rectorado y lo adjunta automáticamente al proceso */
 export async function generateOficioRectorado(
   agreementId: number,
-  data: { bodyHtml: string; oficio_number?: string; reason?: string },
+  data: { bodyHtml: string; oficio_number?: string },
 ) {
   return fetchApi(`/process/${agreementId}/oficio-rectorado/generate`, {
     method: "POST",
@@ -414,18 +410,16 @@ export async function generateExpediente(agreementId: number) {
 }
 
 /**
- * Reemplaza un documento del proceso (Etapa 1): requiere el motivo de la
- * corrección, colapsa duplicados del mismo tipo y registra el evento.
+ * Reemplaza un documento del proceso (Etapa 1): colapsa duplicados del mismo
+ * tipo y registra el evento en la bitácora.
  */
 export async function replaceProcessDocument(
   agreementId: number,
   docId: number,
   file: File,
-  reason: string,
 ) {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("reason", reason);
 
   return fetchApi(`/process/${agreementId}/documents/${docId}/replace`, {
     method: "POST",

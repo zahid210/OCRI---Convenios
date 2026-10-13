@@ -173,7 +173,6 @@ export class ProcessController {
         adesa_number: body.adesa_number,
         oficio_number: body.oficio_number,
         directed_to: body.directed_to,
-        reason: body.reason,
       },
       req.user?.id,
     );
@@ -203,7 +202,6 @@ export class ProcessController {
         sent_at: body.sent_at,
         sent_via: body.sent_via,
         directed_to: body.directed_to,
-        reason: body.reason,
       },
       req.user?.id,
     );
@@ -232,7 +230,6 @@ export class ProcessController {
       {
         bodyHtml: body.bodyHtml,
         oficio_number: body.oficio_number,
-        reason: body.reason,
       },
       req.user?.id,
     );
@@ -269,10 +266,9 @@ export class ProcessController {
   }
 
   /**
-   * Reemplaza el archivo de un documento ya cargado en el trámite (corrección
-   * con motivo obligatorio y traza en la bitácora). No aplica a documentos
-   * generados por el sistema ni a oficios de opinión, que tienen su propio flujo
-   * de corrección.
+   * Reemplaza el archivo de un documento ya cargado en el trámite (traza en la
+   * bitácora). No aplica a documentos generados por el sistema ni a oficios de
+   * opinión, que tienen su propio flujo de corrección.
    */
   @Roles(...FLOW_ROLES)
   @Post(':agreementId/documents/:docId/replace')
@@ -289,7 +285,7 @@ export class ProcessController {
       agreementId,
       docId,
       file,
-      { direction: body.direction, reason: body.reason },
+      { direction: body.direction },
       req.user?.id,
     );
   }

@@ -374,13 +374,7 @@ export class ProcessService {
         published_at: true,
         registered_at: true,
         monitoring_concluded_at: true,
-        applicant_name: true,
-        applicant_email: true,
-        applicant_unit: true,
         rectorate_oficio_number: true,
-        institution_id: true,
-        agreement_type_id: true,
-        observations: true,
       },
     });
 
@@ -709,7 +703,6 @@ export class ProcessService {
     dto: {
       response_date?: string;
       observations?: string;
-      reason?: string;
     },
     file?: UploadFile,
     userId?: number,
@@ -852,9 +845,6 @@ export class ProcessService {
             fromValue: request.status,
             toValue: 'RESPONDIDA',
             opinionRequestId: BigInt(opinionRequestId),
-            metadata: dto.reason?.trim()
-              ? { reason: dto.reason.trim() }
-              : undefined,
           },
           undefined,
           tx,
@@ -1337,7 +1327,6 @@ export class ProcessService {
       adesa_number?: string;
       oficio_number?: string;
       directed_to?: string;
-      reason?: string;
     },
     userId?: number,
   ) {
@@ -1462,7 +1451,6 @@ export class ProcessService {
               opinionRequestId: BigInt(opinionRequestId),
               metadata: {
                 sent_via: dto.sent_via ?? null,
-                reason: dto.reason?.trim() || null,
               },
             },
             'ETAPA_1_PROPUESTA',
@@ -1532,7 +1520,6 @@ export class ProcessService {
       sent_at?: string;
       sent_via?: string;
       directed_to?: string;
-      reason?: string;
     },
     userId?: number,
   ) {
@@ -1687,7 +1674,6 @@ export class ProcessService {
               metadata: JSON.parse(
                 JSON.stringify({
                   sent_via: dto.sent_via ?? null,
-                  reason: dto.reason?.trim() || null,
                   source: isCorrection ? 'correccion' : 'carga_manual',
                   original_name: originalName,
                 }),
@@ -1749,7 +1735,7 @@ export class ProcessService {
    */
   async generateOficioRectorado(
     agreementId: number,
-    dto: { bodyHtml: string; oficio_number?: string; reason?: string },
+    dto: { bodyHtml: string; oficio_number?: string },
     userId?: number,
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
@@ -1845,7 +1831,6 @@ export class ProcessService {
               actorUserId: userId,
               metadata: {
                 oficio_number: dto.oficio_number ?? null,
-                reason: dto.reason?.trim() || null,
               },
             },
             'ETAPA_1_PROPUESTA',
@@ -1905,8 +1890,8 @@ export class ProcessService {
     }
 
     // Idempotencia por tipo: en la propuesta cada tipo de documento es único.
-    // Si ya existe uno, la corrección se hace con "Reemplazar" (con motivo y
-    // trazabilidad) en lugar de acumular duplicados.
+    // Si ya existe uno, la corrección se hace con "Reemplazar" (con trazabilidad
+    // en la bitácora) en lugar de acumular duplicados.
     const alreadyExists = await this.prisma.documents.findFirst({
       where: {
         agreement_id: BigInt(agreementId),
@@ -1978,9 +1963,9 @@ export class ProcessService {
    * conservando su `id` (y por tanto sus vínculos y su lugar en el proceso).
    *
    * Pensado para corregir un documento cargado por error. Solo aplica dentro de
-   * la ventana de corrección (Etapa 1), exige un motivo y deja traza en
-   * `process_events`. Además colapsa los duplicados del mismo tipo para que el
-   * expediente quede con una sola copia por tipo.
+   * la ventana de corrección (Etapa 1) y deja traza en `process_events`. Además
+   * colapsa los duplicados del mismo tipo para que el expediente quede con una
+   * sola copia por tipo.
    *
    * Los documentos generados por el sistema (expediente, oficios) y los
    * oficios de opinión quedan fuera: se corrigen regenerándolos o desde la
@@ -1990,7 +1975,7 @@ export class ProcessService {
     agreementId: number,
     docId: number,
     file: UploadFile,
-    dto: { direction?: string; reason?: string },
+    dto: { direction?: string },
     userId?: number,
   ) {
     const agreement = await this.getAgreementOrThrow(agreementId);
@@ -2024,13 +2009,6 @@ export class ProcessService {
     if (this.isGeneratedDocument(code)) {
       throw new BadRequestException(
         'Este documento lo genera el sistema automáticamente: use "Regenerar" para rehacerlo con los datos actuales.',
-      );
-    }
-
-    const reason = dto.reason?.trim();
-    if (!reason) {
-      throw new BadRequestException(
-        'Indique el motivo de la corrección (motivo es requerido).',
       );
     }
 
@@ -2103,7 +2081,6 @@ export class ProcessService {
                 previous_name: doc.original_name ?? doc.name,
                 new_name: originalName,
                 duplicates_removed: duplicates.length,
-                reason,
               },
             },
             'ETAPA_1_PROPUESTA',

@@ -112,15 +112,8 @@ describe('ProcessService · replaceProcessDocument', () => {
     );
 
     await expect(
-      service.replaceProcessDocument(1, 7, file, { reason: 'error' }),
+      service.replaceProcessDocument(1, 7, file, {}),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(putUnique).not.toHaveBeenCalled();
-  });
-
-  it('exige el motivo de la corrección', async () => {
-    await expect(
-      service.replaceProcessDocument(1, 7, file, { reason: '   ' }),
-    ).rejects.toThrow(/motivo/i);
     expect(putUnique).not.toHaveBeenCalled();
   });
 
@@ -128,7 +121,7 @@ describe('ProcessService · replaceProcessDocument', () => {
     prisma.documents.findFirst.mockResolvedValueOnce(null);
 
     await expect(
-      service.replaceProcessDocument(1, 999, file, { reason: 'error' }),
+      service.replaceProcessDocument(1, 999, file, {}),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -140,7 +133,7 @@ describe('ProcessService · replaceProcessDocument', () => {
     });
 
     await expect(
-      service.replaceProcessDocument(1, 7, file, { reason: 'error' }),
+      service.replaceProcessDocument(1, 7, file, {}),
     ).rejects.toThrow(/Cambiar Oficio/);
     expect(putUnique).not.toHaveBeenCalled();
   });
@@ -152,7 +145,7 @@ describe('ProcessService · replaceProcessDocument', () => {
     });
 
     await expect(
-      service.replaceProcessDocument(1, 7, file, { reason: 'error' }),
+      service.replaceProcessDocument(1, 7, file, {}),
     ).rejects.toThrow(/Regenerar/);
     expect(putUnique).not.toHaveBeenCalled();
   });
@@ -162,9 +155,7 @@ describe('ProcessService · replaceProcessDocument', () => {
       { id: 8n, file_path: '2026/999-2026/dictamen(1).pdf' },
     ]);
 
-    await service.replaceProcessDocument(1, 7, file, {
-      reason: 'se cargó el dictamen equivocado',
-    });
+    await service.replaceProcessDocument(1, 7, file, {});
 
     expect(tx.documents.update).toHaveBeenCalledTimes(1);
     expect(tx.documents.deleteMany).toHaveBeenCalledWith({
@@ -173,18 +164,15 @@ describe('ProcessService · replaceProcessDocument', () => {
     // El objeto original y el duplicado se purgan tras el commit.
     expect(removeRel).toHaveBeenCalledWith('2026/999-2026/dictamen.pdf');
     expect(removeRel).toHaveBeenCalledWith('2026/999-2026/dictamen(1).pdf');
-    const calls = logEvent.mock.calls as unknown as Array<
-      [bigint, string, string, { metadata: { reason: string } }]
-    >;
+    const calls = logEvent.mock.calls as unknown as Array<[bigint, string]>;
     expect(calls[0][1]).toBe('DOCUMENTO_REEMPLAZADO');
-    expect(calls[0][3].metadata.reason).toBe('se cargó el dictamen equivocado');
   });
 
   it('purga el archivo nuevo si la transacción falla (sin dejar huérfanos)', async () => {
     prisma.$transaction.mockRejectedValueOnce(new Error('db caída'));
 
     await expect(
-      service.replaceProcessDocument(1, 7, file, { reason: 'error' }),
+      service.replaceProcessDocument(1, 7, file, {}),
     ).rejects.toThrow('db caída');
     expect(removeRel).toHaveBeenCalledWith('2026/999-2026/nuevo.pdf');
   });
@@ -387,12 +375,7 @@ describe('ProcessService · respondOpinionRequest (corrección RESPONDIDA)', () 
   it('reemplaza una respuesta RESPONDIDA sin borrar el oficio de solicitud', async () => {
     buildService('RESPONDIDA', 1);
 
-    await service.respondOpinionRequest(
-      3,
-      { reason: 'fecha mal cargada' },
-      file,
-      1,
-    );
+    await service.respondOpinionRequest(3, {}, file, 1);
 
     // La consulta de documentos previos SOLO apunta a la respuesta, nunca al
     // oficio de solicitud: el filtro lo garantiza.
@@ -411,11 +394,8 @@ describe('ProcessService · respondOpinionRequest (corrección RESPONDIDA)', () 
     // La respuesta anterior se purga en OBS después del commit.
     expect(removeRel).toHaveBeenCalledWith('2026/999-2026/respuesta(0).pdf');
 
-    const calls = logEvent.mock.calls as unknown as Array<
-      [bigint, string, string, { metadata?: { reason?: string } }]
-    >;
+    const calls = logEvent.mock.calls as unknown as Array<[bigint, string]>;
     expect(calls[0][1]).toBe('RESPUESTA_REEMPLAZADA');
-    expect(calls[0][3]?.metadata?.reason).toBe('fecha mal cargada');
   });
 
   it('bloquea la corrección cuando el trámite ya fue remitido a Rectorado', async () => {
