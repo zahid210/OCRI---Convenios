@@ -127,10 +127,6 @@ export default function GenerarOficioRectoradoModal({
               )}
               Previsualizar y editar
             </button>
-            <p className="text-xs text-gray-400 mt-1">
-              Se abrirá el oficio de envío del expediente técnico a Rectorado en
-              una ventana para revisar y corregir su contenido.
-            </p>
           </div>
           <div className="border-t border-gray-200 pt-4">
             <div className="mt-4">
