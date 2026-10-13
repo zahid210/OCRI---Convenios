@@ -518,7 +518,6 @@ export default function CreatePropuestaPage() {
                       : "border-gold bg-gold hover:bg-gold-dark text-white",
                   )}
                 >
-                  <Gavel className="h-4 w-4" />
                   {dictamenFile ? "Dictamen adjunto ✓" : "Adjuntar Dictamen"}
                 </button>
               </div>

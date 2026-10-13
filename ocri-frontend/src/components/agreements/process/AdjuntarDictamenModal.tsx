@@ -60,9 +60,8 @@ export default function AdjuntarDictamenModal({
             type="button"
             onClick={handleSubmit}
             disabled={!file}
-            className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50"
           >
-            <Gavel className="h-4 w-4" />
             Adjuntar Dictamen
           </button>
         </>
