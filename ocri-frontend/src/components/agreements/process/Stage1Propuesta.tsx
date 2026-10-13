@@ -31,6 +31,9 @@ import ValidarOpinionModal from "./ValidarOpinionModal";
 import SubirDocumentoModal from "./SubirDocumentoModal";
 import CargarOficioModal from "./CargarOficioModal";
 import SolicitarOpinionesModal from "./SolicitarOpinionesModal";
+import EditarDatosPropuestaModal, {
+  type PropuestaDatosPayload,
+} from "./EditarDatosPropuestaModal";
 import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -283,6 +286,7 @@ export default function Stage1Propuesta({
     doc: AgreementDocument;
     initialNumber: string;
   } | null>(null);
+  const [showEditDataModal, setShowEditDataModal] = useState(false);
 
   const [isGeneratingExpediente, setIsGeneratingExpediente] = useState(false);
 
@@ -545,6 +549,37 @@ export default function Stage1Propuesta({
     }
   };
 
+  /** Si existen documentos *generados* a partir de los datos, advertir. */
+  const hasGeneratedDocuments = documents.some((doc) => {
+    const code = doc.document_types?.code;
+    return (
+      code === "EXPEDIENTE_TECNICO" ||
+      code === "OFICIO_RESPUESTA_RECTORADO" ||
+      code === "OFICIO_SOLICITUD_OPINION" ||
+      code === "OFICIO_RESPUESTA_OPINION"
+    );
+  });
+
+  const handleSavePropuestaDatos = async (data: PropuestaDatosPayload) => {
+    try {
+      await updateAgreement(agreementId, data);
+      setShowEditDataModal(false);
+      await onRefresh();
+      if (hasGeneratedDocuments) {
+        toast.info(
+          "Datos guardados. El expediente técnico y los oficios generados deben regenerarse en 'Documentos del Proceso' para reflejar los cambios.",
+          { timeout: 8000 },
+        );
+      } else {
+        toast.success("Datos de la propuesta actualizados correctamente.");
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al guardar los datos";
+      toast.error(message);
+    }
+  };
+
   const handleRegenerateExpediente = async () => {
     const confirmed = await confirm({
       title: "Regenerar expediente técnico",
@@ -791,6 +826,78 @@ export default function Stage1Propuesta({
 
   return (
     <div className="space-y-6">
+      <SectionCard
+        title="Datos de la Propuesta"
+        icon={FileText}
+        action={
+          <button
+            type="button"
+            disabled={!correctionOpen}
+            onClick={() => setShowEditDataModal(true)}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline disabled:text-gray-300 disabled:cursor-not-allowed"
+            title={
+              correctionOpen
+                ? "Editar los datos maestros de la propuesta"
+                : frozenTooltip
+            }
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Editar
+          </button>
+        }
+      >
+        <div className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <span className="text-xs font-semibold uppercase text-gray-500">
+              Código de trámite
+            </span>
+            <p className="text-gray-800 font-medium mt-0.5">
+              {agreement.tramite_code || "—"}
+            </p>
+          </div>
+          <div className="sm:col-span-2 lg:col-span-2">
+            <span className="text-xs font-semibold uppercase text-gray-500">
+              Título
+            </span>
+            <p className="text-gray-800 font-medium mt-0.5">
+              {agreement.title || "—"}
+            </p>
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <span className="text-xs font-semibold uppercase text-gray-500">
+              Objeto
+            </span>
+            <p className="text-gray-800 mt-0.5 whitespace-pre-line">
+              {agreement.name || "—"}
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase text-gray-500">
+              Solicitante
+            </span>
+            <p className="text-gray-800 font-medium mt-0.5">
+              {agreement.applicant_name || "—"}
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase text-gray-500">
+              Unidad
+            </span>
+            <p className="text-gray-800 font-medium mt-0.5">
+              {agreement.applicant_unit || "—"}
+            </p>
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase text-gray-500">
+              Correo del solicitante
+            </span>
+            <p className="text-gray-800 font-medium mt-0.5">
+              {agreement.applicant_email || "—"}
+            </p>
+          </div>
+        </div>
+      </SectionCard>
+
       {canManage &&
         (processStatus === "OPINIONES_COMPLETAS" ||
           processStatus === "EXPEDIENTE_TECNICO_LISTO") && (
@@ -1522,6 +1629,14 @@ export default function Stage1Propuesta({
           initialNumber={editDictamen.initialNumber}
           onConfirm={handleEditDictamen}
           onCancel={() => setEditDictamen(null)}
+        />
+      )}
+
+      {showEditDataModal && (
+        <EditarDatosPropuestaModal
+          agreement={agreement}
+          onSave={handleSavePropuestaDatos}
+          onCancel={() => setShowEditDataModal(false)}
         />
       )}
 

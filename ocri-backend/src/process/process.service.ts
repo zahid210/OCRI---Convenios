@@ -374,6 +374,13 @@ export class ProcessService {
         published_at: true,
         registered_at: true,
         monitoring_concluded_at: true,
+        applicant_name: true,
+        applicant_email: true,
+        applicant_unit: true,
+        rectorate_oficio_number: true,
+        institution_id: true,
+        agreement_type_id: true,
+        observations: true,
       },
     });
 
