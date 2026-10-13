@@ -8,11 +8,14 @@ import type { OpinionRequest } from "@/types/agreements";
 
 interface ResponderSolicitudModalProps {
   request?: OpinionRequest;
+  /** Muestra el campo "Motivo de la corrección" (reemplazo de una respuesta). */
+  allowReason?: boolean;
   onRespond: (
     requestId: number,
     data: {
       response_date: string;
       observations?: string;
+      reason?: string;
     },
     file: File | undefined,
   ) => Promise<void>;
@@ -21,6 +24,7 @@ interface ResponderSolicitudModalProps {
 
 export default function ResponderSolicitudModal({
   request,
+  allowReason = false,
   onRespond,
   onCancel,
 }: ResponderSolicitudModalProps) {
@@ -28,6 +32,7 @@ export default function ResponderSolicitudModal({
 
   const [respondDate, setRespondDate] = useState("");
   const [respondObs, setRespondObs] = useState("");
+  const [reason, setReason] = useState("");
   const [respondFile, setRespondFile] = useState<File | null>(null);
   const [isResponding, setIsResponding] = useState(false);
 
@@ -48,6 +53,7 @@ export default function ResponderSolicitudModal({
         {
           response_date: respondDate,
           observations: respondObs || undefined,
+          reason: reason.trim() || undefined,
         },
         respondFile || undefined,
       );
@@ -116,6 +122,20 @@ export default function ResponderSolicitudModal({
             placeholder="Observaciones de la dependencia (opcional)..."
           />
         </div>
+        {allowReason && (
+          <div>
+            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+              Motivo de la corrección
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
+              placeholder="Ej: se adjuntó el archivo equivocado (opcional)..."
+            />
+          </div>
+        )}
       </div>
     </ModalShell>
   );

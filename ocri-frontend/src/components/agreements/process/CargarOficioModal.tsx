@@ -11,10 +11,13 @@ interface CargarOficioPayload {
   adesa_number?: string;
   oficio_number?: string;
   sent_at?: string;
+  reason?: string;
 }
 
 interface CargarOficioModalProps {
   request?: OpinionRequest;
+  /** Muestra el campo "Motivo de la corrección" (corrección de un oficio enviado). */
+  allowReason?: boolean;
   onUpload: (
     requestId: number,
     file: File,
@@ -39,6 +42,7 @@ function todayIso() {
  */
 export default function CargarOficioModal({
   request,
+  allowReason = false,
   onUpload,
   onCancel,
 }: CargarOficioModalProps) {
@@ -49,6 +53,7 @@ export default function CargarOficioModal({
   const [adesaNumber, setAdesaNumber] = useState("");
   const [oficioNumber, setOficioNumber] = useState("");
   const [sentDate, setSentDate] = useState(todayIso());
+  const [reason, setReason] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
   const handleSubmit = async () => {
@@ -72,6 +77,7 @@ export default function CargarOficioModal({
         adesa_number: adesaNumber.trim() || undefined,
         oficio_number: oficioNumber.trim(),
         sent_at: sentDate || undefined,
+        reason: reason.trim() || undefined,
       });
     } catch {
       /* el error ya se notifica en el padre; el modal permanece abierto */
@@ -169,6 +175,20 @@ export default function CargarOficioModal({
               className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
             />
           </div>
+          {allowReason && (
+            <div className="mt-4">
+              <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                Motivo de la corrección
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={2}
+                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
+                placeholder="Ej: se adjuntó el oficio equivocado (opcional)..."
+              />
+            </div>
+          )}
         </div>
       </div>
     </ModalShell>

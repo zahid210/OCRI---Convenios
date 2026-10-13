@@ -12,16 +12,20 @@ import {
   getDefaultOpinionTargets,
   generateOficioRectorado,
   openDocumentPreview,
+  replaceProcessDocument,
   respondOpinionRequest,
   sendToRectorado,
+  updateAgreement,
   uploadProcessDocument,
   uploadOficioOpinion,
   validateOpinionRequest,
   cancelOpinionRequest,
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
+import AdjuntarDictamenModal from "./AdjuntarDictamenModal";
 import EnviarOficioOpinionModal from "./EnviarOficioOpinionModal";
 import GenerarOficioRectoradoModal from "./GenerarOficioRectoradoModal";
+import ReemplazarDocumentoModal from "./ReemplazarDocumentoModal";
 import ResponderSolicitudModal from "./ResponderSolicitudModal";
 import ValidarOpinionModal from "./ValidarOpinionModal";
 import SubirDocumentoModal from "./SubirDocumentoModal";
@@ -45,6 +49,7 @@ import {
   FolderOpen,
   Loader2,
   MessageSquare,
+  Pencil,
   Plus,
   Send,
   ShieldCheck,
@@ -54,6 +59,7 @@ import {
 } from "lucide-react";
 import {
   DOCUMENT_TYPE_LABELS,
+  DOC_TYPE_ACCEPT,
   NEXT_STAGE_DESTINATION,
   ProcessDetail,
   SectionCard,
@@ -66,6 +72,17 @@ const ACTION_STATUSES = [
   "RECEPCIONADA",
   "OPINIONES_EN_CURSO",
   "OPINIONES_COMPLETAS",
+];
+
+/**
+ * Ventana de corrección de Etapa 1: mientras el trámite aún no se remitió a
+ * Rectorado (ENVIADO_A_RECTORADO), los documentos/oficios se pueden rehacer.
+ */
+const CORRECTION_STATUSES = [
+  "RECEPCIONADA",
+  "OPINIONES_EN_CURSO",
+  "OPINIONES_COMPLETAS",
+  "EXPEDIENTE_TECNICO_LISTO",
 ];
 
 function formatDateOnly(value?: string | null) {
@@ -239,11 +256,18 @@ export default function Stage1Propuesta({
   const [expandedRequest, setExpandedRequest] = useState<number | null>(null);
 
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [showCargarOficioModal, setShowCargarOficioModal] = useState<
-    number | null
-  >(null);
-  const [showSendModal, setShowSendModal] = useState<number | null>(null);
-  const [showRespondModal, setShowRespondModal] = useState<number | null>(null);
+  const [showCargarOficioModal, setShowCargarOficioModal] = useState<{
+    id: number;
+    correction: boolean;
+  } | null>(null);
+  const [showSendModal, setShowSendModal] = useState<{
+    id: number;
+    correction: boolean;
+  } | null>(null);
+  const [showRespondModal, setShowRespondModal] = useState<{
+    id: number;
+    correction: boolean;
+  } | null>(null);
   const [validateModal, setValidateModal] = useState<{
     id: number;
     valid: boolean;
@@ -252,6 +276,13 @@ export default function Stage1Propuesta({
   const [uploadTargetType, setUploadTargetType] = useState<string | null>(null);
 
   const [showRectoradoModal, setShowRectoradoModal] = useState(false);
+
+  const [editReplaceDoc, setEditReplaceDoc] =
+    useState<AgreementDocument | null>(null);
+  const [editDictamen, setEditDictamen] = useState<{
+    doc: AgreementDocument;
+    initialNumber: string;
+  } | null>(null);
 
   const [isGeneratingExpediente, setIsGeneratingExpediente] = useState(false);
 
@@ -283,11 +314,11 @@ export default function Stage1Propuesta({
     hasExpediente && hasOficioRectorado && hasPropuestaFirma;
 
   const respondingRequest = opinion_requests.find(
-    (r) => r.id === showRespondModal,
+    (r) => r.id === showRespondModal?.id,
   );
 
   const cargarOficioRequest = opinion_requests.find(
-    (r) => r.id === showCargarOficioModal,
+    (r) => r.id === showCargarOficioModal?.id,
   );
 
   const pendingRequests = opinion_requests.filter(
@@ -323,7 +354,7 @@ export default function Stage1Propuesta({
   };
 
   const openGenerateOficioModal = (requestId: number) => {
-    setShowSendModal(requestId);
+    setShowSendModal({ id: requestId, correction: false });
   };
 
   const handleCargarOficio = async (
@@ -334,6 +365,7 @@ export default function Stage1Propuesta({
       adesa_number?: string;
       oficio_number?: string;
       sent_at?: string;
+      reason?: string;
     },
   ) => {
     try {
@@ -355,6 +387,7 @@ export default function Stage1Propuesta({
       sent_via: string;
       adesa_number?: string;
       oficio_number?: string;
+      reason?: string;
     },
   ) => {
     try {
@@ -396,6 +429,7 @@ export default function Stage1Propuesta({
     data: {
       response_date: string;
       observations?: string;
+      reason?: string;
     },
     file: File | undefined,
   ) => {
@@ -470,6 +504,198 @@ export default function Stage1Propuesta({
       const message =
         err instanceof Error ? err.message : "Error al subir documento";
       toast.error(message);
+    }
+  };
+
+  const handleReplaceDocument = async (file: File, reason: string) => {
+    const doc = editReplaceDoc;
+    if (!doc) return;
+    try {
+      await replaceProcessDocument(agreementId, doc.id, file, reason);
+      toast.success("Documento reemplazado correctamente.");
+      setEditReplaceDoc(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al reemplazar documento";
+      toast.error(message);
+    }
+  };
+
+  const handleEditDictamen = async (file: File, number: string) => {
+    const doc = editDictamen?.doc;
+    if (!doc) return;
+    try {
+      // 1) Se reemplaza el archivo del dictamen y 2) se corrige el N° almacenado
+      // en el convenio (mismo dato que Admin actualiza). Ambas quedan auditadas.
+      await replaceProcessDocument(agreementId, doc.id, file, "Corrección del dictamen.");
+      await updateAgreement(agreementId, {
+        rectorate_oficio_number: number || null,
+      });
+      toast.success("Dictamen reemplazado y N° actualizado.");
+      setEditDictamen(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al reemplazar dictamen";
+      toast.error(message);
+      // Si el archivo cambió pero el N° falló, se recarga el detalle para
+      // reflejar el estado real.
+      await onRefresh().catch(() => {});
+    }
+  };
+
+  const handleRegenerateExpediente = async () => {
+    const confirmed = await confirm({
+      title: "Regenerar expediente técnico",
+      description:
+        "El expediente se volverá a generar con las opiniones y documentos actuales. Continúe solo si el expediente previo quedó desactualizado.",
+    });
+    if (!confirmed) return;
+    await handleGenerateExpediente();
+  };
+
+  /**
+   * La acción "Editar" de cada fila de la tabla se resuelve por el tipo del
+   * documento: cada tipo abre su modal "clásico" (archivo, N° de dictamen,
+   * oficio de opinión, respuesta, regeneración…).
+   */
+  const correctionOpen =
+    canManage && CORRECTION_STATUSES.includes(processStatus);
+  const frozenTooltip =
+    "Solo se pueden corregir documentos mientras el trámite está en Etapa 1 y aún no se remitió a Rectorado.";
+
+  type DocEditKind =
+    | "replace"
+    | "dictamen"
+    | "expediente"
+    | "rectorado"
+    | "oficio"
+    | "respuesta"
+    | "none";
+
+  const docEditAction = (doc: AgreementDocument): {
+    kind: DocEditKind;
+    label: string;
+    disabled: boolean;
+    tooltip: string;
+  } => {
+    const code = doc.document_types?.code ?? "";
+    const request = doc.opinion_request_id
+      ? opinion_requests.find((r) => r.id === doc.opinion_request_id)
+      : undefined;
+
+    switch (code) {
+      case "OFICIO_SOLICITUD_OPINION": {
+        const enabled = correctionOpen && request?.status === "ENVIADA";
+        return {
+          kind: "oficio",
+          label: "Editar",
+          disabled: !enabled,
+          tooltip: enabled
+            ? "Regenerar o subir otro oficio de solicitud de esta dependencia"
+            : request
+              ? `El oficio solo puede editarse mientras la solicitud está ENVIADA (estado: ${request.status}).`
+              : frozenTooltip,
+        };
+      }
+      case "OFICIO_RESPUESTA_OPINION": {
+        const enabled =
+          correctionOpen &&
+          (request?.status === "RESPONDIDA" ||
+            request?.status === "OBSERVADA");
+        return {
+          kind: "respuesta",
+          label: "Editar",
+          disabled: !enabled,
+          tooltip: enabled
+            ? "Reemplazar la respuesta de esta dependencia"
+            : request &&
+                (request.status === "VALIDADA" ||
+                  request.status === "CANCELADA")
+              ? "La opinión ya fue validada o cancelada y no se modifica."
+              : request
+                ? `La respuesta solo puede reemplazarse en estado RESPONDIDA u OBSERVADA (estado: ${request.status}).`
+                : frozenTooltip,
+        };
+      }
+      case "DICTAMEN":
+        return {
+          kind: "dictamen",
+          label: "Editar",
+          disabled: !correctionOpen,
+          tooltip: correctionOpen
+            ? "Reemplazar el dictamen y su N°"
+            : frozenTooltip,
+        };
+      case "EXPEDIENTE_TECNICO":
+        return {
+          kind: "expediente",
+          label: "Regenerar",
+          disabled: !correctionOpen,
+          tooltip: correctionOpen
+            ? "Regenerar el expediente con las opiniones actuales"
+            : frozenTooltip,
+        };
+      case "OFICIO_RESPUESTA_RECTORADO":
+        return {
+          kind: "rectorado",
+          label: "Regenerar",
+          disabled:
+            !correctionOpen ||
+            !["OPINIONES_COMPLETAS", "EXPEDIENTE_TECNICO_LISTO"].includes(
+              processStatus,
+            ),
+          tooltip:
+            processStatus === "ENVIADO_A_RECTORADO" ||
+            !["OPINIONES_COMPLETAS", "EXPEDIENTE_TECNICO_LISTO"].includes(
+              processStatus,
+            )
+              ? "El oficio se regenera con las opiniones completas ya consolidadas."
+              : frozenTooltip,
+        };
+      case "CONVENIO_FIRMADO":
+      case "PUBLICACION":
+        return { kind: "none", label: "", disabled: true, tooltip: "" };
+      default:
+        return {
+          kind: "replace",
+          label: "Reemplazar",
+          disabled: !correctionOpen,
+          tooltip: correctionOpen
+            ? "Sustituir el archivo (queda el motivo en el historial)"
+            : frozenTooltip,
+        };
+    }
+  };
+
+  const runDocumentEdit = (doc: AgreementDocument, action: DocEditKind) => {
+    switch (action) {
+      case "replace":
+        setEditReplaceDoc(doc);
+        break;
+      case "dictamen":
+        setEditDictamen({
+          doc,
+          initialNumber: agreement.rectorate_oficio_number ?? "",
+        });
+        break;
+      case "expediente":
+        void handleRegenerateExpediente();
+        break;
+      case "rectorado":
+        setShowRectoradoModal(true);
+        break;
+      case "respuesta":
+        if (doc.opinion_request_id) {
+          setShowRespondModal({
+            id: doc.opinion_request_id,
+            correction: true,
+          });
+        }
+        break;
+      default:
+        break;
     }
   };
 
@@ -560,7 +786,7 @@ export default function Stage1Propuesta({
   }, [allRectoradoReady, processStatus, agreementId, onRefresh, toast, router]);
 
   const openRespondModal = (requestId: number) => {
-    setShowRespondModal(requestId);
+    setShowRespondModal({ id: requestId, correction: false });
   };
 
   return (
@@ -839,7 +1065,7 @@ export default function Stage1Propuesta({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setShowCargarOficioModal(req.id);
+                                setShowCargarOficioModal({ id: req.id, correction: false });
                               }}
                               className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm transition-colors"
                               title="Adjuntar un oficio que ya fue emitido, en lugar de generarlo aquí"
@@ -1126,6 +1352,9 @@ export default function Stage1Propuesta({
                   <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Descargar
                   </th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Editar
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1173,6 +1402,57 @@ export default function Stage1Propuesta({
                         <Download className="h-3.5 w-3.5" />
                       </button>
                     </td>
+                    <td className="px-6 py-3 text-right">
+                      {docEditAction(doc).kind === "none" ? (
+                        <span className="text-gray-300">—</span>
+                      ) : docEditAction(doc).kind === "oficio" && doc.opinion_request_id ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            disabled={docEditAction(doc).disabled}
+                            onClick={() =>
+                              setShowSendModal({
+                                id: doc.opinion_request_id as number,
+                                correction: true,
+                              })
+                            }
+                            title={docEditAction(doc).tooltip}
+                            className="inline-flex items-center gap-1 text-primary hover:underline disabled:text-gray-300 disabled:cursor-not-allowed"
+                          >
+                            Regenerar
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={docEditAction(doc).disabled}
+                            onClick={() =>
+                              setShowCargarOficioModal({
+                                id: doc.opinion_request_id as number,
+                                correction: true,
+                              })
+                            }
+                            title={docEditAction(doc).tooltip}
+                            className="inline-flex items-center gap-1 text-primary hover:underline disabled:text-gray-300 disabled:cursor-not-allowed"
+                          >
+                            Subir otro
+                            <Upload className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={docEditAction(doc).disabled}
+                          onClick={() =>
+                            runDocumentEdit(doc, docEditAction(doc).kind)
+                          }
+                          title={docEditAction(doc).tooltip}
+                          className="inline-flex items-center gap-1 text-primary hover:underline disabled:text-gray-300 disabled:cursor-not-allowed"
+                        >
+                          {docEditAction(doc).label}
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1192,6 +1472,7 @@ export default function Stage1Propuesta({
       {showCargarOficioModal !== null && (
         <CargarOficioModal
           request={cargarOficioRequest}
+          allowReason={showCargarOficioModal.correction}
           onUpload={handleCargarOficio}
           onCancel={() => setShowCargarOficioModal(null)}
         />
@@ -1199,7 +1480,8 @@ export default function Stage1Propuesta({
 
       {showSendModal !== null && (
         <EnviarOficioOpinionModal
-          requestId={showSendModal}
+          requestId={showSendModal.id}
+          allowReason={showSendModal.correction}
           onGenerate={handleGenerateOficio}
           onCancel={() => setShowSendModal(null)}
         />
@@ -1216,8 +1498,30 @@ export default function Stage1Propuesta({
       {showRespondModal !== null && (
         <ResponderSolicitudModal
           request={respondingRequest}
+          allowReason={showRespondModal.correction}
           onRespond={handleRespond}
           onCancel={() => setShowRespondModal(null)}
+        />
+      )}
+
+      {editReplaceDoc && (
+        <ReemplazarDocumentoModal
+          docName={documentTipoLabel(editReplaceDoc)}
+          accept={
+            editReplaceDoc.document_types?.code
+              ? DOC_TYPE_ACCEPT[editReplaceDoc.document_types.code]
+              : undefined
+          }
+          onConfirm={handleReplaceDocument}
+          onCancel={() => setEditReplaceDoc(null)}
+        />
+      )}
+
+      {editDictamen && (
+        <AdjuntarDictamenModal
+          initialNumber={editDictamen.initialNumber}
+          onConfirm={handleEditDictamen}
+          onCancel={() => setEditDictamen(null)}
         />
       )}
 

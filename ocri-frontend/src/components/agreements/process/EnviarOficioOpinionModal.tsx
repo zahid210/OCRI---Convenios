@@ -13,10 +13,13 @@ interface GenerarOficioPayload {
   sent_via: string;
   adesa_number?: string;
   oficio_number?: string;
+  reason?: string;
 }
 
 interface EnviarOficioOpinionModalProps {
   requestId: number;
+  /** Muestra el campo "Motivo de la corrección" (corrección de un oficio enviado). */
+  allowReason?: boolean;
   onGenerate: (
     requestId: number,
     payload: GenerarOficioPayload,
@@ -26,6 +29,7 @@ interface EnviarOficioOpinionModalProps {
 
 export default function EnviarOficioOpinionModal({
   requestId,
+  allowReason = false,
   onGenerate,
   onCancel,
 }: EnviarOficioOpinionModalProps) {
@@ -37,6 +41,7 @@ export default function EnviarOficioOpinionModal({
   const [oficioHtml, setOficioHtml] = useState("");
   const [oficioCss, setOficioCss] = useState("");
   const [showEditor, setShowEditor] = useState(false);
+  const [reason, setReason] = useState("");
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
@@ -93,6 +98,7 @@ export default function EnviarOficioOpinionModal({
         sent_via: sendVia,
         adesa_number: adesaNumber || undefined,
         oficio_number: oficioNumber || undefined,
+        reason: reason.trim() || undefined,
       });
     } catch {
       /* el error ya se notifica en el padre; el modal permanece abierto */
@@ -197,6 +203,20 @@ export default function EnviarOficioOpinionModal({
                 placeholder="Ej: 045-2026-OCRI"
               />
             </div>
+            {allowReason && (
+              <div className="mt-4">
+                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+                  Motivo de la corrección
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={2}
+                  className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
+                  placeholder="Ej: el N° de oficio se cargó mal (opcional)..."
+                />
+              </div>
+            )}
           </div>
         </div>
       </ModalShell>
