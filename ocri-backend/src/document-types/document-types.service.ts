@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, document_direction } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { DOCUMENT_TYPES } from '../catalogs/catalogs.data';
 
 @Injectable()
 export class DocumentTypesService {
@@ -42,100 +43,7 @@ export class DocumentTypesService {
   async seed() {
     // Tipado explícito: así `direction` es el enum de Prisma y no se degrada a
     // `string`, evitando un cast `any` (y su supresión de lint) en el upsert.
-    const types: Array<{
-      code: string;
-      name: string;
-      direction: document_direction;
-    }> = [
-      // ─── Etapa 1: Propuesta de convenio ───────────────────────────────
-      {
-        code: 'OFICIO_SOLICITUD',
-        name: 'Oficio de Solicitud de Convenio',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'PROPUESTA_CONVENIO',
-        name: 'Propuesta de Convenio',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'OFICIO_SOLICITUD_OPINION',
-        name: 'Oficio de Solicitud de Opinión',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'OFICIO_RESPUESTA_OPINION',
-        name: 'Oficio de Respuesta de Opinión',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'EXPEDIENTE_TECNICO',
-        name: 'Expediente Técnico',
-        direction: 'INTERNO',
-      },
-      {
-        code: 'INFORME_TECNICO_OCRI',
-        name: 'Informe Técnico / Opinión de OCRI',
-        direction: 'INTERNO',
-      },
-      {
-        code: 'OFICIO_ENVIO_RECTORADO',
-        name: 'Oficio de Envío a Rectorado',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'OFICIO_RESPUESTA_RECTORADO',
-        name: 'Oficio de Respuesta a Rectorado',
-        direction: 'SALIDA',
-      },
-      // ─── Etapa 2: Publicación y registro ──────────────────────────────
-      {
-        code: 'CONVENIO_FIRMADO',
-        name: 'Convenio Firmado Escaneado',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'NOTIFICACION_RECHAZO',
-        name: 'Notificación de Rechazo a Entidad Solicitante',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'PUBLICACION',
-        name: 'Publicación del Convenio',
-        direction: 'INTERNO',
-      },
-      // ─── Etapa 3: Seguimiento ─────────────────────────────────────────
-      {
-        code: 'SOLICITUD_PLAN_TRABAJO',
-        name: 'Oficio de Solicitud de Plan de Trabajo',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'SOLICITUD_INFORME_SEMESTRAL',
-        name: 'Oficio de Solicitud de Informe Semestral',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'SOLICITUD_INFORME_FINAL',
-        name: 'Oficio de Solicitud de Informe Final',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'PLAN_DE_TRABAJO',
-        name: 'Plan de Trabajo',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'INFORME_SEMESTRAL',
-        name: 'Informe Semestral',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'INFORME_FINAL',
-        name: 'Informe Final',
-        direction: 'ENTRADA',
-      },
-    ];
+    const types = DOCUMENT_TYPES;
 
     for (const t of types) {
       await this.prisma.document_types.upsert({

@@ -1,10 +1,27 @@
 import 'dotenv/config';
-import * as bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import {
+  AGREEMENT_TYPES,
+  APP_CONFIG_DEFAULTS,
+  DOCUMENT_TYPES,
+} from '../src/catalogs/catalogs.data';
+import { DEPENDENCIAS_SEED } from '../src/dependencias/dependencias.data';
 
-// ─── Seeder de catálogos base (base limpia) ──────────────────────────────────
-// Ejecutar: npm.cmd run seed   (requiere DATABASE_URL en .env)
+// ─────────────────────────────────────────────────────────────────────────────
+// Seeder de catálogos base para una base limpia.
+//
+// Ejecutar: npm run seed   (requiere DATABASE_URL en .env)
+//
+// Usa EXACTAMENTE las mismas listas que la aplicación (catalogs.data.ts y
+// dependencias.data.ts), así el script y el endpoint POST /catalogs/seed no
+// pueden divergir. Antes este script tenía su propia copia (desactualizada) y
+// corrompía el catálogo al sembrar.
+//
+// Las cuentas (admin/procesador/asistente) NO se siembran aquí: las gestiona
+// SeedUsersService en cada arranque del backend a partir de las variables
+// SEED_*_PASSWORD.
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function main() {
   const connectionString = process.env.DATABASE_URL;
@@ -18,188 +35,43 @@ async function main() {
 
   try {
     console.log('→ Sembrando tipos de documento…');
-    const documentTypes = [
-      // E1: Propuesta de convenio
-      {
-        code: 'OFICIO_SOLICITUD',
-        name: 'Oficio de Solicitud de Convenio',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'PROPUESTA_CONVENIO',
-        name: 'Propuesta de Convenio',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'OFICIO_SOLICITUD_OPINION',
-        name: 'Oficio de Solicitud de Opinión',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'OFICIO_RESPUESTA_OPINION',
-        name: 'Oficio de Respuesta de Opinión',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'EXPEDIENTE_TECNICO',
-        name: 'Expediente Técnico',
-        direction: 'INTERNO',
-      },
-      {
-        code: 'INFORME_TECNICO_OCRI',
-        name: 'Informe Técnico / Opinión de OCRI',
-        direction: 'INTERNO',
-      },
-      {
-        code: 'OFICIO_ENVIO_RECTORADO',
-        name: 'Oficio de Envío a Rectorado',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'OFICIO_RESPUESTA_RECTORADO',
-        name: 'Oficio de Respuesta a Rectorado',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'PROPUESTA_CONVENIO_FIRMA',
-        name: 'Propuesta de Convenio para Firmar',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'DICTAMEN',
-        name: 'Dictamen de Rectorado',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'DOCUMENTO_DE_ORIGEN',
-        name: 'Documento de Origen',
-        direction: 'ENTRADA',
-      },
-      // E2: Publicación y registro
-      {
-        code: 'CONVENIO_FIRMADO',
-        name: 'Convenio Firmado Escaneado',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'NOTIFICACION_RECHAZO',
-        name: 'Notificación de Rechazo a Entidad Solicitante',
-        direction: 'SALIDA',
-      },
-      {
-        code: 'PUBLICACION',
-        name: 'Publicación del Convenio',
-        direction: 'INTERNO',
-      },
-      // E3: Seguimiento
-      {
-        code: 'PLAN_DE_TRABAJO',
-        name: 'Plan de Trabajo',
-        direction: 'ENTRADA',
-      },
-      {
-        code: 'INFORME_SEMESTRAL',
-        name: 'Informe Semestral',
-        direction: 'ENTRADA',
-      },
-      { code: 'INFORME_FINAL', name: 'Informe Final', direction: 'ENTRADA' },
-    ];
-
-    for (const t of documentTypes) {
+    for (const t of DOCUMENT_TYPES) {
       await prisma.document_types.upsert({
         where: { code: t.code },
-        update: { name: t.name, direction: t.direction as never },
+        update: { name: t.name, direction: t.direction },
         create: {
           code: t.code,
           name: t.name,
-          direction: t.direction as never,
+          direction: t.direction,
           is_active: true,
         },
       });
     }
-    console.log(`  ✓ ${documentTypes.length} tipos de documento`);
+    console.log(`  ✓ ${DOCUMENT_TYPES.length} tipos de documento`);
 
     console.log('→ Sembrando dependencias…');
-    const dependencias = [
-      {
-        code: 'REC',
-        name: 'Rectorado',
-        kind: 'RECTORADO',
-        is_default_opinion: false,
-      },
-      {
-        code: 'OCRI',
-        name: 'Oficina de Cooperación y Relaciones Internacionales',
-        kind: 'OCRI',
-        is_default_opinion: false,
-      },
-      {
-        code: 'VRAC',
-        name: 'Vicerrectorado Académico',
-        kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: true,
-      },
-      {
-        code: 'VRIE',
-        name: 'Vicerrectorado de Investigación y Estudios de Posgrado',
-        kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: true,
-      },
-      {
-        code: 'DGA',
-        name: 'Dirección General de Asuntos Académicos',
-        kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: true,
-      },
-      {
-        code: 'OFIC',
-        name: 'Oficina General de Planificación y Presupuesto',
-        kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: true,
-      },
-      {
-        code: 'OGA',
-        name: 'Oficina General de Administración',
-        kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: true,
-      },
-      {
-        code: 'OGRH',
-        name: 'Oficina General de Recursos Humanos',
-        kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: true,
-      },
-      {
-        code: 'ASEL',
-        name: 'Asesoría Legal',
-        kind: 'UNIDAD_ORGANICA',
-        is_default_opinion: true,
-      },
-    ];
-
-    for (const d of dependencias) {
+    for (const d of DEPENDENCIAS_SEED) {
       await prisma.dependencias.upsert({
         where: { code: d.code },
-        update: {},
+        update: {
+          name: d.name,
+          kind: d.kind,
+          is_default_opinion: d.is_default_opinion,
+        },
         create: {
-          ...d,
-          kind: d.kind as never,
-          sort_order: dependencias.indexOf(d),
+          code: d.code,
+          name: d.name,
+          kind: d.kind,
+          is_default_opinion: d.is_default_opinion,
+          sort_order: d.sort_order,
           is_active: true,
         },
       });
     }
-    console.log(`  ✓ ${dependencias.length} dependencias`);
+    console.log(`  ✓ ${DEPENDENCIAS_SEED.length} dependencias`);
 
     console.log('→ Sembrando tipos de convenio…');
-    const agreementTypes = [
-      'Convenio Marco',
-      'Convenio Específico',
-      'Memorándum de Entendimiento',
-      'Carta de Intención',
-    ];
-
-    for (const name of agreementTypes) {
+    for (const name of AGREEMENT_TYPES) {
       const existing = await prisma.agreement_types.findFirst({
         where: { name },
       });
@@ -207,45 +79,17 @@ async function main() {
         await prisma.agreement_types.create({ data: { name } });
       }
     }
-    console.log(`  ✓ ${agreementTypes.length} tipos de convenio`);
+    console.log(`  ✓ ${AGREEMENT_TYPES.length} tipos de convenio`);
 
     console.log('→ Sembrando configuración…');
-    const appConfig = [
-      { key: 'opinion_deadline_days', value: '15' },
-      { key: 'expiration_warning_days', value: '90' },
-    ];
-    for (const c of appConfig) {
+    for (const c of APP_CONFIG_DEFAULTS) {
       await prisma.app_config.upsert({
         where: { key: c.key },
         update: {},
         create: c,
       });
     }
-    console.log(`  ✓ ${appConfig.length} parámetros`);
-
-    console.log('→ Sembrando usuario administrador inicial…');
-    const adminEmail = process.env.SEED_ADMIN_EMAIL || 'ocri@uncp.edu.pe';
-    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-    if (!adminPassword) {
-      console.log(
-        '  ⚠ SEED_ADMIN_PASSWORD no definida; se omite la creación del admin. Defínala en .env y vuelve a ejecutar.',
-      );
-    } else {
-      const hashed = await bcrypt.hash(adminPassword, 10);
-      await prisma.users.upsert({
-        where: { email: adminEmail },
-        update: {},
-        create: {
-          name: 'Administrador OCRI',
-          email: adminEmail,
-          password: hashed,
-          role: 'admin',
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      });
-      console.log(`  ✓ admin listo (${adminEmail})`);
-    }
+    console.log(`  ✓ ${APP_CONFIG_DEFAULTS.length} parámetros`);
 
     console.log('✔ Seeder completado.');
   } finally {

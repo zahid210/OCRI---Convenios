@@ -813,7 +813,7 @@ CREATE TABLE `document_types` (
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `document_types_code_key` (`code`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -840,7 +840,10 @@ REPLACE INTO `document_types` VALUES
 (14,'PUBLICACION','Publicación del Convenio','INTERNO',1),
 (15,'PLAN_DE_TRABAJO','Plan de Trabajo','ENTRADA',1),
 (16,'INFORME_SEMESTRAL','Informe Semestral','ENTRADA',1),
-(17,'INFORME_FINAL','Informe Final','ENTRADA',1);
+(17,'INFORME_FINAL','Informe Final','ENTRADA',1),
+(18,'SOLICITUD_PLAN_TRABAJO','Oficio de Solicitud de Plan de Trabajo','SALIDA',1),
+(19,'SOLICITUD_INFORME_SEMESTRAL','Oficio de Solicitud de Informe Semestral','SALIDA',1),
+(20,'SOLICITUD_INFORME_FINAL','Oficio de Solicitud de Informe Final','SALIDA',1);
 /*!40000 ALTER TABLE `document_types` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;

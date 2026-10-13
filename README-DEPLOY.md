@@ -38,6 +38,12 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 - El primer arranque crea la base de datos a partir de `dumps/ocri-inicio.sql`
   (catálogos + 447 convenios históricos 2021-2025). El import corre **solo la
   primera vez** (volumen `db-data` vacío); después el volumen persiste.
+- Los catálogos base (tipos de documento, dependencias, tipos de convenio y
+  configuración) tienen **una sola fuente** en código
+  (`ocri-backend/src/catalogs/catalogs.data.ts` y `dependencias.data.ts`) y se
+  pueden re-sembrar de forma idempotente con `POST /api/catalogs/seed` (admin) o
+  `npm run seed`. Un test de consistencia compara esas listas con el dump para
+  que no puedan divergir.
 - Ver estado y arranque:
 
 ```bash

@@ -12,6 +12,7 @@ import { SeguimientoModule } from './seguimiento/seguimiento.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DependenciasModule } from './dependencias/dependencias.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
+import { CatalogsModule } from './catalogs/catalogs.module';
 import { AppConfigModule } from './app-config/app-config.module';
 import { ProcessModule } from './process/process.module';
 import { DeliverablesModule } from './deliverables/deliverables.module';
@@ -31,6 +32,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     NotificationsModule,
     DependenciasModule,
     DocumentTypesModule,
+    CatalogsModule,
     AppConfigModule,
     ProcessModule,
     DeliverablesModule,
