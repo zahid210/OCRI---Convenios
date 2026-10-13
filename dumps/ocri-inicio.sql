@@ -2261,9 +2261,9 @@ REPLACE INTO `users` VALUES
 -- backend las reemplaza con SEED_ADMIN_PASSWORD / SEED_DEMO_PASSWORD_1 /
 -- SEED_DEMO_PASSWORD_2 del env (SeedUsersService), de modo que el repo nunca
 -- fija credenciales operativas.
-(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$12$/SNMfHocoPItP83Mu/jwkefFm0qEp6Cn2od/jtwy.WUayPTMzey1G','admin','2026-08-28 22:49:04','2026-08-28 22:49:04'),
-(20,'Jesus','jesus@uncp.edu.pe','$2b$12$FKaPwJomEwIGS7PX.2y17OSVLx38UOL/VzIEtpNMywqjHUbyxxewO','asistente',NULL,'2026-09-09 06:04:21'),
-(21,'Berna','berna@uncp.edu.pe','$2b$12$SFrGKnB2FOiIm7nmTuwWS.C.NnHRLw5WEUhkk1miBhqkf/PSNyNIa','procesador',NULL,'2026-09-09 06:04:26');
+(1,'Administrador OCRI','ocri@uncp.edu.pe','$2b$12$/SNMfHocoPItP83Mu/jwkefFm0qEp6Cn2od/jtwy.WUayPTMzey1G','admin',0,NULL,'2026-08-28 22:49:04','2026-08-28 22:49:04'),
+(20,'Jesus','jesus@uncp.edu.pe','$2b$12$FKaPwJomEwIGS7PX.2y17OSVLx38UOL/VzIEtpNMywqjHUbyxxewO','asistente',0,NULL,NULL,'2026-09-09 06:04:21'),
+(21,'Berna','berna@uncp.edu.pe','$2b$12$SFrGKnB2FOiIm7nmTuwWS.C.NnHRLw5WEUhkk1miBhqkf/PSNyNIa','procesador',0,NULL,NULL,'2026-09-09 06:04:26');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 COMMIT;
