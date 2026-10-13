@@ -797,24 +797,18 @@ export class DeliverablesService {
   // ─── E3 · OCRI revisa: registra u observa con correcciones ────────────────
 
   /**
-   * Evalúa un entregable ya aceptado (ACEPTADO / OBSERVADO / RECIBIDO legacy):
-   * aprobar adjunta el documento recibido (que en la vida real remite la
-   * contraparte) y lo registra; observar solicita correcciones con comentario.
+   * Revisa un entregable ya recibido (RECIBIDO): aprobar lo registra; observar
+   * solicita correcciones con comentario. El documento recibido se adjunta en
+   * el paso previo (submitDeliverable).
    */
   async evaluateDeliverable(
     deliverableId: number,
     decision: 'APPROVED' | 'OBSERVED',
     observations: string | undefined,
-    file: UploadFile | undefined,
     userId?: number,
   ) {
     const deliverable = await this.prisma.deliverables.findUnique({
       where: { id: BigInt(deliverableId) },
-      include: {
-        agreements: {
-          select: { tramite_code: true, created_at: true },
-        },
-      },
     });
 
     if (!deliverable) {
@@ -823,13 +817,9 @@ export class DeliverablesService {
 
     await this.assertInMonitoringByDeliverable(deliverable.agreement_id);
 
-    if (
-      deliverable.status !== 'ACEPTADO' &&
-      deliverable.status !== 'OBSERVADO' &&
-      deliverable.status !== 'RECIBIDO'
-    ) {
+    if (deliverable.status !== 'RECIBIDO') {
       throw new BadRequestException(
-        `Solo se evalúan entregables aceptados (ACEPTADO) o pendientes de corrección (OBSERVADO). Estado actual: ${deliverable.status}`,
+        `Solo se revisan entregables ya recibidos (RECIBIDO). Estado actual: ${deliverable.status}`,
       );
     }
 
@@ -839,62 +829,14 @@ export class DeliverablesService {
       );
     }
 
-    if (decision === 'APPROVED' && !file) {
-      throw new BadRequestException(
-        'Debe adjuntar el documento recibido de la contraparte para aprobar el entregable.',
-      );
-    }
-
-    const isCorrection = deliverable.status === 'OBSERVADO';
     const now = new Date();
 
     const result = await this.prisma.$transaction(async (tx) => {
       if (decision === 'APPROVED') {
-        if (!file) {
-          throw new BadRequestException(
-            'Debe adjuntar el documento recibido de la contraparte para aprobar el entregable.',
-          );
-        }
-
-        const docTypeCode = DOC_TYPE_BY_DELIVERABLE[deliverable.type];
-        const docType = docTypeCode
-          ? await tx.document_types.findUnique({ where: { code: docTypeCode } })
-          : null;
-        const originalName = normalizeUploadName(file.originalname);
-        const nextVersion = deliverable.version + 1;
-
-        const relPath = await storeUploadedDocument(
-          this.storage,
-          file,
-          deliverable.agreements?.tramite_code ?? '',
-          deliverable.agreements?.created_at ?? null,
-        );
-
-        await tx.documents.create({
-          data: {
-            agreements: { connect: { id: deliverable.agreement_id } },
-            deliverables: { connect: { id: deliverable.id } },
-            name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
-            file_path: relPath,
-            original_name: originalName,
-            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-            document_types: docType
-              ? { connect: { id: docType.id } }
-              : undefined,
-            direction: 'ENTRADA',
-            stage: 'ETAPA_3_SEGUIMIENTO',
-            uploaded_by:
-              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
-            created_at: now,
-            updated_at: now,
-          },
-        });
-
         await tx.deliverables.update({
           where: { id: deliverable.id },
           data: {
             status: 'REGISTRADO',
-            version: isCorrection ? { increment: 1 } : undefined,
             registered_at: now,
             updated_at: now,
           },
@@ -904,14 +846,11 @@ export class DeliverablesService {
           tx,
           deliverable.agreement_id,
           'ENTREGABLE_REGISTRADO',
-          `OCRI revisó, validó y registró: ${deliverable.title} (v${
-            isCorrection ? nextVersion : deliverable.version
-          }), adjuntando el documento recibido.`,
+          `OCRI revisó, validó y registró: ${deliverable.title} (v${deliverable.version}).`,
           userId,
           {
             deliverable_type: deliverable.type,
-            original_name: originalName,
-            version: isCorrection ? nextVersion : deliverable.version,
+            version: deliverable.version,
           },
         );
 

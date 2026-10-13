@@ -11,6 +11,7 @@ import {
   openDocumentPreview,
   regenerateRequestDocument,
   requestReport,
+  submitDeliverable,
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
 import { Deliverable, ProcessStatus } from "@/types/agreements";
@@ -40,6 +41,7 @@ import {
 import EvaluarEntregableModal from "./EvaluarEntregableModal";
 import GenerarSolicitudModal from "./GenerarSolicitudModal";
 import CargarSolicitudModal from "./CargarSolicitudModal";
+import AdjuntarRespuestaModal from "./AdjuntarRespuestaModal";
 
 function DeliverableCard({
   deliverable,
@@ -48,6 +50,7 @@ function DeliverableCard({
   onAccept,
   onOpenDocEditor,
   onCargarSolicitud,
+  onAttachResponse,
 }: {
   deliverable: Deliverable;
   canManage: boolean;
@@ -59,6 +62,7 @@ function DeliverableCard({
   onAccept: (deliverable: Deliverable) => Promise<void>;
   onOpenDocEditor: (deliverable: Deliverable) => void;
   onCargarSolicitud: (deliverable: Deliverable) => void;
+  onAttachResponse: (deliverable: Deliverable) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [busyAction, setBusyAction] = useState<null | "accept">(null);
@@ -311,9 +315,18 @@ function DeliverableCard({
                   Solicitud Aceptada
                 </button>
               )}
-              {deliverable.status === "ACEPTADO" ||
-              deliverable.status === "OBSERVADO" ||
-              deliverable.status === "RECIBIDO" ? (
+              {(deliverable.status === "ACEPTADO" ||
+                deliverable.status === "OBSERVADO") && (
+                <button
+                  type="button"
+                  onClick={() => onAttachResponse(deliverable)}
+                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Adjuntar respuesta
+                </button>
+              )}
+              {deliverable.status === "RECIBIDO" && (
                 <>
                   <button
                     onClick={() =>
@@ -334,7 +347,7 @@ function DeliverableCard({
                     Observar
                   </button>
                 </>
-              ) : null}
+              )}
               {deliverable.status === "REGISTRADO" && (
                 <span className="inline-flex items-center gap-1.5 text-xs text-green-700">
                   <CheckCircle2 className="h-3.5 w-3.5" />
@@ -382,6 +395,9 @@ export default function Stage3Seguimiento({
   const [cargarSolicitudModal, setCargarSolicitudModal] = useState<number | null>(
     null,
   );
+  const [adjuntarRespuestaModal, setAdjuntarRespuestaModal] = useState<
+    number | null
+  >(null);
   const [isCompletingMonitoring, setIsCompletingMonitoring] = useState(false);
 
   const workPlans = deliverables.filter((d) => d.type === "PLAN_DE_TRABAJO");
@@ -405,7 +421,7 @@ export default function Stage3Seguimiento({
     try {
       await acceptDeliverableRequest(deliverable.id);
       toast.success(
-        "Solicitud aceptada. Cuando reciba el documento, adjúntelo al aprobar.",
+        "Solicitud aceptada. Cuando reciba el documento, adjúntelo con \"Adjuntar respuesta\".",
       );
       await onRefresh();
     } catch (err: unknown) {
@@ -452,6 +468,22 @@ export default function Stage3Seguimiento({
     }
   };
 
+  const handleAdjuntarRespuesta = async (deliverableId: number, file: File) => {
+    try {
+      await submitDeliverable(deliverableId, file);
+      toast.success(
+        "Respuesta adjuntada. Revise el documento para aprobarlo u observarlo.",
+      );
+      setAdjuntarRespuestaModal(null);
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al adjuntar la respuesta";
+      toast.error(message);
+      throw err;
+    }
+  };
+
   const handleRequestReport = async () => {
     setIsRequestingReport(true);
     try {
@@ -476,10 +508,9 @@ export default function Stage3Seguimiento({
     id: number,
     decision: "APPROVED" | "OBSERVED",
     observations?: string,
-    file?: File,
   ) => {
     try {
-      await evaluateDeliverable(id, decision, observations, file);
+      await evaluateDeliverable(id, decision, observations);
       toast.success(
         decision === "APPROVED"
           ? "Entregable aprobado y registrado."
@@ -549,6 +580,7 @@ export default function Stage3Seguimiento({
                     onAccept={handleAcceptRequest}
                     onOpenDocEditor={(dl) => setDocEditor(dl.id)}
                     onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
+                    onAttachResponse={(dl) => setAdjuntarRespuestaModal(dl.id)}
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -572,6 +604,7 @@ export default function Stage3Seguimiento({
                     onAccept={handleAcceptRequest}
                     onOpenDocEditor={(dl) => setDocEditor(dl.id)}
                     onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
+                    onAttachResponse={(dl) => setAdjuntarRespuestaModal(dl.id)}
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -669,6 +702,14 @@ export default function Stage3Seguimiento({
           deliverableId={cargarSolicitudModal}
           onUpload={handleCargarSolicitud}
           onCancel={() => setCargarSolicitudModal(null)}
+        />
+      )}
+
+      {adjuntarRespuestaModal !== null && (
+        <AdjuntarRespuestaModal
+          deliverableId={adjuntarRespuestaModal}
+          onUpload={handleAdjuntarRespuesta}
+          onCancel={() => setAdjuntarRespuestaModal(null)}
         />
       )}
     </SectionCard>

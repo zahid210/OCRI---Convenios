@@ -154,24 +154,20 @@ export class DeliverablesController {
     return this.deliverablesService.cargarSolicitud(id, file!, req?.user?.id);
   }
 
-  // ─── E3 · OCRI evalúa (adjuntando el doc recibido): registra u observa ─────
+  // ─── E3 · OCRI revisa el entregable recibido: lo registra u observa ────────
 
   @Roles(...FLOW_ROLES)
   @Post('deliverables/:id/evaluate')
-  @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   evaluateDeliverable(
     @Param('id', ParseIntPipe) id: number,
-    @Body()
-    body: EvaluateDeliverableDto,
-    @UploadedFile() file?: UploadFile,
-    @Req() req?: AuthenticatedRequest,
+    @Body() body: EvaluateDeliverableDto,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.deliverablesService.evaluateDeliverable(
       id,
       body.decision,
       body.observations,
-      file,
-      req?.user?.id,
+      req.user?.id,
     );
   }
 

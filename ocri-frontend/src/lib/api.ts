@@ -624,20 +624,15 @@ export async function cargarSolicitud(deliverableId: number, file: File) {
   );
 }
 
-/** OCRI evalúa un entregable: APRUEBA (adjunta el doc recibido y registra) u OBSERVA (comentario) */
+/** OCRI revisa un entregable recibido: lo APRUEBA (registra) u OBSERVA (comentario) */
 export async function evaluateDeliverable(
   deliverableId: number,
   decision: "APPROVED" | "OBSERVED",
   observations?: string,
-  file?: File,
 ) {
-  const formData = new FormData();
-  formData.append("decision", decision);
-  if (observations) formData.append("observations", observations);
-  if (file) formData.append("file", file);
   return fetchApi(`/agreements/deliverables/${deliverableId}/evaluate`, {
     method: "POST",
-    body: formData,
+    body: JSON.stringify({ decision, observations }),
   });
 }
 
