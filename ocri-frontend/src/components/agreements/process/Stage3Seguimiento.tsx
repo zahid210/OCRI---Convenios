@@ -27,7 +27,6 @@ import {
   ExternalLink,
   FileText,
   Handshake,
-  Info,
   Loader2,
   Plus,
   Upload,
@@ -626,23 +625,9 @@ export default function Stage3Seguimiento({
                     Solicitar Informe
                   </button>
                 </div>
-              ) : (
-                <div className="flex items-start gap-2 text-sm text-gray-500">
-                  <Info className="h-4 w-4 shrink-0 mt-0.5 text-gray-400" />
-                  <span className="max-w-md">
-                    Los informes se habilitan cuando el Plan de Trabajo sea
-                    aprobado y registrado (estado REGISTRADO).
-                  </span>
-                </div>
-              )}
+              ) : null}
 
               <div className="flex items-center gap-3">
-                {!canCompleteMonitoring && (
-                  <span className="text-xs text-gray-500 max-w-xs">
-                    Requiere todos los entregables registrados y el Informe
-                    Final registrado.
-                  </span>
-                )}
                 <button
                   onClick={handleCompleteMonitoring}
                   disabled={!canCompleteMonitoring || isCompletingMonitoring}
