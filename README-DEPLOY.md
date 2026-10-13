@@ -44,6 +44,12 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
   pueden re-sembrar de forma idempotente con `POST /api/catalogs/seed` (admin) o
   `npm run seed`. Un test de consistencia compara esas listas con el dump para
   que no puedan divergir.
+- El **esquema** está versionado en `ocri-backend/prisma/migrations` y el backend
+  lo aplica al arrancar (`ocri-backend/docker/entrypoint.sh`): si la base ya
+  tiene tablas pero no historial de migraciones (primer arranque desde el dump),
+  marca la migración inicial como aplicada (baseline, sin re-ejecutarla) y luego
+  corre `prisma migrate deploy`. Así un cambio de esquema se entrega como una
+  migración nueva, sin recrear la base.
 - Ver estado y arranque:
 
 ```bash
@@ -52,6 +58,24 @@ docker compose logs -f backend frontend db
 ```
 
 - Acceso: `http://HOST:3000` (el puerto se ajusta con `WEB_PORT` en `.env`).
+
+### Esquema y migraciones
+
+El esquema se versiona en `ocri-backend/prisma/migrations` y se aplica solo al
+arrancar el backend (no hay que ejecutar nada a mano). Para un cambio de esquema:
+
+```bash
+cd ocri-backend
+npx prisma migrate dev --name <cambio>   # genera la migración y la aplica en local
+```
+
+- El baseline `20261013000000_init` reproduce el esquema actual. En bases ya
+  creadas por el dump se marca como aplicado automáticamente (no se re-ejecuta).
+- Mientras el dump siga creando el esquema, cualquier cambio de `schema.prisma`
+  debe reflejarse también en `dumps/ocri-inicio.sql`; el test
+  `ocri-backend/src/common/schema-dump.consistency.spec.ts` falla si divergen.
+- El CLI de Prisma solo entiende `mysql://`; `prisma.config.ts` normaliza el
+  `mariadb://` de `DATABASE_URL` (el runtime sí usa el adaptador de MariaDB).
 
 ### Credenciales iniciales
 

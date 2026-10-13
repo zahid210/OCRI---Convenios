@@ -35,7 +35,11 @@ WORKDIR /app
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/dist ./dist
 COPY --chown=node:node --from=builder /app/prisma ./prisma
+COPY --chown=node:node --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --chown=node:node --from=builder /app/docker ./docker
 COPY --chown=node:node --from=builder /app/uploads/templates ./uploads/templates
+
+RUN chmod +x /app/docker/entrypoint.sh
 
 USER node
 
@@ -43,4 +47,6 @@ USER node
 # Lo único que se conserva en el contenedor son las plantillas de oficio.
 EXPOSE 4000
 
+# El entrypoint aplica migraciones Prisma (baseline + deploy) antes de arrancar.
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["node", "dist/src/main.js"]

@@ -7,6 +7,9 @@ export default defineConfig({
     path: 'prisma/migrations',
   },
   datasource: {
-    url: process.env['DATABASE_URL'],
+    // El runtime usa @prisma/adapter-mariadb (acepta `mariadb://`), pero el CLI
+    // de Prisma (migrate) solo entiende `mysql://`. Se normaliza aquí, sin tocar
+    // la variable DATABASE_URL que consume la app.
+    url: process.env['DATABASE_URL']?.replace(/^mariadb:\/\//, 'mysql://'),
   },
 });
