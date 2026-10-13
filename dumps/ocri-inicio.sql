@@ -667,7 +667,7 @@ CREATE TABLE `deliverables` (
   `agreement_id` bigint(20) unsigned NOT NULL,
   `type` enum('PLAN_DE_TRABAJO','INFORME_SEMESTRAL','INFORME_FINAL') NOT NULL,
   `title` varchar(255) NOT NULL,
-  `status` enum('SOLICITADO','RECIBIDO','OBSERVADO','REGISTRADO') NOT NULL DEFAULT 'SOLICITADO',
+  `status` enum('SOLICITADO','ACEPTADO','RECIBIDO','OBSERVADO','REGISTRADO') NOT NULL DEFAULT 'SOLICITADO',
   `period` varchar(50) DEFAULT NULL,
   `version` int(11) NOT NULL DEFAULT 1,
   `requested_at` timestamp NOT NULL DEFAULT current_timestamp(),
