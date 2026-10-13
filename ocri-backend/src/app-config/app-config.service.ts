@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  OPINION_DEFAULT_DAYS_KEY,
+  OPINION_WARNING_DAYS_KEY,
+} from '../common/app-config.constants';
 
 @Injectable()
 export class AppConfigService {
@@ -21,25 +25,25 @@ export class AppConfigService {
   }
 
   async getOpinionDefaultDays(): Promise<number> {
-    const val = await this.get('opinion_default_days');
+    const val = await this.get(OPINION_DEFAULT_DAYS_KEY);
     if (!val) return 10;
     const n = parseInt(val, 10);
     return Number.isFinite(n) && n > 0 ? n : 10;
   }
 
   async setOpinionDefaultDays(days: number): Promise<void> {
-    await this.set('opinion_default_days', String(days));
+    await this.set(OPINION_DEFAULT_DAYS_KEY, String(days));
   }
 
   async getWarningDays(): Promise<number> {
-    const val = await this.get('opinion_warning_days');
+    const val = await this.get(OPINION_WARNING_DAYS_KEY);
     if (!val) return 3;
     const n = parseInt(val, 10);
     return Number.isFinite(n) && n > 0 ? n : 3;
   }
 
   async setWarningDays(days: number): Promise<void> {
-    await this.set('opinion_warning_days', String(days));
+    await this.set(OPINION_WARNING_DAYS_KEY, String(days));
   }
 
   async getAll() {

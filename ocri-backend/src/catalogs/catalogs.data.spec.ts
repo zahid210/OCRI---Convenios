@@ -4,6 +4,10 @@ import {
   DOCUMENT_TYPES,
 } from './catalogs.data';
 import { DEPENDENCIAS_SEED } from '../dependencias/dependencias.data';
+import {
+  OPINION_DEFAULT_DAYS_KEY,
+  OPINION_WARNING_DAYS_KEY,
+} from '../common/app-config.constants';
 
 // -----------------------------------------------------------------------------
 // Los catálogos son la fuente única que siembran la app (POST /catalogs/seed) y
@@ -59,8 +63,13 @@ describe('Catálogos canónicos', () => {
     expect(new Set(AGREEMENT_TYPES).size).toBe(AGREEMENT_TYPES.length);
   });
 
-  it('app_config: claves únicas', () => {
+  it('app_config: exactamente las claves que consume AppConfigService', () => {
+    // Evita el desajuste que dejaba los plazos configurados sin efecto: el seed
+    // debe sembrar las mismas claves que el servicio lee.
     const keys = APP_CONFIG_DEFAULTS.map((c) => c.key);
-    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toEqual([OPINION_DEFAULT_DAYS_KEY, OPINION_WARNING_DAYS_KEY]);
+    for (const c of APP_CONFIG_DEFAULTS) {
+      expect(Number(c.value)).toBeGreaterThan(0);
+    }
   });
 });

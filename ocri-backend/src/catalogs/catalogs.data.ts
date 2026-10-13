@@ -1,4 +1,8 @@
 import { document_direction } from '@prisma/client';
+import {
+  OPINION_DEFAULT_DAYS_KEY,
+  OPINION_WARNING_DAYS_KEY,
+} from '../common/app-config.constants';
 
 // -----------------------------------------------------------------------------
 // Catálogos canónicos (fuente única de verdad).
@@ -142,12 +146,13 @@ export interface AppConfigSeed {
 }
 
 /**
- * Configuración inicial. Se conservan las claves históricas para no cambiar
- * comportamiento; ojo: `AppConfigService` lee `opinion_default_days` y
- * `opinion_warning_days`, claves que NO están aquí (por eso hoy cae a sus
- * valores por defecto). Ver nota en el commit: no se toca para no alterar plazos.
+ * Configuración inicial. Las claves DEBEN ser las que consume AppConfigService
+ * (ver common/app-config.constants.ts): `opinion_default_days` (días por defecto
+ * para responder una solicitud de opinión) y `opinion_warning_days` (umbral de
+ * aviso de vencimiento de esa solicitud). El semáforo de vigencia del convenio
+ * NO usa app_config: es la constante EXPIRATION_WARNING_DAYS (90).
  */
 export const APP_CONFIG_DEFAULTS: readonly AppConfigSeed[] = [
-  { key: 'opinion_deadline_days', value: '15' },
-  { key: 'expiration_warning_days', value: '90' },
+  { key: OPINION_DEFAULT_DAYS_KEY, value: '15' },
+  { key: OPINION_WARNING_DAYS_KEY, value: '3' },
 ];
