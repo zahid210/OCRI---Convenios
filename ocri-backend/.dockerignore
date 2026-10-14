@@ -9,3 +9,6 @@ uploads/*
 tmp
 *.log
 .DS_Store
+.agents
+.claude
+.windsurf

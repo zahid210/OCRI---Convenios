@@ -13,7 +13,6 @@ describe('SeedUsersService', () => {
     'SEED_ADMIN_EMAIL',
     'SEED_DEMO_PASSWORD_1',
     'SEED_DEMO_PASSWORD_2',
-    'SEED_DEMO_PASSWORD',
     'SEED_DEMO_EMAIL_1',
     'SEED_DEMO_EMAIL_2',
     'SEED_DEMO_NAME_1',

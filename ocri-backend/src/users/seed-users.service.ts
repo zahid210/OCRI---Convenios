@@ -10,8 +10,6 @@ import { BCRYPT_ROUNDS } from '../auth/auth.constants';
 //   SEED_ADMIN_PASSWORD     → cuenta admin
 //   SEED_DEMO_PASSWORD_1    → asistente (demo)
 //   SEED_DEMO_PASSWORD_2    → procesador (demo)
-// SEED_DEMO_PASSWORD (singular, legado) funciona como respaldo del asistente y
-// del procesador si las variables nuevas no están definidas.
 // El backend crea las cuentas por defecto y reescribe sus contraseñas desde el
 // entorno en cada arranque (SeedUsersService). Este reemplazo evita que una
 // instancia quede operativa con una credencial conocida.
@@ -29,13 +27,13 @@ export class SeedUsersService implements OnModuleInit {
       'admin',
     );
     await this.upsertFromEnv(
-      process.env.SEED_DEMO_PASSWORD_1 || process.env.SEED_DEMO_PASSWORD,
+      process.env.SEED_DEMO_PASSWORD_1,
       process.env.SEED_DEMO_EMAIL_1 || 'jesus@uncp.edu.pe',
       process.env.SEED_DEMO_NAME_1 || 'Jesus',
       'asistente',
     );
     await this.upsertFromEnv(
-      process.env.SEED_DEMO_PASSWORD_2 || process.env.SEED_DEMO_PASSWORD,
+      process.env.SEED_DEMO_PASSWORD_2,
       process.env.SEED_DEMO_EMAIL_2 || 'berna@uncp.edu.pe',
       process.env.SEED_DEMO_NAME_2 || 'Berna',
       'procesador',

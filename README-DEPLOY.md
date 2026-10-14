@@ -25,7 +25,7 @@ hace falta abrir el puerto del backend en el firewall: solo el del frontend.
 cp .env.example .env
 # Editar .env: DB_PASSWORD, DB_ROOT_PASSWORD, JWT_SECRET (>=32 chars),
 #   S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_ENDPOINT,
-#   SEED_ADMIN_PASSWORD y SEED_DEMO_PASSWORD.
+#   SEED_ADMIN_PASSWORD, SEED_DEMO_PASSWORD_1 y SEED_DEMO_PASSWORD_2 (una por cuenta).
 docker compose up -d --build
 ```
 

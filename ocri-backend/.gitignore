@@ -56,3 +56,10 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Instalaciones locales de skills para asistentes de IA. Son reproducibles desde
+# skills-lock.json, así que no se versionan: cada entorno las reinstala. Evita
+# además tener 3 copias idénticas (.agents/.claude/.windsurf) en el repositorio.
+.agents/
+.claude/
+.windsurf/
