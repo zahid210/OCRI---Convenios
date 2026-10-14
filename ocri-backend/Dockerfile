@@ -42,7 +42,10 @@ COPY --chown=node:node --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --chown=node:node --from=builder /app/docker ./docker
 COPY --chown=node:node --from=builder /app/uploads/templates ./uploads/templates
 
-RUN chmod +x /app/docker/entrypoint.sh
+# Defensa extra: si el checkout fue en Windows con autocrlf, el entrypoint llega
+# con CRLF y `/bin/sh` no lo puede ejecutar ("exec ...: no such file or
+# directory"). Se normalizan los fines de línea antes de darle permiso.
+RUN sed -i 's/\r$//' /app/docker/entrypoint.sh && chmod +x /app/docker/entrypoint.sh
 
 USER node
 

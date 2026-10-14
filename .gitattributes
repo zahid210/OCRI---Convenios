@@ -1,0 +1,16 @@
+# Fuerza finales de línea LF en el árbol de trabajo, en cualquier sistema.
+# Sin esto, un `git clone` en Windows (core.autocrlf=true) convierte los `.sh`
+# a CRLF y rompe el entrypoint del backend dentro de Docker:
+#   exec /app/docker/entrypoint.sh: no such file or directory
+* text=auto eol=lf
+
+# Binarios: git no debe normalizarlos.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.zip   binary

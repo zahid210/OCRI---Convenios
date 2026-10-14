@@ -179,6 +179,22 @@ Ajusta el año y el nombre del bucket a los de tu `.env`.
 4. Subir los PDFs históricos al bucket (ver «Almacenamiento de archivos») para que
    los convenios históricos tengan documento visible.
 
+### Windows (Git CRLF)
+
+`git clone` en Windows con `core.autocrlf=true` convierte
+`ocri-backend/docker/entrypoint.sh` a CRLF y Docker falla en bucle con
+`exec /app/docker/entrypoint.sh: no such file or directory`. El repo fuerza LF con
+`.gitattributes` y el `Dockerfile` normaliza el entrypoint, así que si aun así
+aparece el error basta con:
+
+```bash
+git config --global core.autocrlf false
+git rm --cached -r .
+git reset --hard
+docker compose down
+docker compose up -d --build
+```
+
 ## Verificación tras desplegar
 
 ```bash
