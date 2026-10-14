@@ -61,6 +61,24 @@ docker compose logs -f backend frontend db
 
 - Acceso: `http://HOST:3000` (el puerto se ajusta con `WEB_PORT` en `.env`).
 
+### Actualizaciones (redeploy)
+
+El despliegue es **autoservido**: `docker compose up -d --build` reconstruye las
+imágenes y recrea los contenedores. El backend aplica las migraciones pendientes
+y re-siembra los catálogos en cada arranque (los históricos solo si `agreements`
+está vacía), así que no hay pasos manuales.
+
+- Reconstruye solo lo que cambió. Si tocas únicamente el backend, evita el build
+  del frontend con `docker compose up -d --build backend`; igual con `frontend`.
+- Los `Dockerfile` usan BuildKit con cachés persistentes de npm (`.npm`) y del
+  compilador de Next (`frontend/.next/cache`), de modo que los rebuilds
+  incrementales no vuelven a descargar dependencias ni recompilan todo.
+- El primer build de una máquina descarga dependencias (backend ~75 s, frontend
+  ~65 s, en paralelo) y compila el frontend (~45 s). Los siguientes reutilizan la
+  caché de Docker.
+- `restart: unless-stopped` hace que los tres servicios vuelvan solos tras un
+  reinicio del host; solo el frontend publica puerto (`WEB_PORT`).
+
 ### Esquema y migraciones
 
 El esquema se versiona en `ocri-backend/prisma/migrations` y se aplica solo al

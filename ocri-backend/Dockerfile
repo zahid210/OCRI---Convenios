@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # =============================================================================
 # OCRI Convenios · Backend (NestJS + Prisma + MariaDB)
 # Build multi-etapa: deps -> compilación TS -> imagen de ejecución mínima.
@@ -14,7 +15,9 @@ COPY scripts/sync-motor.mjs ./scripts/sync-motor.mjs
 COPY vendor/ ./vendor/
 COPY prisma/ ./prisma/
 
-RUN npm ci
+# Mount de caché de npm: los tarballs sobreviven entre builds aunque la capa se
+# invalide (p. ej. al cambiar package-lock), evitando re-descargar en cada build.
+RUN --mount=type=cache,id=npm-backend,target=/root/.npm,sharing=locked npm ci
 
 # ── 2. Compilación ───────────────────────────────────────────────────────────
 FROM node:22-slim AS builder
