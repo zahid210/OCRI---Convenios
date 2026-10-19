@@ -13,6 +13,7 @@ import type { Request, Response } from 'express';
 import { extname, basename } from 'path';
 import { Public } from '../auth/decorators/public.decorator';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../auth/jwt.config';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { StorageService } from '../common/storage/storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { isRestrictedRole, isVisibleToRestricted } from '../common/visibility';
@@ -58,11 +59,9 @@ export class FilesController {
     return bearerToken;
   }
 
-  private async verifyToken(
-    bearerToken: string,
-  ): Promise<{ role?: string; sub?: number }> {
+  private async verifyToken(bearerToken: string): Promise<JwtPayload> {
     try {
-      return await this.jwtService.verifyAsync(bearerToken, {
+      return await this.jwtService.verifyAsync<JwtPayload>(bearerToken, {
         issuer: JWT_ISSUER,
         audience: JWT_AUDIENCE,
       });
@@ -127,6 +126,23 @@ export class FilesController {
   ) {
     const payload = await this.verifyToken(this.extractBearerToken(req));
 
+    // Este endpoint es @Public (no pasa por el JwtAuthGuard global), así que la
+    // revalidación contra la BD que hace JwtStrategy hay que replicarla aquí:
+    // sin ella, un token revocado (logout, cambio de contraseña o de rol)
+    // seguiría sirviendo documentos hasta expirar (8 h).
+    if (payload.sub == null) {
+      throw new UnauthorizedException('Token inválido o expirado.');
+    }
+    const user = await this.prisma.users.findUnique({
+      where: { id: BigInt(payload.sub) },
+      select: { role: true, token_version: true },
+    });
+    if (!user || (payload.token_version ?? 0) !== user.token_version) {
+      throw new UnauthorizedException(
+        'Sesión revocada. Inicie sesión nuevamente.',
+      );
+    }
+
     const doc = await this.prisma.documents.findUnique({
       where: { id: BigInt(docId) },
       select: {
@@ -139,7 +155,7 @@ export class FilesController {
     }
 
     if (
-      isRestrictedRole(payload.role) &&
+      isRestrictedRole(user.role) &&
       !isVisibleToRestricted(doc.agreements?.process_status)
     ) {
       throw new NotFoundException(`Documento #${docId} no encontrado.`);

@@ -109,7 +109,7 @@ export const DOC_TYPE_EXTENSIONS: Record<string, Set<string>> = {
 };
 
 /** Número de bytes mínimo a leer del stream para validar el magic byte. */
-const SNIFF_BYTES = 8;
+const SNIFF_BYTES = 4096;
 
 const OLE2_HEADER = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
 const PNG_HEADER = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -132,6 +132,18 @@ function isZip(buf: Buffer): boolean {
   );
 }
 
+/** Firma de la primera parte obligatoria de un contenedor OOXML (docx/xlsx). */
+const OOXML_CONTENT_TYPES = Buffer.from('[Content_Types].xml', 'ascii');
+
+/**
+ * Un .docx/.xlsx válido es un ZIP cuya primera entrada es `[Content_Types].xml`
+ * (lo exige OOXML). Comprobar solo `PK\x03\x04` aceptaba cualquier ZIP
+ * renombrado; esto lo descarta sin necesitar una librería de descompresión.
+ */
+function isOoxml(buf: Buffer): boolean {
+  return isZip(buf) && buf.includes(OOXML_CONTENT_TYPES);
+}
+
 function isRtf(buf: Buffer): boolean {
   return buf.length >= 5 && buf.subarray(0, 5).toString('latin1') === '{\\rtf';
 }
@@ -146,8 +158,8 @@ const MAGIC_BY_EXT: Record<string, (buf: Buffer) => boolean> = {
   '.png': (b) => hasPrefix(b, 0, PNG_HEADER),
   '.jpg': (b) => hasPrefix(b, 0, [0xff, 0xd8, 0xff]),
   '.jpeg': (b) => hasPrefix(b, 0, [0xff, 0xd8, 0xff]),
-  '.docx': isZip,
-  '.xlsx': isZip,
+  '.docx': isOoxml,
+  '.xlsx': isOoxml,
   '.doc': (b) => hasPrefix(b, 0, OLE2_HEADER) || isRtf(b),
   '.xls': (b) => hasPrefix(b, 0, OLE2_HEADER) || isRtf(b),
 };

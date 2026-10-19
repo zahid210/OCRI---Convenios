@@ -132,6 +132,11 @@ const DATA_IMAGE_RE =
 const SAFE_HREF_RE = /^(?:#|mailto:|[a-z][a-z0-9+.-]*:$)/i;
 
 function sanitizeStyle(style: string): string {
+  // Un backslash o un comentario permiten recomponer `url(...)` a partir de
+  // fragmentos (`u\72 l(` / `u/**/rl(`), que un motor que decodifique el estilo
+  // interpretaría como la función prohibida. Ningún estilo legítimo del oficio
+  // los usa, así que se descarta el bloque completo.
+  if (style.includes('\\') || style.includes('/*')) return '';
   return STYLE_DANGEROUS.test(style) ? '' : style;
 }
 
@@ -171,25 +176,53 @@ function sanitizeAttrs(el: Element): void {
   }
 }
 
-function cleanNode(node: Element): void {
-  for (const el of Array.from(node.children)) {
-    const tag = el.tagName.toLowerCase();
-    if (DROP_TAGS.has(tag)) {
-      el.remove();
-    } else if (!ALLOWED_TAGS.has(tag)) {
-      cleanNode(el);
-      while (el.firstChild) node.insertBefore(el.firstChild, el);
-      el.remove();
-    } else {
-      sanitizeAttrs(el);
-      cleanNode(el);
-    }
-  }
+interface CleanFrame {
+  el: Element;
+  unwrap: boolean;
+}
 
-  for (const comment of Array.from(node.childNodes).filter(
-    (n) => n.nodeType === 8,
-  )) {
-    comment.parentNode?.removeChild(comment);
+/**
+ * Limpia el árbol con una pila explícita (iterativo): el HTML del cliente puede
+ * anidar miles de nodos y la versión recursiva desbordaba la pila. Emula el
+ * recorrido original: al encontrar una etiqueta no permitida, primero limpia su
+ * subárbol y después la desenvuelve (sube sus hijos en su lugar).
+ */
+function cleanNode(root: Element): void {
+  const stack: CleanFrame[] = [{ el: root, unwrap: false }];
+
+  while (stack.length > 0) {
+    const frame = stack.pop();
+    if (!frame) break;
+    const node = frame.el;
+
+    if (frame.unwrap) {
+      const parent = node.parentNode;
+      if (parent) {
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+      }
+      continue;
+    }
+
+    for (const comment of Array.from(node.childNodes).filter(
+      (n) => n.nodeType === 8,
+    )) {
+      comment.parentNode?.removeChild(comment);
+    }
+
+    for (const el of Array.from(node.children)) {
+      const tag = el.tagName.toLowerCase();
+      if (DROP_TAGS.has(tag)) {
+        el.remove();
+      } else if (ALLOWED_TAGS.has(tag)) {
+        sanitizeAttrs(el);
+        stack.push({ el, unwrap: false });
+      } else {
+        // Diferir el desenvuelto hasta que el subárbol quede limpio.
+        stack.push({ el, unwrap: true });
+        stack.push({ el, unwrap: false });
+      }
+    }
   }
 }
 

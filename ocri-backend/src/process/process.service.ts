@@ -285,14 +285,51 @@ export class ProcessService {
   }
 
   /**
-   * Mueve el archivo subido a la carpeta del convenio y lo registra como
-   * documento dentro de la transacción del llamador. Centraliza el alta de
+   * Sube el archivo a OBS ANTES de abrir la transacción y la ejecuta. Si la
+   * transacción falla, purga el objeto subido (best-effort) para no dejar
+   * huérfanos; si tiene éxito, queda referenciado por la fila creada. Así no se
+   * mantienen bloqueos de BD durante el I/O de red contra el bucket.
+   */
+  private async withStoredFile<T>(
+    file: UploadFile | undefined,
+    agreement: { tramite_code: string; created_at: Date | string | null },
+    work: (
+      tx: Prisma.TransactionClient,
+      relPath: string | undefined,
+    ) => Promise<T>,
+    options?: { maxWait?: number; timeout?: number },
+  ): Promise<T> {
+    const relPath = file
+      ? await storeUploadedDocument(
+          this.storage,
+          file,
+          agreement.tramite_code,
+          agreement.created_at,
+        )
+      : undefined;
+    try {
+      return await this.prisma.$transaction((tx) => work(tx, relPath), options);
+    } catch (err) {
+      if (relPath) {
+        try {
+          await this.storage.removeRel(relPath);
+        } catch {
+          // best-effort: si el borrado falla queda un objeto huérfano.
+        }
+      }
+      throw err as Error;
+    }
+  }
+
+  /**
+   * Registra como documento (dentro de la transacción del llamador) un archivo
+   * que el llamador YA subió a OBS con `withStoredFile`. Centraliza el alta de
    * documentos usada por los distintos pasos del flujo.
    */
   private async persistUploadedDocument(
     tx: Prisma.TransactionClient,
-    agreement: { tramite_code: string; created_at: Date | string | null },
     file: UploadFile,
+    relPath: string,
     opts: {
       agreementId: bigint;
       code: string;
@@ -310,13 +347,6 @@ export class ProcessService {
     });
 
     const originalName = normalizeUploadName(file.originalname);
-
-    const relPath = await storeUploadedDocument(
-      this.storage,
-      file,
-      agreement.tramite_code,
-      agreement.created_at,
-    );
 
     await tx.documents.create({
       data: {
@@ -747,8 +777,10 @@ export class ProcessService {
         })
       : [];
 
-    const updated = await this.prisma.$transaction(
-      async (tx) => {
+    const updated = await this.withStoredFile(
+      file,
+      request.agreements,
+      async (tx, relPath) => {
         // Update condicional por estado: evita que dos respuestas concurrentes
         // sobre la misma solicitud avancen ambas (guard de integridad).
         const updated = await tx.opinion_requests.updateMany({
@@ -784,16 +816,18 @@ export class ProcessService {
           });
         }
 
-        await this.persistUploadedDocument(tx, request.agreements, file, {
-          agreementId: request.agreement_id,
-          code: 'OFICIO_RESPUESTA_OPINION',
-          name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
-          direction: 'ENTRADA',
-          stage: 'ETAPA_1_PROPUESTA',
-          userId,
-          now: new Date(),
-          opinionRequestId: BigInt(opinionRequestId),
-        });
+        if (file && relPath) {
+          await this.persistUploadedDocument(tx, file, relPath, {
+            agreementId: request.agreement_id,
+            code: 'OFICIO_RESPUESTA_OPINION',
+            name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
+            direction: 'ENTRADA',
+            stage: 'ETAPA_1_PROPUESTA',
+            userId,
+            now: new Date(),
+            opinionRequestId: BigInt(opinionRequestId),
+          });
+        }
 
         await this.logEvent(
           request.agreement_id,
@@ -2099,44 +2133,57 @@ export class ProcessService {
       where: { code: 'EXPEDIENTE_TECNICO' },
     });
 
-    const document = await this.prisma.$transaction(
-      async (tx) => {
-        // La fila anterior se retira dentro de la misma transacción que crea
-        // la nueva: si el create falla, el convenio conserva el expediente
-        // previo. El objeto en OBS se borra después del commit y solo con
-        // carácter informativo, porque esa escritura no es transaccional.
-        if (existDoc) {
-          await tx.documents.delete({ where: { id: existDoc.id } });
+    const newPath = storePath(filename);
+
+    const document = await this.prisma
+      .$transaction(
+        async (tx) => {
+          // La fila anterior se retira dentro de la misma transacción que crea
+          // la nueva: si el create falla, el convenio conserva el expediente
+          // previo. El objeto en OBS se borra después del commit y solo con
+          // carácter informativo, porque esa escritura no es transaccional.
+          if (existDoc) {
+            await tx.documents.delete({ where: { id: existDoc.id } });
+          }
+
+          const doc = await tx.documents.create({
+            data: {
+              agreement_id: BigInt(agreementId),
+              name: 'Expediente Técnico',
+              file_path: newPath,
+              original_name: basename(filename),
+              extension: 'pdf',
+              document_type_id: docType?.id ?? null,
+              direction: 'INTERNO',
+              stage: agreement.stage,
+              created_at: new Date(),
+              updated_at: new Date(),
+            },
+          });
+
+          await this.logEvent(
+            BigInt(agreementId),
+            'EXPEDIENTE_GENERADO',
+            `Expediente técnico generado automáticamente a partir de ${opinionRequests.length} opiniones de dependencias.`,
+            { actorUserId: userId },
+            undefined,
+            tx,
+          );
+
+          return doc;
+        },
+        { maxWait: 10000, timeout: 30000 },
+      )
+      .catch(async (err) => {
+        // El expediente recién fusionado ya está en OBS: si la transacción falla,
+        // se purga para no dejar un objeto huérfano (el previo sigue intacto).
+        try {
+          await this.storage.removeRel(newPath);
+        } catch {
+          // best-effort: si el borrado falla queda un objeto huérfano.
         }
-
-        const doc = await tx.documents.create({
-          data: {
-            agreement_id: BigInt(agreementId),
-            name: 'Expediente Técnico',
-            file_path: storePath(filename),
-            original_name: basename(filename),
-            extension: 'pdf',
-            document_type_id: docType?.id ?? null,
-            direction: 'INTERNO',
-            stage: agreement.stage,
-            created_at: new Date(),
-            updated_at: new Date(),
-          },
-        });
-
-        await this.logEvent(
-          BigInt(agreementId),
-          'EXPEDIENTE_GENERADO',
-          `Expediente técnico generado automáticamente a partir de ${opinionRequests.length} opiniones de dependencias.`,
-          { actorUserId: userId },
-          undefined,
-          tx,
-        );
-
-        return doc;
-      },
-      { maxWait: 10000, timeout: 30000 },
-    );
+        throw err;
+      });
 
     // El objeto anterior en OBS se purga DESPUÉS del commit, y nunca antes de
     // que exista el nuevo. Si el borrado falla solo queda un PDF huérfano en el
@@ -2144,7 +2191,6 @@ export class ProcessService {
     // el expediente. `putUnique` garantiza que la ruta nueva difiere de la
     // anterior, pero se comprueba explícitamente por si el flujo cambiara a
     // sobrescribir en el futuro.
-    const newPath = storePath(filename);
     if (existDoc && existDoc.file_path !== newPath) {
       try {
         await this.storage.removeRel(existDoc.file_path);
@@ -2198,18 +2244,29 @@ export class ProcessService {
         where: { code: 'EXPEDIENTE_TECNICO' },
       });
 
-      await this.prisma.documents.create({
-        data: {
-          agreement_id: BigInt(agreementId),
-          name: 'Expediente Técnico',
-          file_path: storePath(filename),
-          original_name: basename(filename),
-          extension: 'pdf',
-          document_type_id: docType?.id ?? null,
-          direction: 'INTERNO',
-          stage: agreement.stage,
-        },
-      });
+      await this.prisma.documents
+        .create({
+          data: {
+            agreement_id: BigInt(agreementId),
+            name: 'Expediente Técnico',
+            file_path: storePath(filename),
+            original_name: basename(filename),
+            extension: 'pdf',
+            document_type_id: docType?.id ?? null,
+            direction: 'INTERNO',
+            stage: agreement.stage,
+          },
+        })
+        .catch(async (err) => {
+          // El expediente recién fusionado ya está en OBS: si la fila no se crea,
+          // se purga para no dejar un objeto huérfano.
+          try {
+            await this.storage.removeRel(storePath(filename));
+          } catch {
+            // best-effort: si el borrado falla queda un objeto huérfano.
+          }
+          throw err;
+        });
     }
 
     const uploadedCodes = await this.getUploadedDocumentCodes(agreementId);
@@ -2354,8 +2411,10 @@ export class ProcessService {
 
     const now = new Date();
 
-    await this.prisma.$transaction(
-      async (tx) => {
+    await this.withStoredFile(
+      file,
+      agreement,
+      async (tx, relPath) => {
         if (decision === 'APPROVED') {
           await this.applyTransition(
             tx,
@@ -2418,8 +2477,8 @@ export class ProcessService {
           );
         }
 
-        if (file) {
-          await this.persistUploadedDocument(tx, agreement, file, {
+        if (file && relPath) {
+          await this.persistUploadedDocument(tx, file, relPath, {
             agreementId: BigInt(agreementId),
             code:
               decision === 'APPROVED'
@@ -2457,8 +2516,10 @@ export class ProcessService {
 
     const now = new Date();
 
-    await this.prisma.$transaction(
-      async (tx) => {
+    await this.withStoredFile(
+      file,
+      agreement,
+      async (tx, relPath) => {
         await this.applyTransition(
           tx,
           BigInt(agreementId),
@@ -2471,8 +2532,8 @@ export class ProcessService {
           },
         );
 
-        if (file) {
-          await this.persistUploadedDocument(tx, agreement, file, {
+        if (file && relPath) {
+          await this.persistUploadedDocument(tx, file, relPath, {
             agreementId: BigInt(agreementId),
             code: 'PUBLICACION',
             fallbackName: 'Publicación del Convenio',
@@ -2555,75 +2616,77 @@ export class ProcessService {
 
     const now = new Date();
 
-    await this.prisma
-      .$transaction(
-        async (tx) => {
-          // Resolución única
-          const duplicated = await tx.agreements.findFirst({
-            where: {
-              resolution_number: effectiveResolution,
-              NOT: { id: BigInt(agreementId) },
-            },
-          });
-          if (duplicated) {
-            throw new ConflictException(
-              `La resolución ${effectiveResolution} ya está asociada al trámite #${Number(duplicated.id)}.`,
-            );
-          }
-
-          await this.applyTransition(
-            tx,
-            BigInt(agreementId),
-            'REGISTRADO',
-            'CONVENIO_REGISTRADO',
-            'Convenio registrado formalmente: resolución, vigencia y responsables verificados. Documentación organizada en el repositorio institucional.',
-            {
-              actorUserId: userId,
-              extraData: {
-                resolution_number: effectiveResolution,
-                start_date: new Date(data.start_date),
-                end_date: new Date(data.end_date),
-                validity_status: 'VIGENTE',
-                registered_at: now,
-                ...(data.drive_link?.trim()
-                  ? { drive_link: data.drive_link.trim() }
-                  : {}),
-                ...(data.observations?.trim()
-                  ? { observations: data.observations.trim() }
-                  : {}),
-              },
-              metadata: JSON.parse(
-                JSON.stringify({
-                  resolution_number: effectiveResolution,
-                  start_date: data.start_date,
-                  end_date: data.end_date,
-                  responsables_count: data.responsables.length,
-                  drive_link: data.drive_link ?? null,
-                }),
-              ) as Record<string, unknown>,
-            },
+    await this.withStoredFile(
+      file,
+      agreement,
+      async (tx, relPath) => {
+        // Resolución única
+        const duplicated = await tx.agreements.findFirst({
+          where: {
+            resolution_number: effectiveResolution,
+            NOT: { id: BigInt(agreementId) },
+          },
+        });
+        if (duplicated) {
+          throw new ConflictException(
+            `La resolución ${effectiveResolution} ya está asociada al trámite #${Number(duplicated.id)}.`,
           );
+        }
 
-          await tx.agreement_responsables.deleteMany({
-            where: { agreement_id: BigInt(agreementId) },
+        await this.applyTransition(
+          tx,
+          BigInt(agreementId),
+          'REGISTRADO',
+          'CONVENIO_REGISTRADO',
+          'Convenio registrado formalmente: resolución, vigencia y responsables verificados. Documentación organizada en el repositorio institucional.',
+          {
+            actorUserId: userId,
+            extraData: {
+              resolution_number: effectiveResolution,
+              start_date: new Date(data.start_date),
+              end_date: new Date(data.end_date),
+              validity_status: 'VIGENTE',
+              registered_at: now,
+              ...(data.drive_link?.trim()
+                ? { drive_link: data.drive_link.trim() }
+                : {}),
+              ...(data.observations?.trim()
+                ? { observations: data.observations.trim() }
+                : {}),
+            },
+            metadata: JSON.parse(
+              JSON.stringify({
+                resolution_number: effectiveResolution,
+                start_date: data.start_date,
+                end_date: data.end_date,
+                responsables_count: data.responsables.length,
+                drive_link: data.drive_link ?? null,
+              }),
+            ) as Record<string, unknown>,
+          },
+        );
+
+        await tx.agreement_responsables.deleteMany({
+          where: { agreement_id: BigInt(agreementId) },
+        });
+
+        for (const r of data.responsables) {
+          await tx.agreement_responsables.create({
+            data: {
+              agreement_id: BigInt(agreementId),
+              name: r.name.trim(),
+              role: r.role?.trim() || null,
+              side: (r.side ?? 'UNCP') as never,
+              email: r.email?.trim() || null,
+              phone: r.phone?.trim() || null,
+              created_at: now,
+              updated_at: now,
+            },
           });
+        }
 
-          for (const r of data.responsables) {
-            await tx.agreement_responsables.create({
-              data: {
-                agreement_id: BigInt(agreementId),
-                name: r.name.trim(),
-                role: r.role?.trim() || null,
-                side: (r.side ?? 'UNCP') as never,
-                email: r.email?.trim() || null,
-                phone: r.phone?.trim() || null,
-                created_at: now,
-                updated_at: now,
-              },
-            });
-          }
-
-          await this.persistUploadedDocument(tx, agreement, file, {
+        if (file && relPath) {
+          await this.persistUploadedDocument(tx, file, relPath, {
             agreementId: BigInt(agreementId),
             code: 'CONVENIO_FIRMADO',
             name: 'Convenio Firmado Escaneado',
@@ -2632,67 +2695,67 @@ export class ProcessService {
             userId,
             now,
           });
-
-          // ─── E3 Auto-generación de Entregables según fórmula ───
-          // Fórmula: Informes Semestrales = Duración en Años * 2 + 1 Informe Final obligatorio al cierre.
-          const start = new Date(data.start_date);
-          const end = new Date(data.end_date);
-          const durationYears =
-            (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-          const numSemestrales = Math.max(0, Math.round(durationYears * 2));
-
-          // 1. Plan de Trabajo (obligatorio al inicio)
-          await tx.deliverables.create({
-            data: {
-              agreement_id: BigInt(agreementId),
-              type: 'PLAN_DE_TRABAJO',
-              title: 'Plan de Trabajo',
-              status: 'SOLICITADO',
-              period: 'Inicial',
-              requested_at: now,
-            },
-          });
-
-          // 2. Informes Semestrales
-          for (let i = 1; i <= numSemestrales; i++) {
-            await tx.deliverables.create({
-              data: {
-                agreement_id: BigInt(agreementId),
-                type: 'INFORME_SEMESTRAL',
-                title: `Informe Semestral ${i}`,
-                status: 'SOLICITADO',
-                period: `Semestre ${i}`,
-                requested_at: now,
-              },
-            });
-          }
-
-          // 3. Informe Final (obligatorio al cierre)
-          await tx.deliverables.create({
-            data: {
-              agreement_id: BigInt(agreementId),
-              type: 'INFORME_FINAL',
-              title: 'Informe Final de Cierre',
-              status: 'SOLICITADO',
-              period: 'Final',
-              requested_at: now,
-            },
-          });
-        },
-        { maxWait: 10000, timeout: 30000 },
-      )
-      .catch((error) => {
-        // Carrera simultánea: la BD cortó por restricción @unique de resolución.
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2002'
-        ) {
-          throw new ConflictException(
-            `La resolución ${effectiveResolution} ya está registrada en otro convenio.`,
-          );
         }
-        throw error;
-      });
+
+        // ─── E3 Auto-generación de Entregables según fórmula ───
+        // Fórmula: Informes Semestrales = Duración en Años * 2 + 1 Informe Final obligatorio al cierre.
+        const start = new Date(data.start_date);
+        const end = new Date(data.end_date);
+        const durationYears =
+          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+        const numSemestrales = Math.max(0, Math.round(durationYears * 2));
+
+        // 1. Plan de Trabajo (obligatorio al inicio)
+        await tx.deliverables.create({
+          data: {
+            agreement_id: BigInt(agreementId),
+            type: 'PLAN_DE_TRABAJO',
+            title: 'Plan de Trabajo',
+            status: 'SOLICITADO',
+            period: 'Inicial',
+            requested_at: now,
+          },
+        });
+
+        // 2. Informes Semestrales
+        for (let i = 1; i <= numSemestrales; i++) {
+          await tx.deliverables.create({
+            data: {
+              agreement_id: BigInt(agreementId),
+              type: 'INFORME_SEMESTRAL',
+              title: `Informe Semestral ${i}`,
+              status: 'SOLICITADO',
+              period: `Semestre ${i}`,
+              requested_at: now,
+            },
+          });
+        }
+
+        // 3. Informe Final (obligatorio al cierre)
+        await tx.deliverables.create({
+          data: {
+            agreement_id: BigInt(agreementId),
+            type: 'INFORME_FINAL',
+            title: 'Informe Final de Cierre',
+            status: 'SOLICITADO',
+            period: 'Final',
+            requested_at: now,
+          },
+        });
+      },
+      { maxWait: 10000, timeout: 30000 },
+    ).catch((error) => {
+      // Carrera simultánea: la BD cortó por restricción @unique de resolución.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `La resolución ${effectiveResolution} ya está registrada en otro convenio.`,
+        );
+      }
+      throw error;
+    });
 
     return serializeBigInt({
       agreement_id: agreementId,

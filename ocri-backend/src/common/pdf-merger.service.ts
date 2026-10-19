@@ -390,6 +390,7 @@ export class PdfMergerService {
 
     const mergedPdf = await PDFDocument.create();
 
+    const unreadable: string[] = [];
     for (const doc of orderedDocs) {
       try {
         const pdfBytes = await this.storage.readRel(doc.file_path);
@@ -405,7 +406,22 @@ export class PdfMergerService {
         this.logger.warn(
           `No se pudo leer el PDF ${doc.file_path} (doc #${doc.id}): ${err}`,
         );
+        unreadable.push(`#${doc.id}`);
       }
+    }
+
+    // No emitir un expediente incompleto en silencio: si algún documento de los
+    // que debían fusionarse no se pudo leer, la generación falla y el usuario lo
+    // ve, en lugar de obtener un expediente al que le faltan documentos.
+    if (unreadable.length > 0) {
+      throw new BadRequestException(
+        `No se pudieron incorporar ${unreadable.length} documento(s) al expediente (${unreadable.join(', ')}). Verifique que los archivos existan en el repositorio.`,
+      );
+    }
+    if (mergedPdf.getPageCount() === 0) {
+      throw new BadRequestException(
+        'El expediente no contiene páginas: los documentos PDF están vacíos.',
+      );
     }
 
     const mergedBytes = await mergedPdf.save();

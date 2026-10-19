@@ -64,6 +64,38 @@ export class AgreementsService {
       dto.tramite_code?.trim().toUpperCase() ||
       `EXP-${now.getFullYear()}-${String(Date.now()).slice(-5)}`;
 
+    // Los documentos a adjuntar se suben a OBS ANTES de abrir la transacción:
+    // no se mantiene un bloqueo de BD durante el I/O de red. Si la transacción
+    // falla, el `.catch` de más abajo purga los objetos ya subidos.
+    const docSpecs: Array<{
+      file?: UploadFile;
+      code: string;
+      fallbackName: string;
+      relPath?: string;
+    }> = [
+      {
+        file: files?.dictamen?.[0],
+        code: 'DICTAMEN',
+        fallbackName: 'Dictamen',
+      },
+      ...(files?.documentos_origen ?? []).map((file) => ({
+        file,
+        code: 'DOCUMENTO_DE_ORIGEN',
+        fallbackName: 'Documento de Origen',
+      })),
+    ];
+    const uploadedPaths: string[] = [];
+    for (const spec of docSpecs) {
+      if (!spec.file) continue;
+      spec.relPath = await storeUploadedDocument(
+        this.storage,
+        spec.file,
+        tramiteCode,
+        now,
+      );
+      uploadedPaths.push(spec.relPath);
+    }
+
     const createdAgreement = await this.prisma
       .$transaction(async (tx) => {
         const resolution = dto.resolution_number?.trim().toUpperCase() || null;
@@ -115,33 +147,15 @@ export class AgreementsService {
           include: agreementIncludes,
         });
 
-        const docSpecs: Array<{
-          file?: UploadFile;
-          code: string;
-          fallbackName: string;
-        }> = [
-          {
-            file: files?.dictamen?.[0],
-            code: 'DICTAMEN',
-            fallbackName: 'Dictamen',
-          },
-          ...(files?.documentos_origen ?? []).map((file) => ({
-            file,
-            code: 'DOCUMENTO_DE_ORIGEN',
-            fallbackName: 'Documento de Origen',
-          })),
-        ];
-
         for (const spec of docSpecs) {
-          if (!spec.file) continue;
+          if (!spec.file || !spec.relPath) continue;
           const docType = await tx.document_types.findUnique({
             where: { code: spec.code },
           });
           await tx.documents.create({
-            data: await this.buildDocumentData(agr.id, spec.file, {
+            data: this.buildDocumentData(agr.id, spec.file, {
               name: docType?.name ?? spec.fallbackName,
-              tramiteCode: agr.tramite_code,
-              createdAt: agr.created_at,
+              filePath: spec.relPath,
               documentTypeId: docType?.id ?? null,
               direction: 'ENTRADA',
               stage: 'ETAPA_1_PROPUESTA',
@@ -170,7 +184,16 @@ export class AgreementsService {
 
         return agr;
       })
-      .catch((error) => {
+      .catch(async (error) => {
+        // Purga los archivos ya subidos: si la transacción no llegó a
+        // comprometerse, el objeto en OBS quedaría huérfano.
+        for (const path of uploadedPaths) {
+          try {
+            await this.storage.removeRel(path);
+          } catch {
+            // best-effort: si no se puede borrar, queda un objeto huérfano.
+          }
+        }
         // Fallback de robustez: si la BD cortó por restricción @unique
         // (carrera simultánea), convertir en 409 con mensaje claro.
         if (
@@ -187,13 +210,12 @@ export class AgreementsService {
     return serializeBigInt<typeof createdAgreement>(createdAgreement);
   }
 
-  private async buildDocumentData(
+  private buildDocumentData(
     agreementId: bigint,
     file: UploadFile,
     opts: {
       name: string;
-      tramiteCode: string;
-      createdAt?: Date | string | null;
+      filePath: string;
       documentTypeId: bigint | null;
       direction: 'ENTRADA' | 'SALIDA' | 'INTERNO';
       stage?: string;
@@ -201,19 +223,13 @@ export class AgreementsService {
       deliverableId?: bigint | null;
       uploadedById?: number | null;
     },
-  ): Promise<Prisma.documentsCreateInput> {
+  ): Prisma.documentsCreateInput {
     const originalName = normalizeUploadName(file.originalname);
     const ext = path.extname(originalName).slice(0, 10) || undefined;
-    const filePath = await storeUploadedDocument(
-      this.storage,
-      file,
-      opts.tramiteCode,
-      opts.createdAt ?? null,
-    );
     return {
       agreements: { connect: { id: agreementId } },
       name: opts.name,
-      file_path: filePath,
+      file_path: opts.filePath,
       original_name: originalName,
       extension: ext,
       document_types: opts.documentTypeId

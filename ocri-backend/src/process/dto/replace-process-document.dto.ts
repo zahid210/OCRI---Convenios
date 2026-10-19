@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
+import { document_direction } from '@prisma/client';
 
 /**
  * Datos de la corrección al reemplazar un documento del proceso. El archivo
@@ -6,6 +7,8 @@ import { IsOptional, IsString } from 'class-validator';
  */
 export class ReplaceProcessDocumentDto {
   @IsOptional()
-  @IsString()
-  direction?: string;
+  @IsEnum(document_direction, {
+    message: 'direction debe ser ENTRADA, SALIDA o INTERNO',
+  })
+  direction?: document_direction;
 }

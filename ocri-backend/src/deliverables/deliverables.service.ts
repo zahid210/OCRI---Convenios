@@ -345,36 +345,48 @@ export class DeliverablesService {
       where: { code: SOLICITUD_DOC_TYPE_BY_DELIVERABLE[type] },
     });
 
-    const doc = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.documents.create({
-        data: {
-          agreements: { connect: { id: deliverable.agreement_id } },
-          deliverables: { connect: { id: deliverable.id } },
-          name: context.name,
-          file_path: filename,
-          original_name: basename(filename),
-          extension: 'pdf',
-          document_types: docType ? { connect: { id: docType.id } } : undefined,
-          direction: 'SALIDA',
-          stage: 'ETAPA_3_SEGUIMIENTO',
-          uploaded_by:
-            userId != null ? { connect: { id: BigInt(userId) } } : undefined,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
+    const doc = await this.prisma
+      .$transaction(async (tx) => {
+        const created = await tx.documents.create({
+          data: {
+            agreements: { connect: { id: deliverable.agreement_id } },
+            deliverables: { connect: { id: deliverable.id } },
+            name: context.name,
+            file_path: filename,
+            original_name: basename(filename),
+            extension: 'pdf',
+            document_types: docType
+              ? { connect: { id: docType.id } }
+              : undefined,
+            direction: 'SALIDA',
+            stage: 'ETAPA_3_SEGUIMIENTO',
+            uploaded_by:
+              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+
+        await this.logEvent(
+          tx,
+          deliverable.agreement_id,
+          'DOCUMENTO_SOLICITUD_GENERADO',
+          `${context.name} generado (${oficioNumber}).`,
+          userId,
+          { deliverable_type: type, oficio_number: oficioNumber },
+        );
+
+        return created;
+      })
+      .catch(async (err) => {
+        // El PDF ya estaba en OBS: si la transacción falla, se purga.
+        try {
+          await this.storage.removeRel(filename);
+        } catch {
+          // best-effort: si el borrado falla queda un objeto huérfano.
+        }
+        throw err;
       });
-
-      await this.logEvent(
-        tx,
-        deliverable.agreement_id,
-        'DOCUMENTO_SOLICITUD_GENERADO',
-        `${context.name} generado (${oficioNumber}).`,
-        userId,
-        { deliverable_type: type, oficio_number: oficioNumber },
-      );
-
-      return created;
-    });
 
     // No se expone la ruta interna del storage; la descarga va por docId
     // (Fase 2 · H2.2 / Fase 3 · F3-2).
@@ -441,42 +453,54 @@ export class DeliverablesService {
       deliverable.agreements?.created_at ?? null,
     );
 
-    const docType = await this.prisma.document_types.findUnique({
-      where: { code: SOLICITUD_DOC_TYPE_BY_DELIVERABLE[type] },
-    });
+    const doc = await this.prisma
+      .$transaction(async (tx) => {
+        const docType = await tx.document_types.findUnique({
+          where: { code: SOLICITUD_DOC_TYPE_BY_DELIVERABLE[type] },
+        });
 
-    const doc = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.documents.create({
-        data: {
-          agreements: { connect: { id: deliverable.agreement_id } },
-          deliverables: { connect: { id: deliverable.id } },
-          name: `Oficio de Solicitud de ${
-            SOLICITUD_NAME_BY_DELIVERABLE[type]
-          }${deliverable.period ? ` (${deliverable.period})` : ''}`,
-          file_path: relPath,
-          original_name: originalName,
-          extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-          document_types: docType ? { connect: { id: docType.id } } : undefined,
-          direction: 'SALIDA',
-          stage: 'ETAPA_3_SEGUIMIENTO',
-          uploaded_by:
-            userId != null ? { connect: { id: BigInt(userId) } } : undefined,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
+        const created = await tx.documents.create({
+          data: {
+            agreements: { connect: { id: deliverable.agreement_id } },
+            deliverables: { connect: { id: deliverable.id } },
+            name: `Oficio de Solicitud de ${
+              SOLICITUD_NAME_BY_DELIVERABLE[type]
+            }${deliverable.period ? ` (${deliverable.period})` : ''}`,
+            file_path: relPath,
+            original_name: originalName,
+            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+            document_types: docType
+              ? { connect: { id: docType.id } }
+              : undefined,
+            direction: 'SALIDA',
+            stage: 'ETAPA_3_SEGUIMIENTO',
+            uploaded_by:
+              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+
+        await this.logEvent(
+          tx,
+          deliverable.agreement_id,
+          'DOCUMENTO_SOLICITUD_CARGADO',
+          `${created.name} cargado por OCRI (sin editar).`,
+          userId,
+          { deliverable_type: type, original_name: originalName },
+        );
+
+        return created;
+      })
+      .catch(async (err) => {
+        // El archivo ya estaba en OBS: si la transacción falla, se purga.
+        try {
+          await this.storage.removeRel(relPath);
+        } catch {
+          // best-effort: si el borrado falla queda un objeto huérfano.
+        }
+        throw err;
       });
-
-      await this.logEvent(
-        tx,
-        deliverable.agreement_id,
-        'DOCUMENTO_SOLICITUD_CARGADO',
-        `${created.name} cargado por OCRI (sin editar).`,
-        userId,
-        { deliverable_type: type, original_name: originalName },
-      );
-
-      return created;
-    });
 
     return serializeBigInt(stripDocumentFilePath(doc));
   }
@@ -672,66 +696,80 @@ export class DeliverablesService {
 
     const originalName = normalizeUploadName(file.originalname);
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const docTypeCode = DOC_TYPE_BY_DELIVERABLE[deliverable.type];
-      const docType = docTypeCode
-        ? await tx.document_types.findUnique({ where: { code: docTypeCode } })
-        : null;
+    // Sube el archivo ANTES de la transacción: no se mantiene un lock de BD
+    // durante el I/O de red; si la transacción falla, se purga el objeto.
+    const relPath = await storeUploadedDocument(
+      this.storage,
+      file,
+      deliverable.agreements?.tramite_code ?? '',
+      deliverable.agreements?.created_at ?? null,
+    );
 
-      const nextVersion = deliverable.version + 1;
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        const docTypeCode = DOC_TYPE_BY_DELIVERABLE[deliverable.type];
+        const docType = docTypeCode
+          ? await tx.document_types.findUnique({ where: { code: docTypeCode } })
+          : null;
 
-      const relPath = await storeUploadedDocument(
-        this.storage,
-        file,
-        deliverable.agreements?.tramite_code ?? '',
-        deliverable.agreements?.created_at ?? null,
-      );
+        const nextVersion = deliverable.version + 1;
 
-      await tx.documents.create({
-        data: {
-          agreements: { connect: { id: deliverable.agreement_id } },
-          deliverables: { connect: { id: deliverable.id } },
-          name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
-          file_path: relPath,
-          original_name: originalName,
-          extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
-          document_types: docType ? { connect: { id: docType.id } } : undefined,
-          direction: 'ENTRADA',
-          stage: 'ETAPA_3_SEGUIMIENTO',
-          uploaded_by:
-            userId != null ? { connect: { id: BigInt(userId) } } : undefined,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
+        await tx.documents.create({
+          data: {
+            agreements: { connect: { id: deliverable.agreement_id } },
+            deliverables: { connect: { id: deliverable.id } },
+            name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
+            file_path: relPath,
+            original_name: originalName,
+            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+            document_types: docType
+              ? { connect: { id: docType.id } }
+              : undefined,
+            direction: 'ENTRADA',
+            stage: 'ETAPA_3_SEGUIMIENTO',
+            uploaded_by:
+              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+
+        const d = await tx.deliverables.update({
+          where: { id: deliverable.id },
+          data: {
+            status: 'RECIBIDO',
+            version: isCorrection ? { increment: 1 } : undefined,
+            submitted_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+
+        await this.logEvent(
+          tx,
+          deliverable.agreement_id,
+          isCorrection ? 'CORRECCION_RECIBIDA' : 'ENTREGABLE_RECIBIDO',
+          isCorrection
+            ? `Los responsables remitieron la correccion de "${deliverable.title}" (version ${nextVersion}).`
+            : `Los responsables remitieron: ${deliverable.title}.`,
+          userId,
+          {
+            deliverable_type: deliverable.type,
+            original_name: originalName,
+            version: isCorrection ? nextVersion : 1,
+          },
+        );
+
+        return d;
+      })
+      .catch(async (err) => {
+        // El archivo ya estaba en OBS: si la transacción falla, se purga.
+        try {
+          await this.storage.removeRel(relPath);
+        } catch {
+          // best-effort: si el borrado falla queda un objeto huérfano.
+        }
+        throw err;
       });
-
-      const d = await tx.deliverables.update({
-        where: { id: deliverable.id },
-        data: {
-          status: 'RECIBIDO',
-          version: isCorrection ? { increment: 1 } : undefined,
-          submitted_at: new Date(),
-          updated_at: new Date(),
-        },
-      });
-
-      await this.logEvent(
-        tx,
-        deliverable.agreement_id,
-        isCorrection ? 'CORRECCION_RECIBIDA' : 'ENTREGABLE_RECIBIDO',
-        isCorrection
-          ? `Los responsables remitieron la correccion de "${deliverable.title}" (version ${nextVersion}).`
-          : `Los responsables remitieron: ${deliverable.title}.`,
-        userId,
-        {
-          deliverable_type: deliverable.type,
-          original_name: originalName,
-          version: isCorrection ? nextVersion : 1,
-        },
-      );
-
-      return d;
-    });
 
     return serializeBigInt(updated);
   }

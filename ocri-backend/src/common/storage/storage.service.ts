@@ -66,7 +66,6 @@ export class StorageService implements OnModuleInit {
   }
 
   private cfg() {
-    const rawTtl = Number(process.env.S3_PRESIGN_TTL ?? 300);
     return {
       bucket: process.env.S3_BUCKET?.trim() ?? '',
       accessKeyId: process.env.S3_ACCESS_KEY_ID?.trim() ?? '',
@@ -74,11 +73,6 @@ export class StorageService implements OnModuleInit {
       region: process.env.S3_REGION?.trim() || 'LA-SANTIAGO',
       endpoint: process.env.S3_ENDPOINT?.trim() ?? '',
       forcePathStyle: (process.env.S3_FORCE_PATH_STYLE ?? 'false') === 'true',
-      // TTL de presign válido: 1 s .. 7 días (máximo OBS/AWS). Si el env viene
-      // corrupto/NaN se usa el valor por defecto en vez de romper los presign.
-      presignTtl: Number.isFinite(rawTtl)
-        ? Math.min(Math.max(rawTtl, 1), 604800)
-        : 300,
       prefix: (process.env.S3_PREFIX ?? '').replace(/\/+$/, ''),
     };
   }
@@ -145,7 +139,14 @@ export class StorageService implements OnModuleInit {
     );
   }
 
-  /** ¿Existe el objeto? Se usa para desambiguar nombres sin sobrescribir. */
+  /**
+   * ¿Existe el objeto? Se usa para desambiguar nombres sin sobrescribir.
+   *
+   * Solo el "no existe" (404/NoSuchKey/NotFound) devuelve false. Cualquier otro
+   * fallo (403, 500, timeout…) se propaga: si se tratara como "no existe",
+   * `putUnique` creería que el nombre está libre y sobrescribiría un documento
+   * ya guardado.
+   */
   async exists(relPath: string): Promise<boolean> {
     try {
       await this.s3().send(
@@ -155,8 +156,9 @@ export class StorageService implements OnModuleInit {
         }),
       );
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      if (isNotFound(err)) return false;
+      throw err;
     }
   }
 
@@ -269,18 +271,19 @@ export class StorageService implements OnModuleInit {
       };
     }
     const c = this.cfg();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       // El HeadBucket debe ser acotado: si el endpoint no responde, /health no
       // debe colgarse (timeouts por defecto del SDK pueden superar el tiempo del
       // healthcheck de Docker y marcar el contenedor como unhealthy).
       await Promise.race([
         this.s3().send(new HeadBucketCommand({ Bucket: c.bucket })),
-        new Promise<never>((_, reject) =>
-          setTimeout(
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(
             () => reject(new Error('timeout (6s) al verificar S3')),
             6000,
-          ),
-        ),
+          );
+        }),
       ]);
       return {
         configured: true,
@@ -295,6 +298,10 @@ export class StorageService implements OnModuleInit {
         bucket: c.bucket,
         message: `S3 no accesible: ${erroToString(err)}`,
       };
+    } finally {
+      // Cancela el temporizador si ganó el HeadBucket (timeout sigue pendiente
+      // hasta 6 s por cada /health si no se limpia).
+      if (timeout) clearTimeout(timeout);
     }
   }
 }

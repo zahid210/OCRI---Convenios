@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { document_direction } from '@prisma/client';
 
 export class UploadProcessDocumentDto {
   @IsString()
@@ -6,6 +7,8 @@ export class UploadProcessDocumentDto {
   document_type_code: string;
 
   @IsOptional()
-  @IsString()
-  direction?: string;
+  @IsEnum(document_direction, {
+    message: 'direction debe ser ENTRADA, SALIDA o INTERNO',
+  })
+  direction?: document_direction;
 }
