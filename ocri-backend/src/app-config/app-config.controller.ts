@@ -1,10 +1,8 @@
-import { Controller, Body, Get, Patch, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Controller, Body, Get, Patch } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AppConfigService } from './app-config.service';
 import { SetDaysDto } from './dto/set-days.dto';
 
-@UseGuards(JwtAuthGuard)
 @Controller('config')
 export class AppConfigController {
   constructor(private readonly appConfigService: AppConfigService) {}

@@ -2,23 +2,44 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import type { Request, Response, NextFunction } from 'express';
+import { randomUUID } from 'crypto';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { assertRequiredEnv } from './config/env';
+import { bigintToJson } from './common/process.constants';
 import { MAX_TOTAL_UPLOAD_BYTES } from './common/uploads.config';
 
-// Extensión tipada de BigInt para serialización JSON segura
+// Extensión tipada de BigInt para serialización JSON segura. Es la red de
+// seguridad global (ver bigintToJson y serializeBigInt): convierte cualquier
+// BigInt que llegue a res.json() y preserva la precisión fuera del rango seguro.
 declare global {
   interface BigInt {
-    toJSON(): number;
+    toJSON(): number | string;
   }
 }
 
-BigInt.prototype.toJSON = function () {
-  return Number(this);
+BigInt.prototype.toJSON = function (this: bigint) {
+  return bigintToJson(this);
 };
 
 async function bootstrap() {
+  assertRequiredEnv();
+
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+
+  // El cierre ordenado dispara onModuleDestroy (p. ej. PrismaService cierra el
+  // pool) ante SIGTERM/SIGINT, que es lo que envía `docker stop`.
+  app.enableShutdownHooks();
+
+  // Identificador de petición para correlacionar logs y respuestas de error.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const incoming = req.headers['x-request-id'];
+    const requestId =
+      (Array.isArray(incoming) ? incoming[0] : incoming) || randomUUID();
+    res.setHeader('X-Request-Id', requestId);
+    req.headers['x-request-id'] = requestId;
+    next();
+  });
 
   // Body parser con límite ampliado: el oficio editable incluye los logos
   // institucionales en base64 y supera el límite por defecto (100kb) que
@@ -26,9 +47,11 @@ async function bootstrap() {
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ extended: true, limit: '10mb' }));
 
-  // Límite agregado por petición multipart: multer limita cada archivo, pero no
-  // la suma del lote. Este guard comprueba Content-Length, de modo que un body
-  // > MAX_TOTAL_UPLOAD_BYTES se rechaza antes de acumularlo en memoria.
+  // Atajo por Content-Length: rechaza el lote completo antes de acumularlo si
+  // ya declara un tamaño mayor al permitido. No es la única defensa: un cliente
+  // con Transfer-Encoding: chunked no envía Content-Length, así que el tope
+  // real (suma de bytes de todos los archivos) lo aplica el engine de multer
+  // en uploads.config.ts.
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (
       req.method === 'POST' &&

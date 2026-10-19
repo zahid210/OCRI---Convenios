@@ -12,3 +12,12 @@ export const OPINION_DEFAULT_DAYS_KEY = 'opinion_default_days';
 
 /** Umbral (días) para avisar que una solicitud de opinión está por vencer. */
 export const OPINION_WARNING_DAYS_KEY = 'opinion_warning_days';
+
+/**
+ * Valores por defecto de las claves anteriores. Son la única fuente de verdad:
+ * los usan tanto el seed (`APP_CONFIG_DEFAULTS` en catalogs.data.ts) como los
+ * fallbacks de AppConfigService cuando la fila todavía no existe. Mantenerlos
+ * aquí evita que el valor sembrado y el fallback del código diverjan.
+ */
+export const OPINION_DEFAULT_DAYS_DEFAULT = 15;
+export const OPINION_WARNING_DAYS_DEFAULT = 3;

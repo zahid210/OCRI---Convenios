@@ -1,6 +1,8 @@
 import { document_direction } from '@prisma/client';
 import {
+  OPINION_DEFAULT_DAYS_DEFAULT,
   OPINION_DEFAULT_DAYS_KEY,
+  OPINION_WARNING_DAYS_DEFAULT,
   OPINION_WARNING_DAYS_KEY,
 } from '../common/app-config.constants';
 
@@ -153,6 +155,12 @@ export interface AppConfigSeed {
  * NO usa app_config: es la constante EXPIRATION_WARNING_DAYS (90).
  */
 export const APP_CONFIG_DEFAULTS: readonly AppConfigSeed[] = [
-  { key: OPINION_DEFAULT_DAYS_KEY, value: '15' },
-  { key: OPINION_WARNING_DAYS_KEY, value: '3' },
+  {
+    key: OPINION_DEFAULT_DAYS_KEY,
+    value: String(OPINION_DEFAULT_DAYS_DEFAULT),
+  },
+  {
+    key: OPINION_WARNING_DAYS_KEY,
+    value: String(OPINION_WARNING_DAYS_DEFAULT),
+  },
 ];

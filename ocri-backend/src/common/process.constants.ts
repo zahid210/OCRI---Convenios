@@ -88,13 +88,32 @@ export const EXPIRATION_WARNING_DAYS = 90;
 export const MAX_OPINION_OBSERVATIONS = 3;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Serialización BigInt → number segura para JSON
+// Serialización BigInt → JSON segura
+//
+// Hay dos capas, deliberadamente complementarias:
+//   1. `BigInt.prototype.toJSON` (main.ts) es la red de seguridad global: evita
+//      que CUALQUIER BigInt que escape a un `res.json()` rompa la serialización.
+//   2. `serializeBigInt` convierte explícitamente payloads de Prisma antes de
+//      devolverlos. Con la capa 1 presente su replacer rara vez se ejecuta, pero
+//      se mantiene por claridad en los servicios y como defensa si la capa 1 se
+//      retira.
+// Ambas preservan la precisión: los enteros fuera del rango seguro de JS se
+// emiten como string en lugar de truncarse con `Number`.
 // ═══════════════════════════════════════════════════════════════════════════
+
+const MAX_SAFE_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
+
+/** Convierte un BigInt a number, o a string si excede el rango seguro de JS. */
+export function bigintToJson(value: bigint): number | string {
+  return value >= -MAX_SAFE_BIGINT && value <= MAX_SAFE_BIGINT
+    ? Number(value)
+    : value.toString();
+}
 
 export function serializeBigInt<T>(obj: T): T {
   const parsed: unknown = JSON.parse(
     JSON.stringify(obj, (_key: string, value: unknown) =>
-      typeof value === 'bigint' ? Number(value) : value,
+      typeof value === 'bigint' ? bigintToJson(value) : value,
     ),
   );
   return parsed as T;

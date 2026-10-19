@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { user_role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BCRYPT_ROUNDS } from '../auth/auth.constants';
+import { serializeBigInt } from '../common/process.constants';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -82,7 +83,7 @@ export class UsersService {
     ]);
 
     return {
-      data: this.serializeBigInt(data),
+      data: serializeBigInt(data),
       meta: {
         total,
         page,
@@ -123,7 +124,7 @@ export class UsersService {
       },
     });
 
-    return this.serializeBigInt(user);
+    return serializeBigInt(user);
   }
 
   async update(id: number, dto: UpdateUserDto) {
@@ -200,7 +201,7 @@ export class UsersService {
       },
     });
 
-    return this.serializeBigInt(updated);
+    return serializeBigInt(updated);
   }
 
   async remove(id: number, requestingUserId: number) {
@@ -229,12 +230,5 @@ export class UsersService {
 
   private async countAdmins(): Promise<number> {
     return this.prisma.users.count({ where: { role: 'admin' } });
-  }
-
-  private serializeBigInt<T>(obj: unknown): T {
-    const jsonString = JSON.stringify(obj, (_, value) =>
-      typeof value === 'bigint' ? Number(value) : (value as unknown),
-    );
-    return JSON.parse(jsonString) as T;
   }
 }

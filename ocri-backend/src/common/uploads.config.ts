@@ -3,7 +3,7 @@ import type { Request } from 'express';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { PassThrough } from 'stream';
 import { basename, extname } from 'path';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
 
 /**
  * Callback de un StorageEngine de multer. Los tipos publicados declaran el
@@ -252,6 +252,14 @@ export async function storeUploadedDocument(
  */
 type MulterStorageEngine = ReturnType<typeof memoryStorage>;
 
+/**
+ * Bytes acumulados en TODO el request (suma de archivos). Se guarda por
+ * petición en un WeakMap para no retener referencias ya terminadas. Es el tope
+ * real: el guard de `Content-Length` (main.ts) es solo un atajo que un cliente
+ * con `Transfer-Encoding: chunked` puede esquivar.
+ */
+const uploadTotalByReq = new WeakMap<Request, number>();
+
 function safeStorageEngine(): MulterStorageEngine {
   const memory = memoryStorage();
 
@@ -284,13 +292,28 @@ function safeStorageEngine(): MulterStorageEngine {
         cb(err);
       };
 
+      // Arranca con lo ya consumido por archivos previos de esta petición.
+      let totalBytes = uploadTotalByReq.get(req) ?? 0;
+
       original.on('data', (chunk: Buffer) => {
-        if (!rejected && headLen < SNIFF_BYTES) {
+        if (rejected) return;
+
+        totalBytes += chunk.length;
+        uploadTotalByReq.set(req, totalBytes);
+        if (totalBytes > MAX_TOTAL_UPLOAD_BYTES) {
+          return reject(
+            new PayloadTooLargeException(
+              'El conjunto de archivos supera el límite permitido por petición.',
+            ),
+          );
+        }
+
+        if (headLen < SNIFF_BYTES) {
           const need = Math.min(SNIFF_BYTES - headLen, chunk.length);
           head.push(chunk.subarray(0, need));
           headLen += need;
         }
-        if (!rejected) passthrough.write(chunk);
+        passthrough.write(chunk);
       });
 
       original.on('end', () => {

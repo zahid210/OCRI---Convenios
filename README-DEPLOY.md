@@ -199,8 +199,18 @@ docker compose up -d --build
 
 ```bash
 docker compose ps                                    # los 3 servicios "healthy"
-curl -s localhost:3000/api/health                     # status ok + storage ok
+curl -s localhost:3000/api/health                     # {"status":"ok"} (liveness)
 docker compose logs backend | grep -i "S3 no configurado"   # no debe aparecer nada
+```
+
+`GET /api/health` es un liveness mínimo (no consulta la BD ni el bucket a
+propósito: si S3 se cae, la API puede seguir sirviendo lecturas y no queremos
+reiniciar el contenedor). Para un diagnóstico real del almacenamiento, como
+admin autenticado:
+
+```bash
+curl -s -H "Authorization: Bearer <token>" localhost:3000/api/health/storage
+# {"configured":true,"ok":true,"bucket":"...","message":"S3 conectado (...)"}
 ```
 
 ## Arquitectura de imágenes

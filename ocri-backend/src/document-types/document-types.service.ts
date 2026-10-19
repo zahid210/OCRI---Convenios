@@ -2,17 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, document_direction } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DOCUMENT_TYPES } from '../catalogs/catalogs.data';
+import { serializeBigInt } from '../common/process.constants';
 
 @Injectable()
 export class DocumentTypesService {
   constructor(private readonly prisma: PrismaService) {}
-
-  private serializeBigInt<T>(obj: unknown): T {
-    const jsonString = JSON.stringify(obj, (_, value) =>
-      typeof value === 'bigint' ? Number(value) : (value as unknown),
-    );
-    return JSON.parse(jsonString) as T;
-  }
 
   async findAll(direction?: document_direction) {
     const where: Prisma.document_typesWhereInput = {};
@@ -25,7 +19,7 @@ export class DocumentTypesService {
       orderBy: { code: 'asc' },
     });
 
-    return this.serializeBigInt(data);
+    return serializeBigInt(data);
   }
 
   async findOne(id: number) {
@@ -37,7 +31,7 @@ export class DocumentTypesService {
       throw new NotFoundException(`Tipo de documento #${id} no encontrado`);
     }
 
-    return this.serializeBigInt(docType);
+    return serializeBigInt(docType);
   }
 
   async seed() {

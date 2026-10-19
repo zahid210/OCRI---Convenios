@@ -1,5 +1,8 @@
+// PRIMERO: carga y centraliza el entorno (.env) antes de evaluar los módulos
+// que leen variables en tiempo de importación. Ver src/config/env.ts.
+import './config/env';
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -18,6 +21,7 @@ import { AppConfigModule } from './app-config/app-config.module';
 import { ProcessModule } from './process/process.module';
 import { DeliverablesModule } from './deliverables/deliverables.module';
 import { StorageModule } from './common/storage/storage.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -43,6 +47,10 @@ import { RolesGuard } from './auth/guards/roles.guard';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

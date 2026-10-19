@@ -1,8 +1,11 @@
-import 'dotenv/config';
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
+/**
+ * El entorno (.env) se carga en src/config/env.ts, importado primero por
+ * app.module.ts; aquí no se importa dotenv para no dispersar el efecto.
+ */
 @Injectable()
 export class PrismaService
   extends PrismaClient

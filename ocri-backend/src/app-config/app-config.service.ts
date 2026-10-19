@@ -1,10 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  OPINION_DEFAULT_DAYS_DEFAULT,
   OPINION_DEFAULT_DAYS_KEY,
+  OPINION_WARNING_DAYS_DEFAULT,
   OPINION_WARNING_DAYS_KEY,
 } from '../common/app-config.constants';
 
+/**
+ * Configuración operativa (tabla `app_config`, clave/valor).
+ *
+ * ADVERTENCIA: `app_config` es para parámetros operativos (plazos, umbrales),
+ * NO para secretos. `getAll()` expone clave/valor a cualquier admin, así que
+ * material sensible (SMTP, tokens de integración) debe vivir en variables de
+ * entorno, no aquí.
+ */
 @Injectable()
 export class AppConfigService {
   constructor(private readonly prisma: PrismaService) {}
@@ -24,11 +34,18 @@ export class AppConfigService {
     });
   }
 
+  /** Entero positivo del valor guardado; si falta o es inválido usa `fallback`. */
+  private parsePositiveInt(value: string | null, fallback: number): number {
+    if (!value) return fallback;
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  }
+
   async getOpinionDefaultDays(): Promise<number> {
-    const val = await this.get(OPINION_DEFAULT_DAYS_KEY);
-    if (!val) return 10;
-    const n = parseInt(val, 10);
-    return Number.isFinite(n) && n > 0 ? n : 10;
+    return this.parsePositiveInt(
+      await this.get(OPINION_DEFAULT_DAYS_KEY),
+      OPINION_DEFAULT_DAYS_DEFAULT,
+    );
   }
 
   async setOpinionDefaultDays(days: number): Promise<void> {
@@ -36,10 +53,10 @@ export class AppConfigService {
   }
 
   async getWarningDays(): Promise<number> {
-    const val = await this.get(OPINION_WARNING_DAYS_KEY);
-    if (!val) return 3;
-    const n = parseInt(val, 10);
-    return Number.isFinite(n) && n > 0 ? n : 3;
+    return this.parsePositiveInt(
+      await this.get(OPINION_WARNING_DAYS_KEY),
+      OPINION_WARNING_DAYS_DEFAULT,
+    );
   }
 
   async setWarningDays(days: number): Promise<void> {
