@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -34,20 +36,30 @@ const agreementIncludes: Prisma.agreementsInclude = {
 
 @Injectable()
 export class AgreementsService {
+  private readonly logger = new Logger(AgreementsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
   ) {}
 
-  private async deletePhysicalFiles(agreementId: bigint): Promise<void> {
-    const documents = await this.prisma.documents.findMany({
-      where: { agreement_id: agreementId },
-    });
-
-    for (const doc of documents) {
-      if (!doc.file_path) continue;
-      await this.storage.removeRel(doc.file_path);
+  /**
+   * Purga best-effort de los objetos de un conjunto de documentos. Nunca lanza:
+   * un objeto inaccesible (red/permiso) no debe impedir el borrado de la fila.
+   * Devuelve las rutas que no se pudieron eliminar para trazabilidad.
+   */
+  private async purgeFiles(paths: (string | null)[]): Promise<string[]> {
+    const failed: string[] = [];
+    for (const relPath of paths) {
+      if (!relPath) continue;
+      try {
+        await this.storage.removeRel(relPath);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException)?.code === 'ENOENT') continue;
+        failed.push(relPath);
+      }
     }
+    return failed;
   }
 
   // ─── E1: OCRI registra la solicitud derivada por Rectorado ────────────────
@@ -59,6 +71,24 @@ export class AgreementsService {
     },
   ) {
     const now = new Date();
+
+    // Vigencia coherente (B6-6): si se informan ambas fechas, el fin no puede
+    // ser anterior al inicio. Se valida antes de subir nada a OBS.
+    const startDate = dto.start_date ? new Date(dto.start_date) : null;
+    const endDate = dto.end_date ? new Date(dto.end_date) : null;
+    if (
+      (startDate && Number.isNaN(startDate.getTime())) ||
+      (endDate && Number.isNaN(endDate.getTime()))
+    ) {
+      throw new BadRequestException(
+        'La vigencia debe contener fechas válidas.',
+      );
+    }
+    if (startDate && endDate && endDate < startDate) {
+      throw new BadRequestException(
+        'La fecha de fin no puede ser anterior a la fecha de inicio.',
+      );
+    }
 
     const tramiteCode =
       dto.tramite_code?.trim().toUpperCase() ||
@@ -418,34 +448,67 @@ export class AgreementsService {
     if (dto.agreement_type_id !== undefined)
       data.agreement_types = { connect: { id: BigInt(dto.agreement_type_id) } };
 
+    // Vigencia coherente: se valida la fecha resultante (la nueva si viene, o
+    // la actual si no se toca) para no dejar `end < start` ni fechas inválidas.
+    const effectiveStart =
+      dto.start_date !== undefined
+        ? dto.start_date
+          ? new Date(dto.start_date)
+          : null
+        : current.start_date;
+    const effectiveEnd =
+      dto.end_date !== undefined
+        ? dto.end_date
+          ? new Date(dto.end_date)
+          : null
+        : current.end_date;
+    if (
+      (effectiveStart && Number.isNaN(effectiveStart.getTime())) ||
+      (effectiveEnd && Number.isNaN(effectiveEnd.getTime()))
+    ) {
+      throw new BadRequestException(
+        'La vigencia debe contener fechas válidas.',
+      );
+    }
+    if (effectiveStart && effectiveEnd && effectiveEnd < effectiveStart) {
+      throw new BadRequestException(
+        'La fecha de fin no puede ser anterior a la fecha de inicio.',
+      );
+    }
+
     const newResolution =
       typeof data.resolution_number === 'string'
         ? data.resolution_number
         : (data.resolution_number?.set ?? null);
 
-    if (newResolution) {
-      const duplicated = await this.prisma.agreements.findFirst({
-        where: {
-          resolution_number: newResolution,
-          NOT: { id: agreementId },
-        },
-        select: { id: true },
-      });
-      if (duplicated) {
-        throw new ConflictException(
-          `El código de resolución ${newResolution} ya está registrado en el convenio #${Number(duplicated.id)}.`,
-        );
-      }
-    }
-
     try {
-      const updated = await this.prisma.agreements.update({
-        where: { id: agreementId },
-        data,
-        include: {
-          ...agreementIncludes,
-          responsables: true,
-        },
+      // El chequeo de resolución duplicada y el update van en la misma
+      // transacción para que dos PATCH concurrentes no pasen ambos el control
+      // y choquen luego contra el índice único (evita la carrera B6-5).
+      const updated = await this.prisma.$transaction(async (tx) => {
+        if (newResolution) {
+          const duplicated = await tx.agreements.findFirst({
+            where: {
+              resolution_number: newResolution,
+              NOT: { id: agreementId },
+            },
+            select: { id: true },
+          });
+          if (duplicated) {
+            throw new ConflictException(
+              `El código de resolución ${newResolution} ya está registrado en el convenio #${Number(duplicated.id)}.`,
+            );
+          }
+        }
+
+        return tx.agreements.update({
+          where: { id: agreementId },
+          data,
+          include: {
+            ...agreementIncludes,
+            responsables: true,
+          },
+        });
       });
       return serializeBigInt<unknown>(updated);
     } catch (error) {
@@ -478,22 +541,23 @@ export class AgreementsService {
   async remove(id: number) {
     const agreementId = BigInt(id);
 
+    let filePaths: (string | null)[];
     try {
       const agreement = await this.prisma.agreements.findUnique({
         where: { id: agreementId },
+        include: { documents: { select: { file_path: true } } },
       });
 
       if (!agreement) {
         throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
       }
 
-      await this.deletePhysicalFiles(agreementId);
+      filePaths = agreement.documents.map((d) => d.file_path);
 
+      // Primero se borra la fila (los documentos caen por cascada) y solo
+      // después del commit se purgan los objetos en OBS: si el borrado en BD
+      // falla, no se pierden archivos de un convenio que sigue existiendo.
       await this.prisma.agreements.delete({ where: { id: agreementId } });
-
-      return {
-        message: `Trámite #${id} y sus archivos asociados eliminados correctamente`,
-      };
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -503,9 +567,22 @@ export class AgreementsService {
       }
       throw error;
     }
+
+    // Purga en OBS después del commit; best-effort (no revierte el borrado).
+    const failed = await this.purgeFiles(filePaths);
+    if (failed.length > 0) {
+      this.logger.warn(
+        `Convenio #${id} eliminado, pero ${failed.length} archivo(s) no se pudieron borrar de OBS: ${failed.join(', ')}`,
+      );
+    }
+
+    return {
+      message: `Trámite #${id} y sus archivos asociados eliminados correctamente`,
+    };
   }
 
   async removeAgreementDocument(docId: number) {
+    let filePath: string | null;
     try {
       const doc = await this.prisma.documents.findUnique({
         where: { id: BigInt(docId) },
@@ -515,13 +592,10 @@ export class AgreementsService {
         throw new NotFoundException(`Documento con ID #${docId} no encontrado`);
       }
 
-      if (doc.file_path) {
-        await this.storage.removeRel(doc.file_path);
-      }
+      filePath = doc.file_path;
 
+      // Igual que en `remove`: la fila primero, OBS después del commit.
       await this.prisma.documents.delete({ where: { id: BigInt(docId) } });
-
-      return { message: `Documento #${docId} eliminado correctamente` };
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -531,6 +605,15 @@ export class AgreementsService {
       }
       throw error;
     }
+
+    const failed = await this.purgeFiles([filePath]);
+    if (failed.length > 0) {
+      this.logger.warn(
+        `Documento #${docId} eliminado, pero no se pudo borrar de OBS: ${failed.join(', ')}`,
+      );
+    }
+
+    return { message: `Documento #${docId} eliminado correctamente` };
   }
 
   async getInstitutionsLookup() {

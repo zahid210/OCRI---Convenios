@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsNumber,
   IsDateString,
+  IsEmail,
   Matches,
   MaxLength,
 } from 'class-validator';
@@ -15,12 +16,14 @@ const trim = ({ value }: { value: unknown }) =>
 export class CreateAgreementDto {
   @IsNotEmpty({ message: 'El asunto de la propuesta es obligatorio' })
   @IsString()
+  @MaxLength(255, { message: 'title no debe exceder 255 caracteres' })
   @Transform(trim)
   title: string;
 
   /** Objeto / denominación completa de la propuesta */
   @IsOptional()
   @IsString()
+  @MaxLength(255, { message: 'name no debe exceder 255 caracteres' })
   @Transform(trim)
   name?: string;
 
@@ -37,28 +40,39 @@ export class CreateAgreementDto {
   /** Entidad Solicitante que remitió la propuesta a Rectorado */
   @IsOptional()
   @IsString()
+  @MaxLength(255, { message: 'applicant_name no debe exceder 255 caracteres' })
   @Transform(trim)
   applicant_name?: string;
 
   @IsOptional()
-  @IsString()
+  @IsEmail({}, { message: 'applicant_email debe ser un correo válido' })
+  @MaxLength(255, {
+    message: 'applicant_email no debe exceder 255 caracteres',
+  })
   @Transform(trim)
   applicant_email?: string;
 
   /** Unidad orgánica solicitante (facultad, oficina, etc.) */
   @IsOptional()
   @IsString()
+  @MaxLength(255, { message: 'applicant_unit no debe exceder 255 caracteres' })
   @Transform(trim)
   applicant_unit?: string;
 
   /** N° del Dictamen con que Rectorado deriva la solicitud a OCRI */
   @IsOptional()
   @IsString()
+  @MaxLength(80, {
+    message: 'rectorate_oficio_number no debe exceder 80 caracteres',
+  })
   @Transform(trim)
   rectorate_oficio_number?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(255, {
+    message: 'resolution_number no debe exceder 255 caracteres',
+  })
   @Transform(trim)
   resolution_number?: string;
 
@@ -90,6 +104,7 @@ export class CreateAgreementDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(5000, { message: 'observations no debe exceder 5000 caracteres' })
   @Transform(trim)
   observations?: string;
 }

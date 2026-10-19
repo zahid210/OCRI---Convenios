@@ -103,4 +103,25 @@ describe('SeguimientoService.findAll (paginación en SQL)', () => {
 
     expect(findWhere).not.toHaveProperty('AND');
   });
+
+  it('confina al rol viewer a los estados visibles (B6-1)', async () => {
+    await service.findAll({ page: 1, per_page: 10 }, 'viewer');
+
+    const status = findWhere?.process_status as { in?: string[] };
+    expect(Array.isArray(status.in)).toBe(true);
+    // La intersección con VIEWER_VISIBLE_STATUSES nunca amplía el alcance.
+    expect(status.in).toEqual(
+      expect.arrayContaining(['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO']),
+    );
+    // El mismo where confinado se usa para el conteo.
+    expect(countWhere).toEqual(findWhere);
+  });
+
+  it('no confina a un rol operativo (B6-1)', async () => {
+    await service.findAll({ page: 1, per_page: 10 }, 'procesador');
+
+    expect(findWhere?.process_status).toEqual({
+      in: ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'],
+    });
+  });
 });

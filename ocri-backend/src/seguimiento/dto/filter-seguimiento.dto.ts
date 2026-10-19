@@ -1,5 +1,8 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { VALID_TRANSITIONS } from '../../common/process.constants';
+
+const PROCESS_STATUSES = Object.keys(VALID_TRANSITIONS);
 
 export class FilterSeguimientoDto {
   @IsOptional()
@@ -22,10 +25,12 @@ export class FilterSeguimientoDto {
 
   /** Estado exacto del proceso a filtrar */
   @IsOptional()
-  @IsString()
+  @IsIn(PROCESS_STATUSES, {
+    message: `process_status debe ser uno de: ${PROCESS_STATUSES.join(', ')}`,
+  })
   process_status?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['true', 'false'], { message: "pendientes debe ser 'true' o 'false'" })
   pendientes?: 'true' | 'false';
 }

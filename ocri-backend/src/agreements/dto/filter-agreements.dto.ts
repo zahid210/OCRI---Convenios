@@ -7,6 +7,9 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { VALID_TRANSITIONS } from '../../common/process.constants';
+
+const PROCESS_STATUSES = Object.keys(VALID_TRANSITIONS);
 
 export class FilterAgreementsDto {
   @IsOptional()
@@ -34,7 +37,9 @@ export class FilterAgreementsDto {
 
   /** Estado exacto del proceso (RECEPCIONADA, OPINIONES_EN_CURSO, ...) */
   @IsOptional()
-  @IsString()
+  @IsIn(PROCESS_STATUSES, {
+    message: `process_status debe ser uno de: ${PROCESS_STATUSES.join(', ')}`,
+  })
   process_status?: string;
 
   @IsOptional()

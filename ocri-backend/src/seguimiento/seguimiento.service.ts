@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilterSeguimientoDto } from './dto/filter-seguimiento.dto';
-import { serializeBigInt } from '../common/process.constants';
+import { serializeBigInt, ProcessStatus } from '../common/process.constants';
+import { isRestrictedRole, restrictStatusList } from '../common/visibility';
 
 interface EntregableRow {
   id: number;
@@ -53,6 +54,7 @@ export class SeguimientoService {
 
   private buildWhere(
     filter: FilterSeguimientoDto,
+    role?: string,
   ): Prisma.agreementsWhereInput {
     const where: Prisma.agreementsWhereInput = {
       process_status: { in: [...TRACKED_STATUSES] },
@@ -78,6 +80,17 @@ export class SeguimientoService {
         where.process_status =
           requested as Prisma.agreementsWhereInput['process_status'];
       }
+    }
+
+    // Confinamiento de lectura (B6-1): el rol restringido (`viewer`) nunca ve
+    // estados no formalizados. Se intersecta como último paso para no ampliar
+    // jamás su alcance, sin importar qué filtros haya aplicado antes. Hoy el
+    // universo ya coincide con lo visible, pero así la regla no depende de que
+    // `TRACKED_STATUSES` siga siendo un subconjunto de VIEWER_VISIBLE_STATUSES.
+    if (isRestrictedRole(role)) {
+      where.process_status = {
+        in: restrictStatusList(where.process_status) as ProcessStatus[],
+      };
     }
 
     return where;
@@ -158,11 +171,11 @@ export class SeguimientoService {
     };
   }
 
-  async findAll(filter: FilterSeguimientoDto) {
+  async findAll(filter: FilterSeguimientoDto, role?: string) {
     const page = Number(filter.page) || 1;
     const perPage = Number(filter.per_page) || 10;
 
-    const where = this.buildWhere(filter);
+    const where = this.buildWhere(filter, role);
 
     if (filter.pendientes === 'true') {
       // Equivalente al filtro en memoria (pendiente_completar || sin_entregables):
@@ -225,8 +238,8 @@ export class SeguimientoService {
     });
   }
 
-  async summary(filter: FilterSeguimientoDto) {
-    const where = this.buildWhere(filter);
+  async summary(filter: FilterSeguimientoDto, role?: string) {
+    const where = this.buildWhere(filter, role);
 
     const agreements = await this.prisma.agreements.findMany({
       where,
