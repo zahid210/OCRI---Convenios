@@ -20,6 +20,7 @@ import {
   UploadFile,
   DOC_TYPE_EXTENSIONS,
   normalizeUploadName,
+  oficioSolicitudFilename,
   opinionDir,
   storePath,
   storeUploadedDocument,
@@ -1588,9 +1589,11 @@ export class ProcessService {
 
     const dependenciaName = request.dependencias?.name ?? 'Dependencia';
 
-    // Mismo nombre y carpeta que el oficio renderizado por el sistema.
-    // `putUnique` no pisa el oficio previo si se vuelve a cargar.
-    const filename = `oficio-solicitud-${dependenciaName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    // Mismo nombre y carpeta que el oficio generado por el sistema
+    // (`oficioSolicitudFilename` + `opinionDir` son la fuente de verdad
+    // compartida). `putUnique` no pisa el oficio previo si se vuelve a cargar:
+    // desambigua con `(1)`, `(2)`… en lugar de duplicar variantes.
+    const filename = oficioSolicitudFilename(dependenciaName);
     const relPath = await this.storage.putUnique(
       opinionDir(agreement.tramite_code, agreement.created_at, dependenciaName),
       filename,

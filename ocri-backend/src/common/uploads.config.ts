@@ -89,6 +89,35 @@ export function opinionDir(
   return `${agreementDir(tramiteCode, createdAt)}/opiniones/${dependenciaName}`;
 }
 
+/**
+ * Nombre de archivo canónico del oficio de solicitud de opinión de una
+ * dependencia. Es la única fuente de verdad: lo usan tanto el oficio generado
+ * por el sistema (`PdfMergerService.generateOficioSolicitud`) como el que se
+ * carga manualmente (`ProcessService.uploadOficioOpinion`), de modo que ambos
+ * flujos conviven en la misma carpeta con un nombre predecible — requisito para
+ * que el reemplazo (`putUnique`) desambigue con `(1)`, `(2)`… en lugar de
+ * duplicar variantes. Un nombre fijo evita además que el layout dependa de lo
+ * que devuelva el renderer.
+ */
+export function oficioSolicitudFilename(dependenciaName: string): string {
+  const safe = (dependenciaName || 'Dependencia').replace(/[^a-zA-Z0-9]/g, '_');
+  return `oficio-solicitud-${safe}.pdf`;
+}
+
+/**
+ * Ruta relativa definitiva del oficio de solicitud de opinión (carpeta +
+ * nombre), independiente de si el archivo se generó o se subió a mano.
+ */
+export function oficioSolicitudPath(
+  tramiteCode: string,
+  createdAt: Date | string | null,
+  dependenciaName: string,
+): string {
+  return `${opinionDir(tramiteCode, createdAt, dependenciaName)}/${oficioSolicitudFilename(
+    dependenciaName,
+  )}`;
+}
+
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf',
   '.doc',

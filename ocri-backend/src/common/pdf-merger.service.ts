@@ -5,7 +5,11 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { renderPdfFromHtml } from 'html-pdf-lite';
 import { PNG } from 'pngjs';
-import { agreementDir, opinionDir } from './uploads.config';
+import {
+  agreementDir,
+  oficioSolicitudFilename,
+  opinionDir,
+} from './uploads.config';
 import { StorageService } from './storage/storage.service';
 import { sanitizeOficioHtml } from './sanitize-oficio-html';
 import { renderListMarkersForPdf } from './oficio-lists';
@@ -275,7 +279,7 @@ export class PdfMergerService {
     }
 
     const mergedBytes = await pdf.save();
-    const filename = `oficio-solicitud-${dependenciaName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    const filename = oficioSolicitudFilename(dependenciaName);
     const relPath = await this.storage.putUnique(
       opinionDir(tramiteCode, createdAt ?? null, dependenciaName),
       filename,
