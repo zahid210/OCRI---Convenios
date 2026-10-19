@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 const VALIDITY_OPTIONS = [
   'VIGENTE',
@@ -15,5 +15,6 @@ export class SetValidityDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500, { message: 'reason no debe exceder 500 caracteres' })
   reason?: string;
 }

@@ -30,6 +30,9 @@ import { UploadProcessDocumentDto } from './dto/upload-process-document.dto';
 import { ReplaceProcessDocumentDto } from './dto/replace-process-document.dto';
 import { RectorateDecisionDto } from './dto/rectorate-decision.dto';
 import { RegisterAgreementDto } from './dto/register-agreement.dto';
+import { ResponsableItemDto } from './dto/register-agreement.dto';
+import { validateSync } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import { SetValidityDto } from './dto/set-validity.dto';
 
 interface AuthenticatedRequest {
@@ -152,8 +155,11 @@ export class ProcessController {
   /** Devuelve el cuerpo editable precargado del oficio de solicitud de opinión */
   @Roles(...FLOW_ROLES)
   @Get('opinion-requests/:id/oficio/template')
-  getOficioOpinionTemplate(@Param('id', ParseIntPipe) id: number) {
-    return this.processService.getOficioOpinionTemplate(id);
+  getOficioOpinionTemplate(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.processService.getOficioOpinionTemplate(id, req.user?.role);
   }
 
   /** Genera el oficio, lo adjunta automáticamente y marca la solicitud como enviada */
@@ -212,8 +218,12 @@ export class ProcessController {
   @Get(':agreementId/oficio-rectorado/template')
   getOficioRectoradoTemplate(
     @Param('agreementId', ParseIntPipe) agreementId: number,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.processService.getOficioRectoradoTemplate(agreementId);
+    return this.processService.getOficioRectoradoTemplate(
+      agreementId,
+      req.user?.role,
+    );
   }
 
   /** Genera el oficio a Rectorado, lo adjunta automáticamente y registra el evento */
@@ -381,41 +391,34 @@ export class ProcessController {
   }
 
   /**
-   * Por multipart los campos llegan como strings: `responsables` viaja como
-   * JSON y debe parsearse de forma segura antes de llegar al servicio.
+   * El ValidationPipe global ya normaliza `responsables` (string JSON de
+   * multipart o arreglo de JSON) y valida cada ítem con `ResponsableItemDto`.
+   * Este helper solo acepta el arreglo resultante y rechaza cualquier forma
+   * inesperada con 400.
    */
-  private parseResponsables(raw: unknown): Array<{
-    name: string;
-    role?: string;
-    side?: 'UNCP' | 'CONTRAPARTE';
-    email?: string;
-    phone?: string;
-  }> {
-    type Responsable = {
-      name: string;
-      role?: string;
-      side?: 'UNCP' | 'CONTRAPARTE';
-      email?: string;
-      phone?: string;
-    };
-    if (!raw) return [];
-    if (typeof raw !== 'string') {
-      return Array.isArray(raw) ? (raw as Responsable[]) : [];
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      throw new BadRequestException(
-        'El campo "responsables" debe ser un arreglo JSON válido.',
-      );
-    }
-    if (!Array.isArray(parsed)) {
+  private parseResponsables(raw: unknown): ResponsableItemDto[] {
+    if (raw == null) return [];
+    if (!Array.isArray(raw)) {
       throw new BadRequestException(
         'El campo "responsables" debe ser un arreglo.',
       );
     }
-    return parsed as Responsable[];
+    return raw.map((item, index) => {
+      const instance = plainToInstance(ResponsableItemDto, item);
+      const errors = validateSync(instance, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      });
+      if (errors.length > 0) {
+        const detail = errors
+          .map((e) => Object.values(e.constraints ?? {}).join(', '))
+          .join('; ');
+        throw new BadRequestException(
+          `responsables[${index}] inválido: ${detail || 'estructura no válida'}`,
+        );
+      }
+      return instance;
+    });
   }
 
   /** Administración de vigencia sobre convenios registrados */

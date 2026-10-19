@@ -67,6 +67,20 @@ describe('process DTOs (validación)', () => {
       expect(ok).toBe(false);
       expect(messages.join()).toContain('dependencia_id');
     });
+
+    it('rechaza default_days fuera de rango', async () => {
+      const zero = await validateWithPipe(GenerateOpinionRequestsDto, {
+        dependencia_ids: [1],
+        default_days: 0,
+      });
+      expect(zero.ok).toBe(false);
+
+      const huge = await validateWithPipe(GenerateOpinionRequestsDto, {
+        dependencia_ids: [1],
+        default_days: 400,
+      });
+      expect(huge.ok).toBe(false);
+    });
   });
 
   describe('RectorateDecisionDto', () => {
@@ -128,11 +142,46 @@ describe('process DTOs (validación)', () => {
 
   describe('RegisterAgreementDto', () => {
     it('acepta responsables como string JSON (multipart)', async () => {
-      const { ok } = await validateWithPipe(RegisterAgreementDto, {
+      const { ok, value } = await validateWithPipe(RegisterAgreementDto, {
         resolution_number: 'R-1',
-        responsables: '[{"name":"Pepe"}]',
+        responsables: '[{"name":"Pepe","side":"UNCP"}]',
       });
       expect(ok).toBe(true);
+      expect((value as { responsables: unknown[] }).responsables).toHaveLength(
+        1,
+      );
+    });
+
+    it('acepta responsables como arreglo JSON', async () => {
+      const { ok } = await validateWithPipe(RegisterAgreementDto, {
+        resolution_number: 'R-1',
+        responsables: [{ name: 'Pepe' }, { name: 'Ana', side: 'CONTRAPARTE' }],
+      });
+      expect(ok).toBe(true);
+    });
+
+    it('rechaza un responsable sin nombre', async () => {
+      const { ok, messages } = await validateWithPipe(RegisterAgreementDto, {
+        responsables: '[{"role":"Coordinador"}]',
+      });
+      expect(ok).toBe(false);
+      expect(messages.join()).toContain('name');
+    });
+
+    it('rechaza un side inválido', async () => {
+      const { ok, messages } = await validateWithPipe(RegisterAgreementDto, {
+        responsables: [{ name: 'Pepe', side: 'OTRO' }],
+      });
+      expect(ok).toBe(false);
+      expect(messages.join()).toContain('side');
+    });
+
+    it('rechaza fecha de vigencia con formato inválido', async () => {
+      const { ok, messages } = await validateWithPipe(RegisterAgreementDto, {
+        start_date: 'no-es-fecha',
+      });
+      expect(ok).toBe(false);
+      expect(messages.join()).toContain('start_date');
     });
 
     it('rechaza campos no declarados', async () => {

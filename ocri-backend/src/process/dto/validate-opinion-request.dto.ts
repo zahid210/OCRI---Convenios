@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class ValidateOpinionRequestDto {
   // Los multipart envían "true"/"false" como string; el JSON como booleano.
@@ -14,5 +14,6 @@ export class ValidateOpinionRequestDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000, { message: 'observations no debe exceder 2000 caracteres' })
   observations?: string;
 }

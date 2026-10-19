@@ -512,8 +512,11 @@ export class ProcessService {
     }
 
     const dueDate = new Date();
-    const defaultDays =
+    const rawDefaultDays =
       options?.defaultDays ?? (await this.appConfig.getOpinionDefaultDays());
+    // Defensa en profundidad: el DTO ya acota 1–365, pero el valor puede venir
+    // de la configuración y debe quedar en un rango sano.
+    const defaultDays = Math.min(Math.max(Number(rawDefaultDays) || 0, 1), 365);
     dueDate.setDate(dueDate.getDate() + defaultDays);
 
     const created = await this.prisma
@@ -573,7 +576,11 @@ export class ProcessService {
 
     const depMap = new Map(dependencias.map((d) => [Number(d.id), d.name]));
 
-    const oficioNumber = options?.oficioNumber ?? `OF. OCRI-SOL-${Date.now()}`;
+    const requestedOficio = options?.oficioNumber?.trim();
+    const oficioNumber =
+      requestedOficio && requestedOficio.length > 0
+        ? requestedOficio
+        : `OF. OCRI-SOL-${Date.now()}`;
 
     for (let i = 0; i < dependenciaIds.length; i++) {
       const depId = dependenciaIds[i];
@@ -781,11 +788,14 @@ export class ProcessService {
       file,
       request.agreements,
       async (tx, relPath) => {
-        // Update condicional por estado: evita que dos respuestas concurrentes
-        // sobre la misma solicitud avancen ambas (guard de integridad).
+        // Guarda de integridad: solo se registra una respuesta sobre una
+        // solicitud realmente en curso. No se permite reanimar una CANCELADA ni
+        // responder un oficio que nunca se envió (GENERADA). El guard por estado
+        // evita además que dos respuestas concurrentes avancen ambas.
         const updated = await tx.opinion_requests.updateMany({
           where: {
             id: BigInt(opinionRequestId),
+            status: { in: ['ENVIADA', 'RESPONDIDA', 'OBSERVADA', 'VALIDADA'] },
           },
           data: {
             status: 'RESPONDIDA',
@@ -802,7 +812,7 @@ export class ProcessService {
 
         if (updated.count === 0) {
           throw new ConflictException(
-            'La solicitud ya no existe y no puede registrar una respuesta nuevamente.',
+            `La solicitud no admite una respuesta en su estado actual (${request.status}).`,
           );
         }
 
@@ -1076,9 +1086,31 @@ export class ProcessService {
       );
     }
 
-    // Borra del disco los archivos generados para esta solicitud (oficios, etc.)
-    // para no dejar huérfanos. El borrado físico es best-effort.
+    // Primero se borra la solicitud (y sus documentos por cascada) y solo
+    // después del commit se purgan los objetos en OBS: si el borrado en BD
+    // falla, no se pierden archivos de una fila que sigue existiendo.
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.opinion_requests.delete({
+          where: { id: BigInt(opinionRequestId) },
+        });
+
+        await this.logEvent(
+          request.agreement_id,
+          'SOLICITUD_ELIMINADA',
+          'Solicitud de opinión eliminada antes de su envío.',
+          { actorUserId: userId },
+          undefined,
+          tx,
+        );
+      },
+      { maxWait: 10000, timeout: 30000 },
+    );
+
+    // Purga en OBS de los archivos generados para esta solicitud (oficios, etc.)
+    // después del commit; best-effort.
     for (const doc of request.documents) {
+      if (!doc.file_path) continue;
       try {
         await this.storage.removeRel(doc.file_path);
       } catch (e) {
@@ -1089,17 +1121,6 @@ export class ProcessService {
         }
       }
     }
-
-    await this.prisma.opinion_requests.delete({
-      where: { id: BigInt(opinionRequestId) },
-    });
-
-    await this.logEvent(
-      request.agreement_id,
-      'SOLICITUD_ELIMINADA',
-      'Solicitud de opinión eliminada antes de su envío.',
-      { actorUserId: userId },
-    );
 
     return { message: 'Solicitud de opinión eliminada correctamente' };
   }
@@ -1113,7 +1134,7 @@ export class ProcessService {
    * solicitud. Todo es editable en el frontend. Devuelve además el CSS de la
    * plantilla para que la vista previa sea idéntica al PDF que se genera.
    */
-  async getOficioOpinionTemplate(opinionRequestId: number) {
+  async getOficioOpinionTemplate(opinionRequestId: number, role?: string) {
     const request = await this.prisma.opinion_requests.findUnique({
       where: { id: BigInt(opinionRequestId) },
       include: {
@@ -1127,6 +1148,8 @@ export class ProcessService {
         `Solicitud de opinión #${opinionRequestId} no encontrada`,
       );
     }
+
+    await this.assertReadableByRole(Number(request.agreement_id), role);
 
     const depName = request.dependencias?.name ?? 'Dependencia';
     const title =
@@ -1213,7 +1236,9 @@ export class ProcessService {
    * CSS, logos y firma/sello que el oficio de opinión; solo cambian el
    * destinatario, el asunto y el cuerpo.
    */
-  async getOficioRectoradoTemplate(agreementId: number) {
+  async getOficioRectoradoTemplate(agreementId: number, role?: string) {
+    await this.assertReadableByRole(agreementId, role);
+
     const agreement = await this.prisma.agreements.findUnique({
       where: { id: BigInt(agreementId) },
     });
@@ -1534,6 +1559,14 @@ export class ProcessService {
       throw new BadRequestException('Debe adjuntar el archivo del oficio.');
     }
 
+    // La edición del oficio está disponible en todo momento, pero no sobre una
+    // solicitud cancelada: se trata de un estado terminal.
+    if (request.status === 'CANCELADA') {
+      throw new BadRequestException(
+        'No se puede modificar el oficio de una solicitud cancelada.',
+      );
+    }
+
     const agreement = request.agreements;
     if (!agreement) {
       throw new NotFoundException(
@@ -1611,11 +1644,13 @@ export class ProcessService {
             },
           });
 
-          // Update condicional por estado: evita que dos cargas concurrentes
-          // sobre la misma solicitud avancen ambas (guard de integridad).
+          // Guarda por estado: la solicitud debe seguir existiendo y no estar
+          // cancelada (cubre además dos cargas concurrentes sobre la misma
+          // solicitud: la segunda encuentra el estado ya movido).
           const updated = await tx.opinion_requests.updateMany({
             where: {
               id: BigInt(opinionRequestId),
+              status: { not: 'CANCELADA' },
             },
             data: {
               ...(isCorrection ? {} : { status: 'ENVIADA' }),
@@ -1630,7 +1665,7 @@ export class ProcessService {
 
           if (updated.count === 0) {
             throw new ConflictException(
-              'La solicitud ya no existe y no puede actualizarse su oficio.',
+              `La solicitud no admite cambios en su estado actual (${request.status}).`,
             );
           }
 
@@ -2599,6 +2634,19 @@ export class ProcessService {
     if (!data.start_date || !data.end_date) {
       throw new BadRequestException(
         'La vigencia (fecha de inicio y fin) es obligatoria para registrar el convenio.',
+      );
+    }
+
+    const startDate = new Date(data.start_date);
+    const endDate = new Date(data.end_date);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new BadRequestException(
+        'La vigencia debe contener fechas válidas.',
+      );
+    }
+    if (endDate < startDate) {
+      throw new BadRequestException(
+        'La fecha de fin no puede ser anterior a la fecha de inicio.',
       );
     }
 
