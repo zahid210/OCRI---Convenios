@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { Request, Response } from 'express';
 import { extname, basename } from 'path';
 import { Public } from '../auth/decorators/public.decorator';
+import { JWT_AUDIENCE, JWT_ISSUER } from '../auth/jwt.config';
 import { StorageService } from '../common/storage/storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { isRestrictedRole, isVisibleToRestricted } from '../common/visibility';
@@ -61,7 +62,10 @@ export class FilesController {
     bearerToken: string,
   ): Promise<{ role?: string; sub?: number }> {
     try {
-      return await this.jwtService.verifyAsync(bearerToken);
+      return await this.jwtService.verifyAsync(bearerToken, {
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      });
     } catch {
       throw new UnauthorizedException('Token inválido o expirado.');
     }

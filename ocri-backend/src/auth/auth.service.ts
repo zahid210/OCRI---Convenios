@@ -4,7 +4,13 @@ import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
-import { BCRYPT_ROUNDS, PASSWORD_MAX_AGE_DAYS } from './auth.constants';
+import { BCRYPT_ROUNDS } from './auth.constants';
+
+/** Contexto de la petición para enriquecer la auditoría de sesión. */
+export interface LoginContext {
+  ip?: string | null;
+  userAgent?: string | null;
+}
 
 @Injectable()
 export class AuthService {
@@ -29,13 +35,6 @@ export class AuthService {
     return email.trim().toLowerCase();
   }
 
-  /** ¿La contraseña superó la antigüedad máxima permitida? */
-  private static isPasswordExpired(changedAt: Date | null): boolean {
-    if (!changedAt) return false; // sin registro previo no se fuerza rotación
-    const ageMs = Date.now() - new Date(changedAt).getTime();
-    return ageMs > PASSWORD_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
-  }
-
   async validateUser(email: string, pass: string) {
     const normalizedEmail = AuthService.normalizeEmail(email);
     const user = await this.usersService.findByEmail(normalizedEmail);
@@ -56,7 +55,7 @@ export class AuthService {
     return user;
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, context: LoginContext = {}) {
     const email = AuthService.normalizeEmail(loginDto.email);
 
     try {
@@ -77,6 +76,8 @@ export class AuthService {
         action: 'LOGIN',
         actor: { id: Number(user.id), email: user.email, role: user.role },
         description: 'Inicio de sesión exitoso',
+        ip: context.ip,
+        userAgent: context.userAgent,
       });
 
       return {
@@ -86,11 +87,6 @@ export class AuthService {
           name: user.name,
           email: user.email,
           role: user.role,
-          // Fundamento de la política de rotación (90 días): avisa a la UI sin
-          // bloquear el acceso (no hay pantalla de autogestión todavía).
-          passwordExpired: AuthService.isPasswordExpired(
-            user.password_changed_at,
-          ),
         },
       };
     } catch (err) {
@@ -101,6 +97,8 @@ export class AuthService {
         action: 'LOGIN',
         actor: { email },
         description: 'Inicio de sesión fallido',
+        ip: context.ip,
+        userAgent: context.userAgent,
       });
       throw err;
     }
@@ -111,7 +109,7 @@ export class AuthService {
    * `token_version` para que cualquier JWT emitido con anterioridad deje de
    * validarse en el strategy.
    */
-  async revokeSession(userId: number) {
+  async revokeSession(userId: number, context: LoginContext = {}) {
     await this.usersService.bumpTokenVersion(userId);
 
     const user = await this.usersService.findById(userId);
@@ -123,6 +121,8 @@ export class AuthService {
         ? { id: userId, email: user.email, role: user.role }
         : { id: userId },
       description: 'Cierre de sesión (tokens invalidados)',
+      ip: context.ip,
+      userAgent: context.userAgent,
     });
   }
 }

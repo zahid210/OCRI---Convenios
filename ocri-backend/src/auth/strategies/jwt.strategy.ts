@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { JWT_AUDIENCE, JWT_ISSUER, JWT_SECRET } from '../jwt.config';
 
 export interface JwtPayload {
   sub: number;
@@ -13,16 +14,14 @@ export interface JwtPayload {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly prisma: PrismaService) {
-    const secret = process.env.JWT_SECRET;
-    if (!secret || secret.length < 32) {
-      throw new Error(
-        'JWT_SECRET no está definido o es demasiado corto (mínimo 32 caracteres).',
-      );
-    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: secret,
+      secretOrKey: JWT_SECRET,
+      // Solo se aceptan tokens emitidos por esta API para este cliente: si el
+      // mismo secreto se reutiliza en otro sistema, sus tokens no valen aquí.
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 

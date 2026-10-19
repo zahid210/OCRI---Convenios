@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { user_role } from '@prisma/client';
+import { Prisma, user_role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BCRYPT_ROUNDS } from '../auth/auth.constants';
 import { serializeBigInt } from '../common/process.constants';
@@ -106,25 +106,35 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
-    const user = await this.prisma.users.create({
-      data: {
-        name: dto.name,
-        email,
-        password: hashedPassword,
-        role: dto.role as user_role,
-        password_changed_at: new Date(),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        created_at: true,
-        updated_at: true,
-      },
-    });
+    try {
+      const user = await this.prisma.users.create({
+        data: {
+          name: dto.name,
+          email,
+          password: hashedPassword,
+          role: dto.role as user_role,
+          password_changed_at: new Date(),
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
 
-    return serializeBigInt(user);
+      return serializeBigInt(user);
+    } catch (err) {
+      // La comprobación previa no basta: dos altas simultáneas del mismo correo
+      // pasan el findUnique y solo una gana en la BD. El P2002 se traduce a 409
+      // en vez de aflorar como 500.
+      if (UsersService.isUniqueViolation(err)) {
+        throw new ConflictException('Ya existe un usuario con ese correo.');
+      }
+      throw err;
+    }
   }
 
   async update(id: number, dto: UpdateUserDto) {
@@ -148,15 +158,11 @@ export class UsersService {
       }
     }
 
-    if (dto.role && dto.role !== user.role) {
-      const isLastAdmin =
-        user.role === 'admin' && (await this.countAdmins()) <= 1;
-      if (isLastAdmin) {
-        throw new BadRequestException(
-          'No se puede cambiar el rol del último administrador del sistema.',
-        );
-      }
-    }
+    // Solo hay riesgo de dejar el sistema sin admin cuando se degrada a un
+    // admin a otro rol. Se resuelve dentro de una transacción con bloqueo (ver
+    // más abajo), para que dos degradaciones simultáneas no pasen ambas.
+    const demotingAdmin =
+      user.role === 'admin' && dto.role !== undefined && dto.role !== user.role;
 
     const data: {
       name?: string;
@@ -182,26 +188,51 @@ export class UsersService {
     }
     if (dto.password) {
       data.password = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-      // Cambio de contraseña: revoca todas las sesiones y registra la fecha
-      // para la política de caducidad (90 días).
+      // Cambio de contraseña: revoca las sesiones vigentes y registra la fecha.
       data.token_version = { increment: 1 };
       data.password_changed_at = new Date();
     }
 
-    const updated = await this.prisma.users.update({
-      where: { id: BigInt(id) },
-      data,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        created_at: true,
-        updated_at: true,
-      },
-    });
+    const select = {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      created_at: true,
+      updated_at: true,
+    } as const;
 
-    return serializeBigInt(updated);
+    try {
+      const updated = demotingAdmin
+        ? await this.prisma.$transaction(async (tx) => {
+            // FOR UPDATE serializa a los que intentan quitar admins a la vez:
+            // el segundo espera al primero y vuelve a contar con el estado ya
+            // consolidado, en lugar de decidir sobre una foto obsoleta.
+            const admins = await UsersService.countAdminsLocked(tx);
+            if (admins <= 1) {
+              throw new BadRequestException(
+                'No se puede cambiar el rol del último administrador del sistema.',
+              );
+            }
+            return tx.users.update({
+              where: { id: BigInt(id) },
+              data,
+              select,
+            });
+          })
+        : await this.prisma.users.update({
+            where: { id: BigInt(id) },
+            data,
+            select,
+          });
+
+      return serializeBigInt(updated);
+    } catch (err) {
+      if (UsersService.isUniqueViolation(err)) {
+        throw new ConflictException('Ya existe un usuario con ese correo.');
+      }
+      throw err;
+    }
   }
 
   async remove(id: number, requestingUserId: number) {
@@ -217,18 +248,44 @@ export class UsersService {
       throw new NotFoundException(`Usuario con ID ${id} no encontrado.`);
     }
 
-    if (user.role === 'admin' && (await this.countAdmins()) <= 1) {
-      throw new BadRequestException(
-        'No se puede eliminar el último administrador del sistema.',
-      );
+    if (user.role === 'admin') {
+      // Mismo bloqueo que en `update`: evita que dos eliminaciones simultáneas
+      // de los dos últimos admins dejen el sistema sin ninguno.
+      await this.prisma.$transaction(async (tx) => {
+        const admins = await UsersService.countAdminsLocked(tx);
+        if (admins <= 1) {
+          throw new BadRequestException(
+            'No se puede eliminar el último administrador del sistema.',
+          );
+        }
+        await tx.users.delete({ where: { id: BigInt(id) } });
+      });
+    } else {
+      await this.prisma.users.delete({ where: { id: BigInt(id) } });
     }
-
-    await this.prisma.users.delete({ where: { id: BigInt(id) } });
 
     return { message: `Usuario "${user.name}" eliminado correctamente.` };
   }
 
-  private async countAdmins(): Promise<number> {
-    return this.prisma.users.count({ where: { role: 'admin' } });
+  /**
+   * Cuenta administradores tomando bloqueo de fila (`FOR UPDATE`) dentro de una
+   * transacción. Prisma no expone locks en findMany, así que se usa SQL crudo;
+   * el `SELECT` seguido de la escritura en la misma transacción serializa las
+   * operaciones que podrían dejar la tabla sin administradores.
+   */
+  private static async countAdminsLocked(
+    tx: Prisma.TransactionClient,
+  ): Promise<number> {
+    const rows = await tx.$queryRaw<Array<{ id: bigint }>>`
+      SELECT id FROM users WHERE role = 'admin' FOR UPDATE`;
+    return rows.length;
+  }
+
+  /** ¿El error es una violación de unicidad de Prisma (p. ej. email duplicado)? */
+  private static isUniqueViolation(err: unknown): boolean {
+    return (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === 'P2002'
+    );
   }
 }

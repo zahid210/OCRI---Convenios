@@ -23,8 +23,23 @@ const REQUIRED_ENV = [
   'S3_ENDPOINT',
 ] as const;
 
-/** Longitud mínima exigida a JWT_SECRET (coincide con auth.module.ts). */
+/** Longitud mínima exigida a JWT_SECRET (aplicada por getJwtSecret). */
 const JWT_SECRET_MIN_LENGTH = 32;
+
+/**
+ * Secreto JWT validado. Es la única fuente que consumen los módulos que
+ * registran/verifican tokens (auth, agreements), de modo que la política
+ * (longitud mínima) no se duplique.
+ */
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET?.trim() ?? '';
+  if (secret.length < JWT_SECRET_MIN_LENGTH) {
+    throw new Error(
+      `JWT_SECRET debe tener al menos ${JWT_SECRET_MIN_LENGTH} caracteres.`,
+    );
+  }
+  return secret;
+}
 
 /**
  * Falla con un mensaje único y legible si falta configuración crítica. No
@@ -39,10 +54,6 @@ export function assertRequiredEnv(): void {
     );
   }
 
-  const jwtSecret = process.env.JWT_SECRET?.trim() ?? '';
-  if (jwtSecret.length < JWT_SECRET_MIN_LENGTH) {
-    throw new Error(
-      `JWT_SECRET debe tener al menos ${JWT_SECRET_MIN_LENGTH} caracteres.`,
-    );
-  }
+  // Valida también la longitud mínima del secreto con el mismo criterio.
+  getJwtSecret();
 }

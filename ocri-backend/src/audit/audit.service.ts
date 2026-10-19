@@ -25,6 +25,10 @@ export interface AuditEntry {
    * operación (`{ creadas: [...], actualizadas: [...] }` en el seed).
    */
   changes?: Record<string, unknown> | null;
+  /** IP de origen de la petición (login/logout). Sirve para rastrear abuso. */
+  ip?: string | null;
+  /** User-Agent del cliente (login/logout). Sirve para rastrear abuso. */
+  userAgent?: string | null;
 }
 
 /** Valores JSON seguros para Prisma (Date → ISO, bigint → number). */
@@ -76,6 +80,8 @@ export class AuditService {
           actor_email: actorEmail,
           actor_role: entry.actor?.role ?? null,
           description: entry.description?.slice(0, 500) ?? null,
+          ip: entry.ip ?? null,
+          user_agent: entry.userAgent?.slice(0, 255) ?? null,
           changes:
             entry.changes && Object.keys(entry.changes).length > 0
               ? (jsonSafe(entry.changes) as Prisma.InputJsonValue)

@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsIn,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -8,10 +9,16 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { USER_ROLES } from './create-user.dto';
+import {
+  PASSWORD_MAX_BYTES,
+  PASSWORD_MIN_LENGTH,
+} from '../../auth/auth.constants';
+import { MaxByteLength } from '../../common/validators/max-byte-length.decorator';
 
 export class UpdateUserDto {
   @IsOptional()
   @IsString()
+  @IsNotEmpty({ message: 'El nombre no puede quedar vacío' })
   @MaxLength(255)
   name?: string;
 
@@ -28,7 +35,11 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
-  @MaxLength(255)
+  @MinLength(PASSWORD_MIN_LENGTH, {
+    message: `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres`,
+  })
+  @MaxByteLength(PASSWORD_MAX_BYTES, {
+    message: `La contraseña no puede exceder ${PASSWORD_MAX_BYTES} bytes`,
+  })
   password?: string;
 }

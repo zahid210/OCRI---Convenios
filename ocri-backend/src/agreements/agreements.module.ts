@@ -4,13 +4,7 @@ import { AgreementsService } from './agreements.service';
 import { AgreementsController } from './agreements.controller';
 import { FilesController } from './files.controller';
 import { PrismaModule } from '../prisma/prisma.module';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error(
-    'JWT_SECRET no está definido o es demasiado corto (mínimo 32 caracteres).',
-  );
-}
+import { JWT_SECRET } from '../auth/jwt.config';
 
 @Module({
   imports: [PrismaModule, JwtModule.register({ secret: JWT_SECRET })],

@@ -4,8 +4,12 @@
 // email no exista (evita la enumeración de usuarios por timing).
 export const BCRYPT_ROUNDS = 12;
 
-// Antigüedad máxima de una contraseña antes de marcarla como "por renovar".
-// Se expone como `passwordExpired` en la respuesta del login para que la UI
-// pueda forzar el cambio cuando exista pantalla de autogestión. La columna
-// `password_changed_at` de `users` registra la última rotación.
-export const PASSWORD_MAX_AGE_DAYS = 90;
+/** Longitud mínima de contraseña (caracteres). Compartida por alta y cambio. */
+export const PASSWORD_MIN_LENGTH = 8;
+
+/**
+ * Longitud máxima de contraseña en BYTES UTF-8. bcrypt solo procesa los
+ * primeros 72 bytes: aceptar más haría pasar por distintas contraseñas que en
+ * realidad coinciden (dos cadenas que difieren a partir del byte 72).
+ */
+export const PASSWORD_MAX_BYTES = 72;

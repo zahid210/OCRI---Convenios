@@ -13,3 +13,9 @@ export const USER_ROLES = [
   'asistente',
   'procesador',
 ] as const;
+
+/**
+ * Universo de roles válidos. Tiparlo evita que un typo en `@Roles('admn')`
+ * cierre (o abra) permisos en silencio.
+ */
+export type Role = (typeof USER_ROLES)[number];

@@ -6,13 +6,12 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error(
-    'JWT_SECRET no está definido o es demasiado corto (mínimo 32 caracteres). Configúrelo en el archivo .env antes de iniciar.',
-  );
-}
+import {
+  JWT_AUDIENCE,
+  JWT_EXPIRES_IN,
+  JWT_ISSUER,
+  JWT_SECRET,
+} from './jwt.config';
 
 @Module({
   imports: [
@@ -21,7 +20,11 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
     AuditModule,
     JwtModule.register({
       secret: JWT_SECRET,
-      signOptions: { expiresIn: '8h' },
+      signOptions: {
+        expiresIn: JWT_EXPIRES_IN,
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      },
     }),
   ],
   providers: [AuthService, JwtStrategy],

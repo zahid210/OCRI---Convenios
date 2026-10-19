@@ -1,10 +1,4 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class LoginDto {
@@ -17,12 +11,10 @@ export class LoginDto {
   @IsNotEmpty({ message: 'El correo es requerido' })
   email: string;
 
+  // En el login NO se exige la política de longitud del alta/cambio: una
+  // contraseña corta debe dar 401 (credenciales inválidas), no 400. La política
+  // se aplica donde se define la credencial (CreateUserDto/UpdateUserDto).
   @IsString()
   @IsNotEmpty({ message: 'La contraseña es requerida' })
-  // Misma política que en el alta de usuarios (CreateUserDto): mínimo 8
-  // caracteres y tope de 255. Unificar evita que existan cuentas con
-  // contraseñas de distinta fortaleza según la vía por la que se crearon.
-  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
-  @MaxLength(255, { message: 'La contraseña no puede exceder 255 caracteres' })
   password: string;
 }
