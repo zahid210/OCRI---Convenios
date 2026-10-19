@@ -684,7 +684,8 @@ export class AgreementsService {
       'EN_SEGUIMIENTO',
       'SEGUIMIENTO_CONCLUIDO',
     ];
-    const statuses = isRestrictedRole(role)
+    const restricted = isRestrictedRole(role);
+    const statuses = restricted
       ? restrictStatusList({ in: baseStatuses })
       : baseStatuses;
 
@@ -704,7 +705,7 @@ export class AgreementsService {
 
     const rows = agreements.map((a) => {
       const temporal = deriveTemporalStatus(a.end_date);
-      return {
+      const row = {
         id: Number(a.id),
         tramite_code: a.tramite_code,
         title: a.title,
@@ -721,6 +722,16 @@ export class AgreementsService {
         responsables: a.responsables,
         drive_link: a.drive_link,
       };
+
+      // B6-9 · Confinamiento de campos: el rol restringido (`viewer`) ve el
+      // semáforo (estado/vigencia) pero no los datos internos de gestión —el
+      // enlace de trabajo `drive_link` ni los responsables con sus datos de
+      // contacto—. Se omiten en el origen para no depender de que el cliente
+      // decida no mostrarlos.
+      if (restricted) {
+        return { ...row, responsables: undefined, drive_link: undefined };
+      }
+      return row;
     });
 
     return serializeBigInt(rows);
