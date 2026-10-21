@@ -4,11 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { basename } from 'path';
+import { basename, extname } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   serializeBigInt,
   validateTransition,
+  MAX_DELIVERABLE_OBSERVATIONS,
 } from '../common/process.constants';
 import {
   UploadFile,
@@ -70,6 +71,17 @@ export class DeliverablesService {
       throw new BadRequestException(
         `El seguimiento opera sobre convenios PUBLICADOS o EN_SEGUIMIENTO. Estado actual: ${processStatus}`,
       );
+    }
+  }
+
+  /**
+   * Confinamiento de lectura (B7-1): el rol restringido (`viewer`) solo accede a
+   * entregables de convenios formalizados. Responde 404 para no confirmar la
+   * existencia de convenios en trámite, igual que el resto de lecturas.
+   */
+  private assertReadableByRole(processStatus: string, role?: string): void {
+    if (isRestrictedRole(role) && !isVisibleToRestricted(processStatus)) {
+      throw new NotFoundException('Entregable no encontrado');
     }
   }
 
@@ -178,7 +190,15 @@ export class DeliverablesService {
     const agreement = deliverable.agreements;
     const tramiteCode = agreement.tramite_code ?? '';
     const seq = tramiteCode.split('-').pop() ?? '000';
-    const year = new Date().getFullYear();
+    // B7-6 · El año del N° de oficio se deriva del convenio (`NNNN-YYYY`), no
+    // del reloj del servidor: una solicitud sobre un convenio 2025 debe seguir
+    // numerándose con 2025 aunque se emita en 2026.
+    const yearFromTramite = tramiteCode.match(/-(\d{4})$/)?.[1];
+    const year =
+      yearFromTramite ??
+      (agreement.created_at
+        ? String(agreement.created_at.getFullYear())
+        : String(new Date().getFullYear()));
     const prefix =
       type === 'PLAN_DE_TRABAJO'
         ? 'PLAN'
@@ -228,7 +248,7 @@ export class DeliverablesService {
    * de la plantilla, más el N° de oficio autogenerado) para previsualizarlo y
    * editarlo desde la misma sección usada para los demás oficios.
    */
-  async getRequestDocumentTemplate(deliverableId: number) {
+  async getRequestDocumentTemplate(deliverableId: number, role?: string) {
     const deliverable = await this.prisma.deliverables.findUnique({
       where: { id: BigInt(deliverableId) },
       include: {
@@ -244,6 +264,9 @@ export class DeliverablesService {
     if (!deliverable) {
       throw new NotFoundException(`Entregable #${deliverableId} no encontrado`);
     }
+
+    // B7-1: el rol restringido no debe ver la plantilla de convenios en trámite.
+    this.assertReadableByRole(deliverable.agreements.process_status, role);
 
     const [context, css] = await Promise.all([
       this.buildSolicitudContext(deliverable),
@@ -303,23 +326,6 @@ export class DeliverablesService {
           'El oficio de solicitud solo puede generarse o editarse mientras la solicitud está en SOLICITADO o ACEPTADO (antes de remitir el entregable).',
         );
       }
-
-      const prev = await this.prisma.documents.findMany({
-        where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
-        select: { id: true, file_path: true },
-      });
-      if (prev.length > 0) {
-        await this.prisma.documents.deleteMany({
-          where: { id: { in: prev.map((d) => d.id) } },
-        });
-        for (const doc of prev) {
-          try {
-            await this.storage.removeRel(doc.file_path);
-          } catch {
-            // archivo ausente o borrado en el bucket: se ignora.
-          }
-        }
-      }
     } else {
       const existing = await this.prisma.documents.findFirst({
         where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
@@ -334,6 +340,9 @@ export class DeliverablesService {
     const bodyHtml = opts.bodyHtml ?? context.bodyHtml;
     const type = context.type;
 
+    // B7-3 · Se genera el PDF nuevo ANTES de tocar el previo: si el render
+    // falla, el oficio anterior permanece intacto (antes se borraba primero y
+    // un fallo dejaba al entregable sin oficio).
     const filename = await this.pdfMerger.renderOficioOpinionPdf(
       bodyHtml,
       oficioNumber,
@@ -345,8 +354,28 @@ export class DeliverablesService {
       where: { code: SOLICITUD_DOC_TYPE_BY_DELIVERABLE[type] },
     });
 
+    let replacedPaths: string[] = [];
     const doc = await this.prisma
       .$transaction(async (tx) => {
+        // Reset en cada intento: si Prisma reintenta la transacción, no deben
+        // quedar rutas de un intento anterior (purga errónea del oficio vigente).
+        replacedPaths = [];
+
+        // Dentro de la misma transacción: borrar el previo y crear el nuevo
+        // son atómicos, así que nunca queda un estado intermedio sin oficio.
+        if (opts.replace || opts.bodyHtml) {
+          const prev = await tx.documents.findMany({
+            where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
+            select: { id: true, file_path: true },
+          });
+          if (prev.length > 0) {
+            replacedPaths = prev.map((d) => d.file_path);
+            await tx.documents.deleteMany({
+              where: { id: { in: prev.map((d) => d.id) } },
+            });
+          }
+        }
+
         const created = await tx.documents.create({
           data: {
             agreements: { connect: { id: deliverable.agreement_id } },
@@ -387,6 +416,17 @@ export class DeliverablesService {
         }
         throw err;
       });
+
+    // Purga de los objetos reemplazados DESPUÉS del commit, best-effort: si el
+    // borrado en el bucket falla queda un objeto huérfano, pero la BD ya es
+    // consistente (el oficio nuevo es el vigente).
+    for (const path of replacedPaths) {
+      try {
+        await this.storage.removeRel(path);
+      } catch {
+        // best-effort: objeto ausente o ya borrado en el bucket.
+      }
+    }
 
     // No se expone la ruta interna del storage; la descarga va por docId
     // (Fase 2 · H2.2 / Fase 3 · F3-2).
@@ -445,6 +485,9 @@ export class DeliverablesService {
 
     const originalName = normalizeUploadName(file.originalname);
     const type = deliverable.type;
+    // B7-8 · `extname` devuelve '' cuando no hay extensión (a diferencia de
+    // `split('.').pop()`, que devolvía el nombre completo como "extensión").
+    const extension = extname(originalName).replace(/^\./, '').slice(0, 10);
 
     const relPath = await storeUploadedDocument(
       this.storage,
@@ -468,7 +511,7 @@ export class DeliverablesService {
             }${deliverable.period ? ` (${deliverable.period})` : ''}`,
             file_path: relPath,
             original_name: originalName,
-            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+            extension,
             document_types: docType
               ? { connect: { id: docType.id } }
               : undefined,
@@ -511,22 +554,32 @@ export class DeliverablesService {
     const agreement = await this.getAgreementOrThrow(agreementId);
     this.assertInMonitoring(agreement.process_status);
 
-    const existing = await this.prisma.deliverables.findFirst({
-      where: { agreement_id: BigInt(agreementId), type: 'PLAN_DE_TRABAJO' },
-    });
-
     const result = await this.prisma.$transaction(async (tx) => {
-      const d = existing
-        ? existing
-        : await tx.deliverables.create({
-            data: {
-              agreement_id: BigInt(agreementId),
-              type: 'PLAN_DE_TRABAJO',
-              title: 'Plan de Trabajo',
-              status: 'SOLICITADO',
-              requested_at: new Date(),
-            },
-          });
+      // B7-5/B7-7 · Búsqueda y creación en la misma transacción (evita dos
+      // Planes concurrentes) y validación del estado del Plan existente: no
+      // tiene sentido "volver a solicitar" uno ya remitido/registrado, eso
+      // dejaría un evento de solicitud sobre un plan aprobado.
+      let d = await tx.deliverables.findFirst({
+        where: { agreement_id: BigInt(agreementId), type: 'PLAN_DE_TRABAJO' },
+      });
+
+      if (d) {
+        if (d.status === 'REGISTRADO') {
+          throw new BadRequestException(
+            'El Plan de Trabajo ya fue registrado; no es necesario volver a solicitarlo.',
+          );
+        }
+      } else {
+        d = await tx.deliverables.create({
+          data: {
+            agreement_id: BigInt(agreementId),
+            type: 'PLAN_DE_TRABAJO',
+            title: 'Plan de Trabajo',
+            status: 'SOLICITADO',
+            requested_at: new Date(),
+          },
+        });
+      }
 
       await this.logEvent(
         tx,
@@ -592,7 +645,7 @@ export class DeliverablesService {
       });
       if (pending) {
         if (period && pending.period !== period) {
-          await this.prisma.deliverables.update({
+          const updated = await this.prisma.deliverables.update({
             where: { id: pending.id },
             data: {
               period,
@@ -600,11 +653,9 @@ export class DeliverablesService {
               updated_at: new Date(),
             },
           });
+          return serializeBigInt(updated);
         }
-        const updated = await this.prisma.deliverables.findUnique({
-          where: { id: pending.id },
-        });
-        return serializeBigInt(updated!);
+        return serializeBigInt(pending);
       }
     }
 
@@ -623,6 +674,43 @@ export class DeliverablesService {
         : 'Informe Final';
 
     const deliverable = await this.prisma.$transaction(async (tx) => {
+      // B7-5 · La búsqueda de un informe pendiente y la creación viven en la
+      // MISMA transacción: sin esto, dos peticiones concurrentes podían crear
+      // dos Informes Semestrales en SOLICITADO. Con la lectura dentro del
+      // bloque serializado (InnoDB), la segunda ve la fila recién creada y la
+      // reutiliza en lugar de duplicarla.
+      if (type === 'INFORME_SEMESTRAL') {
+        const pending = await tx.deliverables.findFirst({
+          where: {
+            agreement_id: BigInt(agreementId),
+            type: 'INFORME_SEMESTRAL',
+            status: 'SOLICITADO',
+          },
+        });
+        if (pending) {
+          if (period && pending.period !== period) {
+            return tx.deliverables.update({
+              where: { id: pending.id },
+              data: {
+                period,
+                title: `Informe Semestral (${period})`,
+                updated_at: new Date(),
+              },
+            });
+          }
+          return pending;
+        }
+      }
+
+      if (type === 'INFORME_FINAL') {
+        const existing = await tx.deliverables.findFirst({
+          where: { agreement_id: BigInt(agreementId), type: 'INFORME_FINAL' },
+        });
+        if (existing) {
+          return existing;
+        }
+      }
+
       const d = await tx.deliverables.create({
         data: {
           agreement_id: BigInt(agreementId),
@@ -721,7 +809,7 @@ export class DeliverablesService {
             name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
             file_path: relPath,
             original_name: originalName,
-            extension: originalName.split('.').pop()?.slice(0, 10) ?? 'pdf',
+            extension: extname(originalName).replace(/^\./, '').slice(0, 10),
             document_types: docType
               ? { connect: { id: docType.id } }
               : undefined,
@@ -918,6 +1006,18 @@ export class DeliverablesService {
           }
         }
       } else {
+        // B7-2 · Tope de correcciones: evita un ciclo "observado → re-remitir →
+        // observado" sin avance. Se cuenta dentro de la transacción para que
+        // dos observaciones concurrentes no superen el límite.
+        const observationCount = await tx.deliverable_observations.count({
+          where: { deliverable_id: deliverable.id },
+        });
+        if (observationCount >= MAX_DELIVERABLE_OBSERVATIONS) {
+          throw new BadRequestException(
+            `Se alcanzó el máximo de ${MAX_DELIVERABLE_OBSERVATIONS} observaciones para este entregable. Debe registrarlo o concluir el seguimiento.`,
+          );
+        }
+
         await tx.deliverables.update({
           where: { id: deliverable.id },
           data: { status: 'OBSERVADO', updated_at: now },
@@ -942,7 +1042,7 @@ export class DeliverablesService {
         );
       }
 
-      return tx.deliverables.findUnique({
+      return tx.deliverables.findUniqueOrThrow({
         where: { id: deliverable.id },
         include: { observations: { orderBy: { created_at: 'desc' } } },
       });
@@ -1024,12 +1124,7 @@ export class DeliverablesService {
     const agreement = await this.getAgreementOrThrow(agreementId);
 
     // El rol restringido solo accede a convenios formalizados.
-    if (
-      isRestrictedRole(role) &&
-      !isVisibleToRestricted(agreement.process_status)
-    ) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
-    }
+    this.assertReadableByRole(agreement.process_status, role);
 
     const deliverables = await this.prisma.deliverables.findMany({
       where: { agreement_id: BigInt(agreementId) },

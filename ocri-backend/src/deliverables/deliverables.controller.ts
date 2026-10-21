@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -65,13 +66,18 @@ export class DeliverablesController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   submitWorkPlan(
     @Param('agreementId', ParseIntPipe) agreementId: number,
-    @UploadedFile() file?: UploadFile,
-    @Req() req?: AuthenticatedRequest,
+    @UploadedFile() file: UploadFile | undefined,
+    @Req() req: AuthenticatedRequest,
   ) {
+    if (!file) {
+      throw new BadRequestException(
+        'Debe adjuntar el archivo del Plan de Trabajo.',
+      );
+    }
     return this.deliverablesService.submitWorkPlan(
       agreementId,
-      file!,
-      req?.user?.id,
+      file,
+      req.user?.id,
     );
   }
 
@@ -100,10 +106,13 @@ export class DeliverablesController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   submitDeliverable(
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file?: UploadFile,
-    @Req() req?: AuthenticatedRequest,
+    @UploadedFile() file: UploadFile | undefined,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.deliverablesService.submitDeliverable(id, file!, req?.user?.id);
+    if (!file) {
+      throw new BadRequestException('Debe adjuntar el archivo del entregable.');
+    }
+    return this.deliverablesService.submitDeliverable(id, file, req.user?.id);
   }
 
   // ─── E3 · La contraparte acepta la solicitud del entregable ────────────────
@@ -121,8 +130,14 @@ export class DeliverablesController {
 
   @Roles(...FLOW_ROLES)
   @Get('deliverables/:id/request-document-template')
-  getRequestDocumentTemplate(@Param('id', ParseIntPipe) id: number) {
-    return this.deliverablesService.getRequestDocumentTemplate(id);
+  getRequestDocumentTemplate(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.deliverablesService.getRequestDocumentTemplate(
+      id,
+      req.user?.role,
+    );
   }
 
   // ─── E3 · Genera/edita el oficio de solicitud (con contenido editable) ────
@@ -148,10 +163,15 @@ export class DeliverablesController {
   @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
   cargarSolicitud(
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file?: UploadFile,
-    @Req() req?: AuthenticatedRequest,
+    @UploadedFile() file: UploadFile | undefined,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.deliverablesService.cargarSolicitud(id, file!, req?.user?.id);
+    if (!file) {
+      throw new BadRequestException(
+        'Debe adjuntar el archivo del oficio de solicitud.',
+      );
+    }
+    return this.deliverablesService.cargarSolicitud(id, file, req.user?.id);
   }
 
   // ─── E3 · OCRI revisa el entregable recibido: lo registra u observa ────────

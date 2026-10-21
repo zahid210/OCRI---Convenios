@@ -87,6 +87,14 @@ export const EXPIRATION_WARNING_DAYS = 90;
  */
 export const MAX_OPINION_OBSERVATIONS = 3;
 
+/**
+ * Máximo de iteraciones de corrección de un entregable observado (Plan de
+ * Trabajo / Informe) antes de forzar el cierre del ciclo. Evita el bucle
+ * "observado → re-remitir → observado" sin avance; tras el tope, OCRI solo
+ * puede registrar el entregable o concluir el seguimiento con trazabilidad.
+ */
+export const MAX_DELIVERABLE_OBSERVATIONS = 3;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Serialización BigInt → JSON segura
 //
