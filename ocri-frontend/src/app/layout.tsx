@@ -18,7 +18,11 @@ export const metadata: Metadata = {
     "Sistema de gestión de propuestas, registro y seguimiento de convenios de la Oficina Central de Relaciones Interinstitucionales.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="es"
