@@ -618,7 +618,7 @@ export default function CreatePropuestaPage() {
                   value={applicantUnit}
                   onChange={(e) => setApplicantUnit(e.target.value)}
                   placeholder="EJ: FACULTAD DE INGENIERÍA / DIRECCIÓN DE RELACIONES INSTITUCIONALES"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
+                  className="h-10 w-full px-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
               </div>
 
@@ -663,7 +663,7 @@ export default function CreatePropuestaPage() {
                   value={applicantName}
                   onChange={(e) => setApplicantName(e.target.value)}
                   placeholder="EJ: DR. CARLOS ALARCÓN (RECTOR / DIRECTOR)"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
+                  className="h-10 w-full px-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
                 />
               </div>
 
@@ -680,7 +680,7 @@ export default function CreatePropuestaPage() {
                   value={applicantEmail}
                   onChange={(e) => setApplicantEmail(e.target.value)}
                   placeholder="contacto@institucion.edu.pe"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
+                  className="h-10 w-full px-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800"
                 />
               </div>
             </div>
@@ -696,7 +696,7 @@ export default function CreatePropuestaPage() {
           </div>
 
           <div className="p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
               <div className="space-y-1.5">
                 <label
                   htmlFor="title"
@@ -711,27 +711,50 @@ export default function CreatePropuestaPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="EJ: PROPUESTA CONVENIO MARCO UNCP - ESSALUD"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
+                  className="h-10 w-full px-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <label
-                    htmlFor="tramiteCode"
-                    className="block text-xs font-semibold uppercase text-gray-600"
-                  >
-                    Código <span className="text-red-500">*</span>
-                  </label>
-                  <div className="inline-flex border border-gray-300 bg-gray-50 p-0.5">
+                <label
+                  htmlFor="tramiteCode"
+                  className="block text-xs font-semibold uppercase text-gray-600"
+                >
+                  Código <span className="text-red-500">*</span>
+                </label>
+                <div className="flex h-10 w-full">
+                  <input
+                    id="tramiteCode"
+                    type="text"
+                    required={!autoTramiteCode}
+                    disabled={autoTramiteCode}
+                    value={autoTramiteCode ? "" : tramiteCode}
+                    onChange={(e) => setTramiteCode(e.target.value.toUpperCase())}
+                    placeholder={
+                      autoTramiteCode
+                        ? `AUTOGENERADO (EJ: 001-${new Date().getFullYear()})`
+                        : `EJ: 001-${new Date().getFullYear()}`
+                    }
+                    className={cn(
+                      "h-full flex-1 min-w-0 px-3 text-sm border border-r-0 focus:outline-none focus:border-gold uppercase",
+                      autoTramiteCode
+                        ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-white border-gray-300 text-gray-800",
+                      !autoTramiteCode &&
+                        tramiteCode.trim() !== "" &&
+                        !TRAMITE_CODE_FORMAT.test(tramiteCode.trim()) &&
+                        "border-red-400 focus:border-red-500",
+                    )}
+                  />
+                  <div className="inline-flex h-full border border-gray-300 bg-gray-50 shrink-0">
                     <button
                       type="button"
                       onClick={() => setAutoTramiteCode(false)}
                       className={cn(
-                        "px-2.5 py-0.5 text-[11px] font-semibold uppercase transition-colors cursor-pointer",
+                        "h-full px-3 text-xs font-semibold uppercase transition-colors cursor-pointer",
                         !autoTramiteCode
                           ? "bg-gold text-white"
-                          : "text-gray-600 hover:text-gray-800",
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-800",
                       )}
                     >
                       Digitar
@@ -743,39 +766,16 @@ export default function CreatePropuestaPage() {
                         setTramiteCode("");
                       }}
                       className={cn(
-                        "px-2.5 py-0.5 text-[11px] font-semibold uppercase transition-colors cursor-pointer",
+                        "h-full px-3 text-xs font-semibold uppercase border-l border-gray-300 transition-colors cursor-pointer",
                         autoTramiteCode
                           ? "bg-gold text-white"
-                          : "text-gray-600 hover:text-gray-800",
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-800",
                       )}
                     >
                       Autogenerar
                     </button>
                   </div>
                 </div>
-                <input
-                  id="tramiteCode"
-                  type="text"
-                  required={!autoTramiteCode}
-                  disabled={autoTramiteCode}
-                  value={autoTramiteCode ? "" : tramiteCode}
-                  onChange={(e) => setTramiteCode(e.target.value.toUpperCase())}
-                  placeholder={
-                    autoTramiteCode
-                      ? `AUTOGENERADO CORRELATIVO (EJ: 001-${new Date().getFullYear()})`
-                      : `EJ: 001-${new Date().getFullYear()}`
-                  }
-                  className={cn(
-                    "w-full px-3 py-2 text-sm border focus:outline-none focus:border-gold uppercase",
-                    autoTramiteCode
-                      ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-white border-gray-300 text-gray-800",
-                    !autoTramiteCode &&
-                      tramiteCode.trim() !== "" &&
-                      !TRAMITE_CODE_FORMAT.test(tramiteCode.trim()) &&
-                      "border-red-400 focus:border-red-500",
-                  )}
-                />
                 {!autoTramiteCode &&
                 tramiteCode.trim() !== "" &&
                 !TRAMITE_CODE_FORMAT.test(tramiteCode.trim()) ? (
