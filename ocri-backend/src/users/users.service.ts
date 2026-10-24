@@ -51,8 +51,11 @@ export class UsersService {
   }
 
   async findAll(filters: UserFilters = {}) {
-    const page = Number(filters.page) || 1;
-    const perPage = Number(filters.per_page) || 10;
+    // Defensa en profundidad (B8-5): el DTO ya acota page/per_page, pero el
+    // servicio también se invoca con objetos crudos; se limita aquí para que un
+    // per_page desmedido no materialice la tabla completa.
+    const page = Math.max(1, Number(filters.page) || 1);
+    const perPage = Math.min(100, Math.max(1, Number(filters.per_page) || 10));
     const skip = (page - 1) * perPage;
 
     const where = filters.search

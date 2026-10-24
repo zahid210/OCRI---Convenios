@@ -44,7 +44,10 @@ export class SeedUsersService implements OnModuleInit {
     rawPassword: string | undefined,
     email: string,
     name: string,
-    role: 'admin' | 'asistente' | 'procesador' | 'viewer',
+    // Solo los tres roles de operación se siembran desde el entorno (B8-6). El
+    // rol `viewer` (solo lectura) se crea y administra desde `/users`; no tiene
+    // credencial por defecto para no dejar una cuenta de acceso abierta.
+    role: 'admin' | 'asistente' | 'procesador',
   ): Promise<void> {
     const raw = rawPassword;
     if (!raw) {

@@ -7,13 +7,17 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProcessStatus } from '../common/process.constants';
 import { isRestrictedRole, restrictStatusList } from '../common/visibility';
+import { AuditActor, AuditService } from '../audit/audit.service';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
 import { UpdateInstitutionDto } from './dto/update-institution.dto';
 
 @Injectable()
 export class InstitutionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * Forzado de categorización alineado a las 5 opciones oficiales:
@@ -99,7 +103,7 @@ export class InstitutionsService {
     return 'Entidad Gubernamental';
   }
 
-  async create(dto: CreateInstitutionDto) {
+  async create(dto: CreateInstitutionDto, actor?: AuditActor) {
     const nameUpper = dto.name.trim().toUpperCase();
 
     // Verificación para evitar duplicados en BD
@@ -113,13 +117,28 @@ export class InstitutionsService {
 
     const finalType = this.categorizeType(nameUpper, dto.type);
 
-    return this.prisma.institutions.create({
+    const created = await this.prisma.institutions.create({
       data: {
         name: nameUpper,
         country: dto.country.trim().toUpperCase(),
         type: finalType,
       },
     });
+
+    await this.audit.record({
+      entity: 'institutions',
+      entityId: created.id,
+      action: 'CREATE',
+      actor,
+      description: `${created.name} — ${created.country}`,
+      changes: {
+        name: { before: null, after: created.name },
+        country: { before: null, after: created.country },
+        type: { before: null, after: created.type },
+      },
+    });
+
+    return created;
   }
 
   async findAll(filter: FilterInstitutionsDto) {
@@ -263,7 +282,7 @@ export class InstitutionsService {
     return institution;
   }
 
-  async update(id: number, dto: UpdateInstitutionDto) {
+  async update(id: number, dto: UpdateInstitutionDto, actor?: AuditActor) {
     const institution = await this.prisma.institutions.findUnique({
       where: { id },
     });
@@ -293,7 +312,7 @@ export class InstitutionsService {
 
     const finalType = this.categorizeType(name, inputType);
 
-    return this.prisma.institutions.update({
+    const updated = await this.prisma.institutions.update({
       where: { id },
       data: {
         name,
@@ -302,9 +321,35 @@ export class InstitutionsService {
         updated_at: new Date(),
       },
     });
+
+    // Traza campo a campo: el `type` se normaliza en silencio (categorizeType),
+    // así que la auditoría deja constancia del valor real guardado.
+    const changes: Record<string, { before: unknown; after: unknown }> = {};
+    if (name !== institution.name) {
+      changes.name = { before: institution.name, after: name };
+    }
+    if (country !== institution.country) {
+      changes.country = { before: institution.country, after: country };
+    }
+    if (finalType !== institution.type) {
+      changes.type = { before: institution.type, after: finalType };
+    }
+
+    if (Object.keys(changes).length > 0) {
+      await this.audit.record({
+        entity: 'institutions',
+        entityId: updated.id,
+        action: 'UPDATE',
+        actor,
+        description: `${updated.name} — ${updated.country}`,
+        changes,
+      });
+    }
+
+    return updated;
   }
 
-  async remove(id: number) {
+  async remove(id: number, actor?: AuditActor) {
     const institution = await this.prisma.institutions.findUnique({
       where: { id },
       include: {
@@ -324,8 +369,23 @@ export class InstitutionsService {
       );
     }
 
-    return this.prisma.institutions.delete({
+    const deleted = await this.prisma.institutions.delete({
       where: { id },
     });
+
+    await this.audit.record({
+      entity: 'institutions',
+      entityId: deleted.id,
+      action: 'DELETE',
+      actor,
+      description: `${deleted.name} — ${deleted.country}`,
+      changes: {
+        name: { before: deleted.name, after: null },
+        country: { before: deleted.country, after: null },
+        type: { before: deleted.type, after: null },
+      },
+    });
+
+    return deleted;
   }
 }

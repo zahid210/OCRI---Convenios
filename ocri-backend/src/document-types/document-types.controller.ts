@@ -14,6 +14,9 @@ import { FilterDocumentTypesDto } from './dto/filter-document-types.dto';
 export class DocumentTypesController {
   constructor(private readonly documentTypesService: DocumentTypesService) {}
 
+  // Lectura de catálogo: abierta a cualquier usuario autenticado (B8-3). No hay
+  // confinamiento por rol porque un tipo de documento no revela datos de
+  // convenios; solo las mutaciones exigen admin.
   @Get()
   findAll(@Query() filterDto: FilterDocumentTypesDto) {
     return this.documentTypesService.findAll(filterDto.direction);

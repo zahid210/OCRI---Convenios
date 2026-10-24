@@ -38,6 +38,8 @@ export class DependenciasController {
     return this.dependenciasService.create(dto, req.user);
   }
 
+  // Lectura de catálogo: abierta a cualquier usuario autenticado (B8-3). Solo
+  // las mutaciones exigen admin.
   @Get()
   findAll(@Query() filters: FilterDependenciasDto) {
     return this.dependenciasService.findAll({

@@ -16,6 +16,7 @@ import { CREATOR_ROLES } from '../auth/role-sets';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
+import { SearchQueryDto } from './dto/search-query.dto';
 import { UpdateInstitutionDto } from './dto/update-institution.dto';
 import { InstitutionsService } from './institutions.service';
 
@@ -32,8 +33,11 @@ export class InstitutionsController {
   // El asistente registra instituciones aliadas desde /propuestas/create.
   @Roles(...CREATOR_ROLES)
   @Post()
-  create(@Body() createDto: CreateInstitutionDto) {
-    return this.institutionsService.create(createDto);
+  create(
+    @Body() createDto: CreateInstitutionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.institutionsService.create(createDto, req.user);
   }
 
   @Get()
@@ -42,14 +46,14 @@ export class InstitutionsController {
   }
 
   @Get('search')
-  search(@Query('q') q?: string) {
-    return this.institutionsService.search(q);
+  search(@Query() query: SearchQueryDto) {
+    return this.institutionsService.search(query.q);
   }
 
   /** Autocompletado por nombre para el registro de propuestas (solo nombre). */
   @Get('autocomplete')
-  autocomplete(@Query('q') q?: string) {
-    return this.institutionsService.autocomplete(q);
+  autocomplete(@Query() query: SearchQueryDto) {
+    return this.institutionsService.autocomplete(query.q);
   }
 
   @Get('countries')
@@ -70,13 +74,17 @@ export class InstitutionsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateInstitutionDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.institutionsService.update(id, updateDto);
+    return this.institutionsService.update(id, updateDto, req.user);
   }
 
   @Roles('admin')
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.institutionsService.remove(id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.institutionsService.remove(id, req.user);
   }
 }
