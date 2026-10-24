@@ -112,6 +112,7 @@ export interface Agreement {
     rectorate_decision?: 'APPROVED' | 'REJECTED' | null;
     rectorate_decision_at?: string | null;
     notified_solicitante_at?: string | null;
+    created_at?: string | null;
 
     published_at?: string | null;
     registered_at?: string | null;

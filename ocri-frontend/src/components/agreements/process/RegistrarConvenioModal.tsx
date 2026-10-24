@@ -83,6 +83,12 @@ export default function RegistrarConvenioModal({
       toast.error("Las fechas de vigencia son obligatorias.");
       return;
     }
+    if (new Date(endDate) < new Date(startDate)) {
+      toast.error(
+        "La fecha de fin no puede ser anterior a la fecha de inicio.",
+      );
+      return;
+    }
     if (validResponsables.length === 0) {
       toast.error("Debe agregar al menos un responsable con nombre.");
       return;
@@ -185,6 +191,7 @@ export default function RegistrarConvenioModal({
               </label>
               <input
                 type="date"
+                min={startDate || undefined}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"

@@ -27,6 +27,30 @@ function backendUrl(): string | null {
     return process.env.API_PROXY_URL?.trim().replace(/\/+$/, "") || null;
 }
 
+/**
+ * Propaga cabeceras de contexto del cliente original (IP y User-Agent) hacia el
+ * backend para que el rate-limiter de login y la bitácora de auditoría
+ * (`audit_logs`) registren al cliente real y no la IP del contenedor Next.js.
+ */
+function buildForwardedHeaders(
+    request: NextRequest,
+    extra: Record<string, string> = {},
+): Record<string, string> {
+    const headers: Record<string, string> = { ...extra };
+    const xff = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+    const ua = request.headers.get("user-agent");
+    if (xff) {
+        headers["x-forwarded-for"] = xff;
+    } else if (realIp) {
+        headers["x-forwarded-for"] = realIp;
+    }
+    if (ua) {
+        headers["user-agent"] = ua;
+    }
+    return headers;
+}
+
 // Áreas protegidas: todas las páginas autenticadas del ciclo de vida del convenio
 const protectedPrefixes = [
     "/dashboard",
@@ -225,7 +249,9 @@ async function handleLogin(request: NextRequest): Promise<NextResponse> {
     try {
         upstream = await fetch(`${backend}/api/auth/login`, {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: buildForwardedHeaders(request, {
+                "content-type": "application/json",
+            }),
             body: await request.text(),
         });
     } catch {
@@ -309,7 +335,9 @@ async function handleLogout(request: NextRequest): Promise<NextResponse> {
         try {
             await fetch(`${backend}/api/auth/logout`, {
                 method: "POST",
-                headers: { authorization: `Bearer ${token}` },
+                headers: buildForwardedHeaders(request, {
+                    authorization: `Bearer ${token}`,
+                }),
                 signal: AbortSignal.timeout(3000),
             });
         } catch {

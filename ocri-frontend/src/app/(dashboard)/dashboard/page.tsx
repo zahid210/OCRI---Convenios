@@ -220,26 +220,33 @@ export default function DashboardPage() {
                     const isProposal = isProposalStatus(
                       agreement.process_status,
                     );
+                    const isRejected =
+                      agreement.process_status === "NO_SUSCRITO";
                     const isExpired =
                       agreement.temporal_status === "VENCIDO" ||
                       (agreement.temporal_status === undefined &&
                         agreement.end_date &&
                         new Date(agreement.end_date) < new Date());
-                    const stateLabel = isProposal
-                      ? PROCESS_STATUS_LABELS[
-                          agreement.process_status ?? "RECEPCIONADA"
-                        ]
-                      : agreement.temporal_status === "POR_VENCER"                        ? "Por vencer"
-                        : isExpired
-                          ? "Vencido"
-                          : "Vigente";
-                    const stateBadge = isProposal
-                      ? "bg-amber-50 text-amber-800 border-amber-200"
-                      : agreement.temporal_status === "POR_VENCER"
+                    const stateLabel = isRejected
+                      ? PROCESS_STATUS_LABELS.NO_SUSCRITO
+                      : isProposal
+                        ? PROCESS_STATUS_LABELS[
+                            agreement.process_status ?? "RECEPCIONADA"
+                          ]
+                        : agreement.temporal_status === "POR_VENCER"
+                          ? "Por vencer"
+                          : isExpired
+                            ? "Vencido"
+                            : "Vigente";
+                    const stateBadge = isRejected
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : isProposal
                         ? "bg-amber-50 text-amber-800 border-amber-200"
-                        : isExpired
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-green-50 text-green-700 border-green-200";
+                        : agreement.temporal_status === "POR_VENCER"
+                          ? "bg-amber-50 text-amber-800 border-amber-200"
+                          : isExpired
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-green-50 text-green-700 border-green-200";
                     return (
                       <ClickableTableRow
                         key={agreement.id}
@@ -251,7 +258,7 @@ export default function DashboardPage() {
                               : `/convenios/${agreement.id}`,
                           )
                         }
-                        ariaLabel={`Abrir ${isProposal ? "propuesta" : "convenio"} ${agreement.title || agreement.resolution_number || agreement.id}`}
+                        ariaLabel={`Abrir ${isProposal || isRejected ? "propuesta" : "convenio"} ${agreement.title || agreement.resolution_number || agreement.id}`}
                       >
                         <td className="py-3 px-4 text-sm text-gray-800">
                           <span
@@ -271,12 +278,12 @@ export default function DashboardPage() {
                         <td className="py-3 px-4">
                           <span
                             className={`inline-block px-2 py-1 text-xs border font-medium ${
-                              isProposal
+                              isProposal || isRejected
                                 ? "bg-blue-50 text-blue-700 border-blue-200"
                                 : "bg-primary text-white border-primary"
                             }`}
                           >
-                            {isProposal ? "Propuesta" : "Convenio"}
+                            {isProposal || isRejected ? "Propuesta" : "Convenio"}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 hidden sm:table-cell">

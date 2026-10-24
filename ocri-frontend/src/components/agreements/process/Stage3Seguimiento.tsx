@@ -46,6 +46,7 @@ import AdjuntarRespuestaModal from "./AdjuntarRespuestaModal";
 function DeliverableCard({
   deliverable,
   canManage,
+  blockedByPlan = false,
   onEvaluate,
   onAccept,
   onOpenDocEditor,
@@ -54,6 +55,7 @@ function DeliverableCard({
 }: {
   deliverable: Deliverable;
   canManage: boolean;
+  blockedByPlan?: boolean;
   onEvaluate: (
     id: number,
     title: string,
@@ -277,7 +279,13 @@ function DeliverableCard({
             </div>
           )}
 
-          {canManage && (
+          {canManage && blockedByPlan && deliverable.status !== "REGISTRADO" && (
+            <div className="pt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2">
+              Los informes se habilitan cuando el Plan de Trabajo ha sido aprobado y registrado.
+            </div>
+          )}
+
+          {canManage && !blockedByPlan && (
             <div className="flex flex-wrap gap-2 pt-2">
               {deliverable.status === "SOLICITADO" && !hasSolicitudDoc && (
                 <>
@@ -511,13 +519,31 @@ export default function Stage3Seguimiento({
   ) => {
     try {
       await evaluateDeliverable(id, decision, observations);
+      const target = deliverables.find((d) => d.id === id);
+      const others = deliverables.filter((d) => d.id !== id);
+      const typesPresent = new Set([
+        ...others.map((d) => d.type),
+        ...(target ? [target.type] : []),
+      ]);
+      const willAutoConclude =
+        decision === "APPROVED" &&
+        others.every((d) => d.status === "REGISTRADO") &&
+        typesPresent.has("PLAN_DE_TRABAJO") &&
+        typesPresent.has("INFORME_SEMESTRAL") &&
+        typesPresent.has("INFORME_FINAL");
+
       toast.success(
-        decision === "APPROVED"
-          ? "Entregable aprobado y registrado."
-          : "Entregable observado. Se solicitaron correcciones.",
+        willAutoConclude
+          ? "Entregable aprobado. Todos los entregables están registrados: seguimiento concluido."
+          : decision === "APPROVED"
+            ? "Entregable aprobado y registrado."
+            : "Entregable observado. Se solicitaron correcciones.",
       );
       setEvaluateModal(null);
       await onRefresh();
+      if (willAutoConclude) {
+        router.replace(NEXT_STAGE_DESTINATION(agreementId).toConvenio);
+      }
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Error al evaluar entregable";
@@ -576,7 +602,7 @@ export default function Stage3Seguimiento({
                   <DeliverableCard
                     key={d.id}
                     deliverable={d}
-                    canManage={canManage}
+                    canManage={canManage && processStatus !== "SEGUIMIENTO_CONCLUIDO"}
                     onAccept={handleAcceptRequest}
                     onOpenDocEditor={(dl) => setDocEditor(dl.id)}
                     onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
@@ -600,7 +626,8 @@ export default function Stage3Seguimiento({
                   <DeliverableCard
                     key={d.id}
                     deliverable={d}
-                    canManage={canManage}
+                    canManage={canManage && processStatus !== "SEGUIMIENTO_CONCLUIDO"}
+                    blockedByPlan={!planApproved}
                     onAccept={handleAcceptRequest}
                     onOpenDocEditor={(dl) => setDocEditor(dl.id)}
                     onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}

@@ -297,7 +297,7 @@ export async function validateOpinionRequest(
   });
 }
 
-/** Cancela una solicitud de opinión que no será considerada (desbloquea el avance a opciones completas) */
+/** Cancela una solicitud de opinión en curso (todas las solicitudes deben estar validadas para avanzar a OPINIONES_COMPLETAS) */
 export async function cancelOpinionRequest(requestId: number) {
   return fetchApi(`/process/opinion-requests/${requestId}/cancel`, {
     method: "POST",

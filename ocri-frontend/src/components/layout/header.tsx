@@ -64,17 +64,22 @@ export function Header() {
             </Sheet>
 
             {/* Buscador Estilo Escritorio */}
-            <div className="w-full hidden sm:flex items-center relative">
-                <HeaderSearch />
-            </div>
+            {currentUser?.role !== 'asistente' && (
+                <div className="w-full hidden sm:flex items-center relative">
+                    <HeaderSearch />
+                </div>
+            )}
 
             <div className="w-full flex-1" />
 
             <div className="flex items-center gap-3">
                 {/* Notificaciones */}
-                <HeaderNotifications />
-
-                <div className="h-6 w-[1px] bg-gray-200 mx-1" />
+                {currentUser?.role !== 'asistente' && (
+                    <>
+                        <HeaderNotifications />
+                        <div className="h-6 w-[1px] bg-gray-200 mx-1" />
+                    </>
+                )}
 
                 {/* Menú de Usuario */}
                 <DropdownMenu>

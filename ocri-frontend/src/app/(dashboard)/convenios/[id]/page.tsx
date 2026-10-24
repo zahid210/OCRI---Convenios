@@ -25,7 +25,7 @@ const ETAPA2_STATUSES = [
     'PUBLICADO',
 ];
 
-const ETAPA3_STATUSES = ['EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
+const ETAPA3_STATUSES = ['PUBLICADO', 'EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO'];
 
 export default function ConvenioDetailPage({
     params,

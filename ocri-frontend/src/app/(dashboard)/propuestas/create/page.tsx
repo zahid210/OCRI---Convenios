@@ -29,7 +29,7 @@ import AdjuntarDictamenModal from "@/components/agreements/process/AdjuntarDicta
 
 const MAX_ORIGEN_FILES = 20;
 const ACCEPTED_EXTENSIONS = /\.(pdf|doc|docx)$/i;
-const TRAMITE_CODE_FORMAT = /^\d+-\d{4}$/;
+const TRAMITE_CODE_FORMAT = /^\d{3,}-\d{4}$/;
 const MIN_INST_QUERY = 2;
 const INST_DEBOUNCE_MS = 300;
 
@@ -55,6 +55,7 @@ export default function CreatePropuestaPage() {
 
   const [rectorateOficioNumber, setRectorateOficioNumber] = useState("");
   const [tramiteCode, setTramiteCode] = useState("");
+  const [autoTramiteCode, setAutoTramiteCode] = useState(false);
   const [institutionId, setInstitutionId] = useState("");
   const [applicantName, setApplicantName] = useState("");
   const [applicantEmail, setApplicantEmail] = useState("");
@@ -263,6 +264,7 @@ export default function CreatePropuestaPage() {
   const resetForm = () => {
     setRectorateOficioNumber("");
     setTramiteCode("");
+    setAutoTramiteCode(false);
     setApplicantName("");
     setApplicantEmail("");
     setApplicantUnit("");
@@ -390,11 +392,19 @@ export default function CreatePropuestaPage() {
     }
 
     const formattedCode = tramiteCode.trim().toUpperCase();
-    if (formattedCode && !TRAMITE_CODE_FORMAT.test(formattedCode)) {
-      toast.warning(
-        "El código debe tener el formato NNN-YYYY (ej. 001-2026).",
-      );
-      return;
+    if (!autoTramiteCode) {
+      if (!formattedCode) {
+        toast.warning(
+          "Por favor, ingresa el código del convenio o activa la opción de autogenerar.",
+        );
+        return;
+      }
+      if (!TRAMITE_CODE_FORMAT.test(formattedCode)) {
+        toast.warning(
+          "El código debe tener el formato NNN-YYYY (ej. 001-2026).",
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -406,7 +416,7 @@ export default function CreatePropuestaPage() {
       formData.append("agreement_type_id", Number(agreementTypeId).toString());
 
       if (name.trim()) formData.append("name", name.trim().toUpperCase());
-      if (formattedCode)
+      if (!autoTramiteCode && formattedCode)
         formData.append("tramite_code", formattedCode);
       if (rectorateOficioNumber.trim())
         formData.append(
@@ -423,13 +433,15 @@ export default function CreatePropuestaPage() {
       if (dictamenFile) formData.append("dictamen", dictamenFile);
       origenFiles.forEach((f) => formData.append("documentos_origen", f));
 
-      const created = await fetcher<{ id: number }>("/agreements", {
+      const created = await fetcher<{ id: number; tramite_code?: string | null }>("/agreements", {
         method: "POST",
         body: formData,
       });
 
       toast.success(
-        "Propuesta registrada correctamente. Iniciando evaluación técnica.",
+        created.tramite_code
+          ? `Propuesta registrada correctamente (${created.tramite_code}). Iniciando evaluación técnica.`
+          : "Propuesta registrada correctamente. Iniciando evaluación técnica.",
       );
 
       // El asistente no accede a la bandeja ni al detalle (su ruta es solo
@@ -704,24 +716,79 @@ export default function CreatePropuestaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label
-                  htmlFor="tramiteCode"
-                  className="block text-xs font-semibold uppercase text-gray-600"
-                >
-                  Código <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label
+                    htmlFor="tramiteCode"
+                    className="block text-xs font-semibold uppercase text-gray-600"
+                  >
+                    Código <span className="text-red-500">*</span>
+                  </label>
+                  <div className="inline-flex border border-gray-300 bg-gray-50 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setAutoTramiteCode(false)}
+                      className={cn(
+                        "px-2.5 py-0.5 text-[11px] font-semibold uppercase transition-colors cursor-pointer",
+                        !autoTramiteCode
+                          ? "bg-gold text-white"
+                          : "text-gray-600 hover:text-gray-800",
+                      )}
+                    >
+                      Digitar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoTramiteCode(true);
+                        setTramiteCode("");
+                      }}
+                      className={cn(
+                        "px-2.5 py-0.5 text-[11px] font-semibold uppercase transition-colors cursor-pointer",
+                        autoTramiteCode
+                          ? "bg-gold text-white"
+                          : "text-gray-600 hover:text-gray-800",
+                      )}
+                    >
+                      Autogenerar
+                    </button>
+                  </div>
+                </div>
                 <input
                   id="tramiteCode"
                   type="text"
-                  required
-                  value={tramiteCode}
-                  onChange={(e) => setTramiteCode(e.target.value)}
-                  placeholder="EJ: 001-2026"
-                  className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
+                  required={!autoTramiteCode}
+                  disabled={autoTramiteCode}
+                  value={autoTramiteCode ? "" : tramiteCode}
+                  onChange={(e) => setTramiteCode(e.target.value.toUpperCase())}
+                  placeholder={
+                    autoTramiteCode
+                      ? `AUTOGENERADO CORRELATIVO (EJ: 001-${new Date().getFullYear()})`
+                      : `EJ: 001-${new Date().getFullYear()}`
+                  }
+                  className={cn(
+                    "w-full px-3 py-2 text-sm border focus:outline-none focus:border-gold uppercase",
+                    autoTramiteCode
+                      ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white border-gray-300 text-gray-800",
+                    !autoTramiteCode &&
+                      tramiteCode.trim() !== "" &&
+                      !TRAMITE_CODE_FORMAT.test(tramiteCode.trim()) &&
+                      "border-red-400 focus:border-red-500",
+                  )}
                 />
-                <p className="text-xs text-gray-400">
-                  Código único del convenio. Será también el n° de resolución.
-                </p>
+                {!autoTramiteCode &&
+                tramiteCode.trim() !== "" &&
+                !TRAMITE_CODE_FORMAT.test(tramiteCode.trim()) ? (
+                  <p className="text-xs text-red-600">
+                    Formato requerido: NNN-YYYY (mínimo 3 dígitos y año de 4 dígitos, ej. 001-{new Date().getFullYear()}).
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    {autoTramiteCode
+                      ? `El sistema asignará automáticamente el siguiente correlativo NNN-${new Date().getFullYear()}.`
+                      : "Código único del convenio (formato NNN-YYYY). Será también el n° de resolución."}
+                  </p>
+                )}
               </div>
             </div>
 

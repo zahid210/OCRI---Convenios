@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { UserItem, PaginatedResponse } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { useUser } from "@/components/user-provider";
-import { ROLE_LABELS } from "@/lib/auth";
+import { isAdmin, ROLE_LABELS } from "@/lib/auth";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -17,10 +17,12 @@ import {
   ChevronRight,
   Users as UsersIcon,
   X,
+  XCircle,
   ChevronDown,
 } from "lucide-react";
 
 const ROLES = ["admin", "procesador", "asistente", "viewer"];
+const PASSWORD_POLICY_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
 const roleBadgeColors: Record<string, string> = {
   admin: "bg-primary-active text-white border-primary-active",
@@ -120,6 +122,14 @@ export default function UsersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingUser || form.password) {
+      if (!PASSWORD_POLICY_RE.test(form.password)) {
+        toast.warning(
+          "La contraseña debe tener al menos 8 caracteres e incluir letras y números.",
+        );
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
@@ -210,6 +220,15 @@ export default function UsersPage() {
 
   const inputClass =
     "w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800";
+
+  if (!isAdmin(currentUser)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <XCircle className="h-12 w-12 text-red-400" />
+        <p className="text-gray-600">Acceso restringido a administradores.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12 font-sans text-gray-700">
@@ -504,11 +523,12 @@ export default function UsersPage() {
                 <input
                   type="password"
                   required={!editingUser}
+                  minLength={8}
                   value={form.password}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, password: e.target.value }))
                   }
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Mínimo 8 caracteres (letras y números)"
                   className={inputClass}
                 />
               </div>
@@ -535,8 +555,8 @@ export default function UsersPage() {
                   <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 </div>
                 <p className="text-[11px] text-gray-400">
-                  Admin: acceso completo · Editor: gestiona convenios e
-                  instituciones · Solo Lectura: consulta.
+                  Admin: acceso total · Procesador: gestiona flujo de convenios ·
+                  Asistente: registra nuevas propuestas · Solo Lectura: consulta.
                 </p>
               </div>
 

@@ -311,9 +311,7 @@ export default function Stage1Propuesta({
     (r) => r.id === editOficioRequestId,
   );
 
-  const pendingRequests = opinion_requests.filter(
-    (r) => r.status !== "CANCELADA" && !r.response_date,
-  );
+  const pendingRequests = opinion_requests.filter((r) => !r.response_date);
   const respondedRequests = opinion_requests
     .filter((r) => r.response_date)
     .sort((a, b) => {
@@ -467,7 +465,7 @@ export default function Stage1Propuesta({
   const handleCancelRequest = async (requestId: number, depName?: string) => {
     const confirmed = await confirm({
       title: "Cancelar opinión",
-      description: `¿Cancelar la opinión de ${depName ?? "esta dependencia"}? El trámite solo avanzará si el resto de opiniones quedan resueltas.`,
+      description: `¿Cancelar la opinión de ${depName ?? "esta dependencia"}? Recuerde que para avanzar al Expediente Técnico todas las solicitudes registradas deben encontrarse validadas.`,
     });
     if (!confirmed) return;
 
@@ -983,10 +981,12 @@ export default function Stage1Propuesta({
                         )
                       }
                       extraBadge={
-                        <TemporalBadge
-                          dueAt={req.due_at}
-                          warningDays={config?.warning_days ?? 3}
-                        />
+                        req.status !== "CANCELADA" ? (
+                          <TemporalBadge
+                            dueAt={req.due_at}
+                            warningDays={config?.warning_days ?? 3}
+                          />
+                        ) : null
                       }
                       subline={
                         (oficioDocumentLabel(documents, req.id) ??
@@ -1174,9 +1174,10 @@ export default function Stage1Propuesta({
                               </button>
                             </>
                           )}
-                          {(req.status === "ENVIADA" ||
-                            req.status === "RESPONDIDA" ||
-                            req.status === "OBSERVADA") && (
+                          {actionsOpen &&
+                            (req.status === "ENVIADA" ||
+                              req.status === "RESPONDIDA" ||
+                              req.status === "OBSERVADA") && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

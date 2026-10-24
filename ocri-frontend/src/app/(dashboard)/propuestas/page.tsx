@@ -246,7 +246,9 @@ export default function PropuestasPage() {
 
                       <td className="py-5 px-5 text-center">
                         <span className="text-xs text-gray-500 font-mono">
-                          —
+                          {agreement.created_at
+                            ? new Date(agreement.created_at).toLocaleDateString("es-PE")
+                            : "—"}
                         </span>
                       </td>
 

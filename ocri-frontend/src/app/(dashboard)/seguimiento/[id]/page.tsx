@@ -11,7 +11,7 @@ import Stage3Seguimiento from "@/components/agreements/process/Stage3Seguimiento
 import AgreementHeader from "@/components/agreements/process/AgreementHeader";
 import { ProcessDetail } from "@/components/agreements/process/shared";
 
-const ETAPA3_STATUSES = ["EN_SEGUIMIENTO", "SEGUIMIENTO_CONCLUIDO"];
+const ETAPA3_STATUSES = ["PUBLICADO", "EN_SEGUIMIENTO", "SEGUIMIENTO_CONCLUIDO"];
 
 export default function SeguimientoDetailPage({
     params,
