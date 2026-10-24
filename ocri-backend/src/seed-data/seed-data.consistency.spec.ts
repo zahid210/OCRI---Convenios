@@ -35,8 +35,6 @@ function read(name: string): Row[] {
 const institutions = read('institutions.json');
 const agreements = read('agreements.json');
 const documents = read('documents.json');
-const processEvents = read('process_events.json');
-const acknowledgements = read('notification_acknowledgements.json');
 
 const ids = (rows: Row[]): Set<number> =>
   new Set(rows.map((r) => Number(r.id)));
@@ -46,18 +44,10 @@ describe('Seed de datos históricos', () => {
     expect(institutions).toHaveLength(388);
     expect(agreements).toHaveLength(447);
     expect(documents).toHaveLength(436);
-    expect(processEvents).toHaveLength(5);
-    expect(acknowledgements).toHaveLength(88);
   });
 
   it('no repite ids dentro de cada tabla', () => {
-    for (const rows of [
-      institutions,
-      agreements,
-      documents,
-      processEvents,
-      acknowledgements,
-    ]) {
+    for (const rows of [institutions, agreements, documents]) {
       const list = rows.map((r) => Number(r.id));
       expect(new Set(list).size).toBe(list.length);
     }
@@ -78,24 +68,6 @@ describe('Seed de datos históricos', () => {
     for (const d of documents) {
       expect(ok.has(Number(d.agreement_id))).toBe(true);
       expect(tipos.has(String(d.document_type))).toBe(true);
-    }
-  });
-
-  it('cada evento referencia un convenio válido', () => {
-    const ok = ids(agreements);
-    for (const e of processEvents) {
-      expect(ok.has(Number(e.agreement_id))).toBe(true);
-    }
-  });
-
-  it('los acuses y eventos referencian usuarios por email', () => {
-    for (const n of acknowledgements) {
-      expect(String(n.user_email)).toMatch(/^[^@\s]+@[^@\s]+$/);
-    }
-    for (const e of processEvents) {
-      if (e.actor_email !== null) {
-        expect(String(e.actor_email)).toMatch(/^[^@\s]+@[^@\s]+$/);
-      }
     }
   });
 });

@@ -24,3 +24,11 @@ Thumbs.db
 # los templates y sus assets (logos y plantilla del oficio).
 ocri-backend/uploads/*
 !ocri-backend/uploads/templates/
+
+# Volcados y respaldos de base de datos (nunca versionar dumps con datos sensibles;
+# solo se versionan las migraciones de esquema de Prisma).
+*.sql
+*.sql.gz
+*.dump
+*.bak
+!ocri-backend/prisma/migrations/**/*.sql

@@ -56,13 +56,10 @@ export class SeedDataService implements OnApplicationBootstrap {
 
     const docTypeId = await this.mapId('document_types', 'code');
     const agreementTypeId = await this.mapId('agreement_types', 'name');
-    const userId = await this.mapId('users', 'email');
 
     const institutions = this.read('institutions.json');
     const agreements = this.read('agreements.json');
     const documents = this.read('documents.json');
-    const processEvents = this.read('process_events.json');
-    const acknowledgements = this.read('notification_acknowledgements.json');
 
     const seeds: TableSeed[] = [
       {
@@ -165,43 +162,6 @@ export class SeedDataService implements OnApplicationBootstrap {
           r.updated_at,
         ]),
       },
-      {
-        table: 'process_events',
-        columns: [
-          'id',
-          'agreement_id',
-          'stage',
-          'event_type',
-          'description',
-          'actor_user_id',
-          'from_value',
-          'to_value',
-          'occurred_at',
-          'metadata',
-        ],
-        rows: processEvents.map((r) => [
-          r.id,
-          r.agreement_id,
-          r.stage,
-          r.event_type,
-          r.description,
-          this.resolveOptional(userId, r.actor_email, 'usuario'),
-          r.from_value,
-          r.to_value,
-          r.occurred_at,
-          r.metadata,
-        ]),
-      },
-      {
-        table: 'notification_acknowledgements',
-        columns: ['id', 'user_id', 'key', 'read_at'],
-        rows: acknowledgements.map((r) => [
-          r.id,
-          this.resolve(userId, r.user_email, 'usuario'),
-          r.key,
-          r.read_at,
-        ]),
-      },
     ];
 
     await this.prisma.$transaction(async (tx) => {
@@ -214,8 +174,7 @@ export class SeedDataService implements OnApplicationBootstrap {
 
     this.logger.log(
       `Datos históricos sembrados: ${institutions.length} instituciones, ` +
-        `${agreements.length} convenios, ${documents.length} documentos, ` +
-        `${processEvents.length} eventos, ${acknowledgements.length} acuses.`,
+        `${agreements.length} convenios, ${documents.length} documentos.`,
     );
   }
 
@@ -265,14 +224,6 @@ export class SeedDataService implements OnApplicationBootstrap {
       throw new Error(`Seed: ${what} "${String(key)}" no existe en la base`);
     }
     return id;
-  }
-
-  private resolveOptional(
-    map: Map<string, number>,
-    key: SeedValue,
-    what: string,
-  ): number | null {
-    return key === null || key === '' ? null : this.resolve(map, key, what);
   }
 
   private async insert(

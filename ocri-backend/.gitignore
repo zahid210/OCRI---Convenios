@@ -63,3 +63,11 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .agents/
 .claude/
 .windsurf/
+
+# Volcados y respaldos de base de datos (solo se versionan las migraciones DDL de Prisma)
+*.sql
+*.sql.gz
+*.dump
+*.bak
+!prisma/migrations/**/*.sql
+
