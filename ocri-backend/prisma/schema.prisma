@@ -115,11 +115,12 @@ model users {
   // cada JWT, de modo que los tokens emitidos antes quedan invalidados.
   token_version        Int       @default(0)
   password_changed_at  DateTime? @db.Timestamp(0)
-  created_at DateTime? @db.Timestamp(0)
-  updated_at DateTime? @db.Timestamp(0)
+  created_at           DateTime? @default(now()) @db.Timestamp(0)
+  updated_at           DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 
-  documents_uploaded       documents[]
-  deliverable_observations deliverable_observations[]
+  documents_uploaded            documents[]
+  deliverable_observations      deliverable_observations[]
+  notification_acknowledgements notification_acknowledgements[]
 
   @@index([role])
 }
@@ -129,8 +130,8 @@ model institutions {
   name       String    @db.VarChar(255)
   country    String    @db.VarChar(255)
   type       String    @default("Publica") @db.VarChar(255)
-  created_at DateTime? @db.Timestamp(0)
-  updated_at DateTime? @db.Timestamp(0)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 
   agreements agreements[]
 
@@ -141,9 +142,9 @@ model institutions {
 
 model agreement_types {
   id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  name       String    @db.VarChar(255)
-  created_at DateTime? @db.Timestamp(0)
-  updated_at DateTime? @db.Timestamp(0)
+  name       String    @unique @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 
   agreements agreements[]
 }
@@ -157,8 +158,8 @@ model dependencias {
   is_default_opinion Boolean          @default(false)
   sort_order         Int              @default(0)
   is_active          Boolean          @default(true)
-  created_at         DateTime?        @db.Timestamp(0)
-  updated_at         DateTime?        @db.Timestamp(0)
+  created_at         DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?        @default(now()) @updatedAt @db.Timestamp(0)
 
   opinion_requests opinion_requests[]
 
@@ -214,8 +215,8 @@ model agreements {
   monitoring_concluded_at DateTime? @db.Timestamp(0)
 
   observations String?   @db.Text
-  created_at   DateTime? @db.Timestamp(0)
-  updated_at   DateTime? @db.Timestamp(0)
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+  updated_at   DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 
   institutions    institutions    @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agreements_institution_id_foreign")
   agreement_types agreement_types @relation(fields: [agreement_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agreements_agreement_type_id_foreign")
@@ -232,6 +233,7 @@ model agreements {
   @@index([start_date], map: "agreements_start_date_index")
   @@index([process_status])
   @@index([validity_status])
+  @@index([stage])
 }
 
 // Responsables del convenio registrados durante el registro (E2); destinatarios
@@ -244,8 +246,8 @@ model agreement_responsables {
   side         responsable_side @default(UNCP)
   email        String?          @db.VarChar(255)
   phone        String?          @db.VarChar(50)
-  created_at   DateTime?        @db.Timestamp(0)
-  updated_at   DateTime?        @db.Timestamp(0)
+  created_at   DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?        @default(now()) @updatedAt @db.Timestamp(0)
 
   agreements agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agreement_responsables_agreement_id_foreign")
 
@@ -268,19 +270,19 @@ model documents {
   opinion_request_id BigInt?             @db.UnsignedBigInt
   deliverable_id     BigInt?             @db.UnsignedBigInt
   uploaded_by_id     BigInt?             @db.UnsignedBigInt
-  created_at         DateTime?           @db.Timestamp(0)
-  updated_at         DateTime?           @db.Timestamp(0)
+  created_at         DateTime?           @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?           @default(now()) @updatedAt @db.Timestamp(0)
 
   agreements       agreements        @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "documents_agreement_id_foreign")
-  document_types   document_types?   @relation(fields: [document_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  document_types   document_types?   @relation(fields: [document_type_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   opinion_requests opinion_requests? @relation(fields: [opinion_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   deliverables     deliverables?     @relation(fields: [deliverable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  uploaded_by      users?            @relation(fields: [uploaded_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploaded_by      users?            @relation(fields: [uploaded_by_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
-  @@index([agreement_id], map: "documents_agreement_id_foreign")
   @@index([document_type_id])
   @@index([opinion_request_id])
   @@index([deliverable_id])
+  @@index([uploaded_by_id], map: "documents_uploaded_by_id_fkey")
   @@index([agreement_id, stage])
 }
 
@@ -302,15 +304,15 @@ model opinion_requests {
   response_date DateTime? @db.Date
   validated_at  DateTime? @db.Timestamp(0)
   observations  String?   @db.Text
-  created_at    DateTime? @db.Timestamp(0)
-  updated_at    DateTime? @db.Timestamp(0)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  updated_at    DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 
-  agreements   agreements   @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  dependencias dependencias @relation(fields: [dependencia_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  documents    documents[]
+  agreements     agreements       @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  dependencias   dependencias     @relation(fields: [dependencia_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documents      documents[]
+  process_events process_events[]
 
   @@unique([agreement_id, dependencia_id, stage])
-  @@index([agreement_id])
   @@index([response_date])
   @@index([status, due_at])
   @@index([dependencia_id])
@@ -331,9 +333,11 @@ model process_events {
   occurred_at        DateTime       @default(now()) @db.Timestamp(0)
   metadata           Json?
 
-  agreements agreements @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  agreements       agreements        @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  opinion_requests opinion_requests? @relation(fields: [opinion_request_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([agreement_id, occurred_at])
+  @@index([opinion_request_id])
 }
 
 // ─── Auditoría de catálogos ────────────────────────────────────────────────
@@ -383,7 +387,6 @@ model deliverables {
   observations deliverable_observations[]
   documents    documents[]
 
-  @@index([agreement_id])
   @@index([agreement_id, type])
   @@index([status])
 }
@@ -396,9 +399,10 @@ model deliverable_observations {
   created_at     DateTime @default(now()) @db.Timestamp(0)
 
   deliverable deliverables @relation(fields: [deliverable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  created_by  users?       @relation(fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  created_by  users?       @relation(fields: [created_by_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([deliverable_id])
+  @@index([created_by_id], map: "deliverable_observations_created_by_id_fkey")
 }
 
 // ─── Configuración ──────────────────────────────────────────────────────────
@@ -406,7 +410,7 @@ model deliverable_observations {
 model app_config {
   key        String    @id @db.VarChar(80)
   value      String    @db.VarChar(255)
-  updated_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 }
 
 // ─── Acknowledgment de notificaciones (marcar como leído) ───────────────────
@@ -421,6 +425,7 @@ model notification_acknowledgements {
   key     String   @db.VarChar(120)
   read_at DateTime @default(now()) @db.Timestamp(0)
 
+  users users @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@unique([user_id, key])
-  @@index([user_id])
 }

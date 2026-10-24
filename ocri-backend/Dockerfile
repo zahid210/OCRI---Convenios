@@ -4,8 +4,14 @@
 # Build multi-etapa: deps -> compilación TS -> imagen de ejecución mínima.
 # =============================================================================
 
+# ── 0. Imagen base con OpenSSL (requerido por Prisma Engine) ────────────────
+FROM node:22-slim AS base
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # ── 1. Dependencias ──────────────────────────────────────────────────────────
-FROM node:22-slim AS deps
+FROM base AS deps
 WORKDIR /app
 
 # postinstall (sync-motor) copia vendor/html-pdf-lite sobre el paquete instalado
@@ -20,7 +26,7 @@ COPY prisma/ ./prisma/
 RUN --mount=type=cache,id=npm-backend,target=/root/.npm,sharing=locked npm ci
 
 # ── 2. Compilación ───────────────────────────────────────────────────────────
-FROM node:22-slim AS builder
+FROM base AS builder
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
@@ -28,7 +34,7 @@ COPY . .
 RUN npx prisma generate && npm run build
 
 # ── 3. Imagen de ejecución ──────────────────────────────────────────────────
-FROM node:22-slim AS runner
+FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=4000
 WORKDIR /app

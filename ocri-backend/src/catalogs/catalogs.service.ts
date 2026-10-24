@@ -51,14 +51,13 @@ export class CatalogsService {
     // Dependencias: delega en su servicio (dedupe por código/nombre + auditoría).
     const { message } = await this.dependencias.seed(actor);
 
-    // Tipos de convenio: no hay unique por nombre, así que se evita duplicar a mano.
+    // Tipos de convenio: clave única por nombre (@unique en schema.prisma).
     for (const name of AGREEMENT_TYPES) {
-      const existing = await this.prisma.agreement_types.findFirst({
+      await this.prisma.agreement_types.upsert({
         where: { name },
+        update: {},
+        create: { name },
       });
-      if (!existing) {
-        await this.prisma.agreement_types.create({ data: { name } });
-      }
     }
 
     for (const c of APP_CONFIG_DEFAULTS) {

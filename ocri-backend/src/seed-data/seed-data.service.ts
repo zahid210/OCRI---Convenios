@@ -44,6 +44,7 @@ export class SeedDataService implements OnApplicationBootstrap {
 
   async seedInitial(): Promise<void> {
     await this.catalogs.seedAll();
+    await this.syncExpiredAgreements();
 
     const existing = await this.prisma.agreements.count();
     if (existing > 0) {
@@ -203,15 +204,40 @@ export class SeedDataService implements OnApplicationBootstrap {
       },
     ];
 
-    for (const seed of seeds) {
-      await this.insert(seed);
-    }
+    await this.prisma.$transaction(async (tx) => {
+      for (const seed of seeds) {
+        await this.insert(seed, tx);
+      }
+    });
+
+    await this.syncExpiredAgreements();
 
     this.logger.log(
       `Datos históricos sembrados: ${institutions.length} instituciones, ` +
         `${agreements.length} convenios, ${documents.length} documentos, ` +
         `${processEvents.length} eventos, ${acknowledgements.length} acuses.`,
     );
+  }
+
+  private async syncExpiredAgreements(): Promise<void> {
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+
+    const { count } = await this.prisma.agreements.updateMany({
+      where: {
+        validity_status: 'VIGENTE',
+        end_date: { lt: startOfToday },
+      },
+      data: {
+        validity_status: 'VENCIDO',
+      },
+    });
+
+    if (count > 0) {
+      this.logger.log(
+        `Vigencia sincronizada: ${count} convenio(s) con fecha vencida marcados como VENCIDO.`,
+      );
+    }
   }
 
   private read(name: string): SeedRow[] {
@@ -249,7 +275,10 @@ export class SeedDataService implements OnApplicationBootstrap {
     return key === null || key === '' ? null : this.resolve(map, key, what);
   }
 
-  private async insert(seed: TableSeed): Promise<void> {
+  private async insert(
+    seed: TableSeed,
+    executor: Pick<PrismaService, '$executeRawUnsafe'> = this.prisma,
+  ): Promise<void> {
     if (seed.rows.length === 0) return;
     const cols = seed.columns.map((c) => `\`${c}\``).join(', ');
     const tuple = `(${seed.columns.map(() => '?').join(', ')})`;
@@ -261,7 +290,7 @@ export class SeedDataService implements OnApplicationBootstrap {
         values.push(...row);
         return tuple;
       });
-      await this.prisma.$executeRawUnsafe(
+      await executor.$executeRawUnsafe(
         `INSERT INTO \`${seed.table}\` (${cols}) VALUES ${tuples.join(', ')}`,
         ...values,
       );

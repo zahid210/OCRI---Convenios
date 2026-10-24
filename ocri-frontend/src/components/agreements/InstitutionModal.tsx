@@ -221,13 +221,25 @@ export default function InstitutionModal({
                   Universidad Nacional
                 </option>
                 <option value="Universidad Privada">Universidad Privada</option>
+                <option value="Universidad Internacional">
+                  Universidad Internacional
+                </option>
+                <option value="Sector Público">Sector Público</option>
                 <option value="Entidad Gubernamental">
                   Entidad Gubernamental
+                </option>
+                <option value="Educación">Educación</option>
+                <option value="Salud">Salud</option>
+                <option value="Comunidades">Comunidades</option>
+                <option value="Empresa Nacional">Empresa Nacional</option>
+                <option value="Empresa Internacional">
+                  Empresa Internacional
                 </option>
                 <option value="Empresa Privada">Empresa Privada</option>
                 <option value="Organización Internacional">
                   Organización Internacional
                 </option>
+                <option value="Otros">Otros</option>
               </select>
               <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
             </div>
