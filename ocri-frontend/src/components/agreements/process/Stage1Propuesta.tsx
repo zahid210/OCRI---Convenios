@@ -750,10 +750,6 @@ export default function Stage1Propuesta({
         (processStatus === "OPINIONES_COMPLETAS" ||
           processStatus === "EXPEDIENTE_TECNICO_LISTO") && (
           <SectionCard title="Documentos para Rectorado" icon={FileCheck}>
-            <p className="text-xs text-gray-500 mb-4">
-              Prepare los 3 documentos requeridos. Una vez completos, el sistema
-              enviará el expediente a Rectorado automáticamente.
-            </p>
             <div className="space-y-3">
               {/* 1. Expediente Técnico */}
               <div className="flex items-center justify-between p-3 border border-gray-200 bg-gray-50">
@@ -1016,14 +1012,13 @@ export default function Stage1Propuesta({
                               Generar Oficio
                             </button>
                           )}
-                          {actionsOpen && req.status === "GENERADA" && (
+                          {actionsOpen && req.status === "GENERADA" && !oficioDocumentLabel(documents, req.id) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setShowCargarOficioModal(req.id);
                               }}
                               className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm transition-colors"
-                              title="Adjuntar un oficio que ya fue emitido, en lugar de generarlo aquí"
                             >
                               <Upload className="h-4 w-4" />
                               Cargar Oficio

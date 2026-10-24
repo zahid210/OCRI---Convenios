@@ -71,10 +71,6 @@ export default function SolicitarOpinionesModal({
       }
     >
       <div className="p-6">
-        <p className="text-sm text-gray-600 mb-4">
-          Seleccione las dependencias que deben emitir opinión sobre este
-          convenio.
-        </p>
         <div className="relative mb-4">
           <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
