@@ -30,7 +30,7 @@ import {
   normalizeOficioNumber,
 } from '../common/pdf-merger.service';
 import { StorageService } from '../common/storage/storage.service';
-import { buildOficioRectoradoReferencia } from './oficio-html';
+import { buildOficioRectoradoReferencia, escapeHtml } from './oficio-html';
 import { isRestrictedRole, isVisibleToRestricted } from '../common/visibility';
 import {
   stripDocumentFilePaths,
@@ -177,8 +177,8 @@ export class ProcessService {
 
   /**
    * Avanza el proceso a OPINIONES_COMPLETAS cuando todas las solicitudes de
-   * opinión quedaron resueltas (VALIDADAS o CANCELADAS). Se ejecuta dentro de
-   * la transacción del llamador y es un no-op si ya está en ese estado.
+   * opinión se encuentran VALIDADAS. Se ejecuta dentro de la transacción del
+   * llamador y es un no-op si ya está en ese estado o si no existen solicitudes.
    */
   private async advanceToOpinionesCompletas(
     tx: Prisma.TransactionClient,
@@ -191,9 +191,9 @@ export class ProcessService {
       select: { status: true },
     });
 
-    const allValidated = allRequests.every(
-      (r) => r.status === 'VALIDADA' || r.status === 'CANCELADA',
-    );
+    const allValidated =
+      allRequests.length > 0 &&
+      allRequests.every((r) => r.status === 'VALIDADA');
 
     const currentStatus = await tx.agreements.findUnique({
       where: { id: agreementId },
@@ -216,9 +216,8 @@ export class ProcessService {
   }
 
   /**
-   * Verifica que existan solicitudes de opinión y que todas estén resueltas
-   * (VALIDADAS o CANCELADAS). `action` completa el mensaje de error, p. ej.
-   * "generar el expediente".
+   * Verifica que existan solicitudes de opinión y que todas estén VALIDADAS.
+   * `action` completa el mensaje de error, p. ej. "generar el expediente".
    */
   private async assertOpinionsResolved(agreementId: number, action: string) {
     const opinionRequests = await this.prisma.opinion_requests.findMany({
@@ -231,13 +230,11 @@ export class ProcessService {
       );
     }
 
-    const notCompleted = opinionRequests.filter(
-      (r) => r.status !== 'VALIDADA' && r.status !== 'CANCELADA',
-    );
+    const notValidated = opinionRequests.filter((r) => r.status !== 'VALIDADA');
 
-    if (notCompleted.length > 0) {
+    if (notValidated.length > 0) {
       throw new BadRequestException(
-        `Hay ${notCompleted.length} opinión(es) sin validar o cancelar. No se puede ${action}.`,
+        `Hay ${notValidated.length} opinión(es) sin validar. No se puede ${action}.`,
       );
     }
 
@@ -461,10 +458,7 @@ export class ProcessService {
       all_responded:
         counts.total > 0 &&
         opinionRequests.every(
-          (r) =>
-            r.status === 'VALIDADA' ||
-            r.status === 'CANCELADA' ||
-            r.status === 'RESPONDIDA',
+          (r) => r.status === 'VALIDADA' || r.status === 'RESPONDIDA',
         ),
       due_date: dueDate,
       documents: stripDocumentFilePaths(documents),
@@ -1104,6 +1098,34 @@ export class ProcessService {
           undefined,
           tx,
         );
+
+        const remaining = await tx.opinion_requests.findMany({
+          where: { agreement_id: request.agreement_id },
+          select: { status: true },
+        });
+
+        if (remaining.length === 0) {
+          const current = await tx.agreements.findUnique({
+            where: { id: request.agreement_id },
+            select: { process_status: true },
+          });
+          if (current?.process_status === 'OPINIONES_EN_CURSO') {
+            await tx.agreements.update({
+              where: { id: request.agreement_id },
+              data: {
+                process_status: 'RECEPCIONADA',
+                updated_at: new Date(),
+              },
+            });
+          }
+        } else {
+          await this.advanceToOpinionesCompletas(
+            tx,
+            request.agreement_id,
+            'Todas las solicitudes de opinión restantes se encuentran validadas.',
+            userId,
+          );
+        }
       },
       { maxWait: 10000, timeout: 30000 },
     );
@@ -1152,11 +1174,17 @@ export class ProcessService {
 
     await this.assertReadableByRole(Number(request.agreement_id), role);
 
-    const depName = request.dependencias?.name ?? 'Dependencia';
-    const title =
-      request.agreements?.title ?? 'convenio de cooperación interinstitucional';
-    const destinatario = request.directed_to ?? `Responsable de ${depName}`;
-    const oficio = normalizeOficioNumber(request.oficio_number ?? undefined);
+    const depName = escapeHtml(request.dependencias?.name ?? 'Dependencia');
+    const title = escapeHtml(
+      request.agreements?.title ?? 'convenio de cooperación interinstitucional',
+    );
+    const destinatario = escapeHtml(
+      request.directed_to ??
+        `Responsable de ${request.dependencias?.name ?? 'Dependencia'}`,
+    );
+    const oficio = escapeHtml(
+      normalizeOficioNumber(request.oficio_number ?? undefined),
+    );
 
     const fecha = new Date().toLocaleDateString('es-PE', {
       day: 'numeric',
@@ -1248,12 +1276,15 @@ export class ProcessService {
       throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
     }
 
-    const title =
-      agreement.title ?? 'convenio de cooperación interinstitucional';
+    const title = escapeHtml(
+      agreement.title ?? 'convenio de cooperación interinstitucional',
+    );
     const destinatario = 'Rectorado';
     const tramiteCode = agreement.tramite_code ?? '';
-    const oficio = normalizeOficioNumber(
-      `${tramiteCode.split('-')[0] ?? ''}-${new Date().getFullYear()}`,
+    const oficio = escapeHtml(
+      normalizeOficioNumber(
+        `${tramiteCode.split('-')[0] ?? ''}-${new Date().getFullYear()}`,
+      ),
     );
 
     const fecha = new Date().toLocaleDateString('es-PE', {
@@ -1274,7 +1305,7 @@ export class ProcessService {
     });
     const referencia = buildOficioRectoradoReferencia(documentos);
 
-    const asunto = `REMISI&Oacute;N DE EXPEDIENTE T&Oacute;CNICO DEL ${title} PARA SU SUSCRIPCI&Oacute;N`;
+    const asunto = `REMISI&Oacute;N DE EXPEDIENTE T&Eacute;CNICO DEL ${title} PARA SU SUSCRIPCI&Oacute;N`;
 
     const img = (uri: string, alt: string) =>
       uri ? `<img src="${uri}" alt="${alt}"/>` : '';

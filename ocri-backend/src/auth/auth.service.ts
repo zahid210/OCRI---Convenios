@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
@@ -12,13 +17,46 @@ export interface LoginContext {
   userAgent?: string | null;
 }
 
+/** Ventana y tope de intentos fallidos de inicio de sesión por IP/correo. */
+const LOGIN_RATE_WINDOW_MS = 60_000;
+const LOGIN_MAX_FAILED_ATTEMPTS = 10;
+
 @Injectable()
 export class AuthService {
+  private readonly failedAttempts = new Map<string, number[]>();
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly audit: AuditService,
   ) {}
+
+  private checkRateLimit(key: string): void {
+    const now = Date.now();
+    const recent = (this.failedAttempts.get(key) ?? []).filter(
+      (ts) => now - ts < LOGIN_RATE_WINDOW_MS,
+    );
+    if (recent.length === 0) {
+      this.failedAttempts.delete(key);
+    } else {
+      this.failedAttempts.set(key, recent);
+    }
+    if (recent.length >= LOGIN_MAX_FAILED_ATTEMPTS) {
+      throw new HttpException(
+        'Demasiados intentos de inicio de sesión. Intente nuevamente en un minuto.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  private recordFailedAttempt(key: string): void {
+    const now = Date.now();
+    const recent = (this.failedAttempts.get(key) ?? []).filter(
+      (ts) => now - ts < LOGIN_RATE_WINDOW_MS,
+    );
+    recent.push(now);
+    this.failedAttempts.set(key, recent);
+  }
 
   // Hash de relleno: se compara cuando el email no existe para que el tiempo de
   // respuesta sea idéntico al del flujo real (mismo costo bcrypt). Esto evita
@@ -57,9 +95,12 @@ export class AuthService {
 
   async login(loginDto: LoginDto, context: LoginContext = {}) {
     const email = AuthService.normalizeEmail(loginDto.email);
+    const rateKey = `${context.ip ?? 'unknown'}:${email}`;
+    this.checkRateLimit(rateKey);
 
     try {
       const user = await this.validateUser(email, loginDto.password);
+      this.failedAttempts.delete(rateKey);
 
       const payload = {
         sub: Number(user.id),
@@ -90,6 +131,7 @@ export class AuthService {
         },
       };
     } catch (err) {
+      this.recordFailedAttempt(rateKey);
       // Registra también los intentos fallidos para detectar fuerza bruta o
       // abuso del endpoint (sin revelar si el correo existe o no).
       await this.audit.record({

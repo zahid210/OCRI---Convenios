@@ -4,10 +4,12 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditActor, AuditService } from '../audit/audit.service';
 import {
   UploadFile,
   normalizeUploadName,
@@ -41,7 +43,34 @@ export class AgreementsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    @Optional() private readonly audit?: AuditService,
   ) {}
+
+  /**
+   * Genera el siguiente código de trámite correlativo `NNN-YYYY` para el año
+   * en curso cuando no se indica uno explícitamente (p. ej. si el último del
+   * año 2026 es `001-2026`, devuelve `002-2026`; si no hay ninguno aún en ese
+   * año, devuelve `001-2026`).
+   */
+  private async generateNextTramiteCode(year: number): Promise<string> {
+    const suffix = `-${year}`;
+    const existing = await this.prisma.agreements.findMany({
+      where: { tramite_code: { endsWith: suffix } },
+      select: { tramite_code: true },
+    });
+    let maxSeq = 0;
+    const re = new RegExp(`^(\\d+)-${year}$`);
+    for (const row of existing) {
+      const m = row.tramite_code?.match(re);
+      if (m) {
+        const num = Number.parseInt(m[1], 10);
+        if (Number.isFinite(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    }
+    return `${String(maxSeq + 1).padStart(3, '0')}-${year}`;
+  }
 
   /**
    * Purga best-effort de los objetos de un conjunto de documentos. Nunca lanza:
@@ -69,6 +98,7 @@ export class AgreementsService {
       dictamen?: UploadFile[];
       documentos_origen?: UploadFile[];
     },
+    actor?: AuditActor,
   ) {
     const now = new Date();
 
@@ -90,9 +120,10 @@ export class AgreementsService {
       );
     }
 
+    const explicitTramiteCode = dto.tramite_code?.trim().toUpperCase();
     const tramiteCode =
-      dto.tramite_code?.trim().toUpperCase() ||
-      `EXP-${now.getFullYear()}-${String(Date.now()).slice(-5)}`;
+      explicitTramiteCode ||
+      (await this.generateNextTramiteCode(now.getFullYear()));
 
     // Los documentos a adjuntar se suben a OBS ANTES de abrir la transacción:
     // no se mantiene un bloqueo de BD durante el I/O de red. Si la transacción
@@ -189,6 +220,7 @@ export class AgreementsService {
               documentTypeId: docType?.id ?? null,
               direction: 'ENTRADA',
               stage: 'ETAPA_1_PROPUESTA',
+              uploadedById: actor?.id ?? null,
             }),
           });
         }
@@ -198,6 +230,7 @@ export class AgreementsService {
             agreement_id: agr.id,
             event_type: 'SOLICITUD_RECEPCIONADA',
             description: `OCRI recibió de Rectorado la solicitud de propuesta de convenio${dto.rectorate_oficio_number ? ` (Dictamen ${dto.rectorate_oficio_number})` : ''}. Inicia evaluación técnica.`,
+            actor_user_id: actor?.id != null ? BigInt(actor.id) : null,
             to_value: 'RECEPCIONADA',
             stage: 'ETAPA_1_PROPUESTA',
             metadata: JSON.parse(
@@ -407,7 +440,7 @@ export class AgreementsService {
     return serializeBigInt<unknown>(agreement);
   }
 
-  async update(id: number, dto: UpdateAgreementDto) {
+  async update(id: number, dto: UpdateAgreementDto, actor?: AuditActor) {
     const agreementId = BigInt(id);
 
     const current = await this.prisma.agreements.findUnique({
@@ -501,7 +534,7 @@ export class AgreementsService {
           }
         }
 
-        return tx.agreements.update({
+        const result = await tx.agreements.update({
           where: { id: agreementId },
           data,
           include: {
@@ -509,6 +542,19 @@ export class AgreementsService {
             responsables: true,
           },
         });
+
+        await tx.process_events.create({
+          data: {
+            agreement_id: agreementId,
+            event_type: 'CONVENIO_ACTUALIZADO',
+            description: 'Se actualizaron los datos del convenio.',
+            actor_user_id: actor?.id != null ? BigInt(actor.id) : null,
+            stage: current.stage,
+            occurred_at: new Date(),
+          },
+        });
+
+        return result;
       });
       return serializeBigInt<unknown>(updated);
     } catch (error) {
@@ -538,10 +584,11 @@ export class AgreementsService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, actor?: AuditActor) {
     const agreementId = BigInt(id);
 
     let filePaths: (string | null)[];
+    let deletedInfo: { tramite_code: string; title: string } | null = null;
     try {
       const agreement = await this.prisma.agreements.findUnique({
         where: { id: agreementId },
@@ -553,6 +600,10 @@ export class AgreementsService {
       }
 
       filePaths = agreement.documents.map((d) => d.file_path);
+      deletedInfo = {
+        tramite_code: agreement.tramite_code,
+        title: agreement.title,
+      };
 
       // Primero se borra la fila (los documentos caen por cascada) y solo
       // después del commit se purgan los objetos en OBS: si el borrado en BD
@@ -568,6 +619,20 @@ export class AgreementsService {
       throw error;
     }
 
+    if (deletedInfo) {
+      await this.audit?.record({
+        entity: 'agreements',
+        entityId: id,
+        action: 'DELETE',
+        actor,
+        description: `${deletedInfo.tramite_code} — ${deletedInfo.title}`,
+        changes: {
+          tramite_code: { before: deletedInfo.tramite_code, after: null },
+          title: { before: deletedInfo.title, after: null },
+        },
+      });
+    }
+
     // Purga en OBS después del commit; best-effort (no revierte el borrado).
     const failed = await this.purgeFiles(filePaths);
     if (failed.length > 0) {
@@ -581,7 +646,7 @@ export class AgreementsService {
     };
   }
 
-  async removeAgreementDocument(docId: number) {
+  async removeAgreementDocument(docId: number, actor?: AuditActor) {
     let filePath: string | null;
     try {
       const doc = await this.prisma.documents.findUnique({
@@ -596,6 +661,17 @@ export class AgreementsService {
 
       // Igual que en `remove`: la fila primero, OBS después del commit.
       await this.prisma.documents.delete({ where: { id: BigInt(docId) } });
+
+      await this.prisma.process_events.create({
+        data: {
+          agreement_id: doc.agreement_id,
+          event_type: 'DOCUMENTO_ELIMINADO',
+          description: `Se eliminó el documento "${doc.name}".`,
+          actor_user_id: actor?.id != null ? BigInt(actor.id) : null,
+          stage: doc.stage ?? undefined,
+          occurred_at: new Date(),
+        },
+      });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

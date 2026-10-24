@@ -317,6 +317,11 @@ export class DeliverablesService {
       throw new NotFoundException(`Entregable #${deliverableId} no encontrado`);
     }
 
+    await this.assertWorkPlanRegisteredIfReport(
+      deliverable.agreement_id,
+      deliverable.type,
+    );
+
     if (opts.replace || opts.bodyHtml) {
       if (
         deliverable.status !== 'SOLICITADO' &&
@@ -461,6 +466,10 @@ export class DeliverablesService {
     }
 
     await this.assertInMonitoringByDeliverable(deliverable.agreement_id);
+    await this.assertWorkPlanRegisteredIfReport(
+      deliverable.agreement_id,
+      deliverable.type,
+    );
 
     if (deliverable.status !== 'SOLICITADO') {
       throw new BadRequestException(
@@ -594,7 +603,11 @@ export class DeliverablesService {
         validateTransition('PUBLICADO', 'EN_SEGUIMIENTO');
         await tx.agreements.update({
           where: { id: BigInt(agreementId) },
-          data: { process_status: 'EN_SEGUIMIENTO' },
+          data: {
+            process_status: 'EN_SEGUIMIENTO',
+            stage: 'ETAPA_3_SEGUIMIENTO',
+            updated_at: new Date(),
+          },
         });
         await this.logEvent(
           tx,
@@ -766,6 +779,10 @@ export class DeliverablesService {
     }
 
     await this.assertInMonitoringByDeliverable(deliverable.agreement_id);
+    await this.assertWorkPlanRegisteredIfReport(
+      deliverable.agreement_id,
+      deliverable.type,
+    );
 
     if (
       deliverable.status !== 'ACEPTADO' &&
@@ -873,6 +890,27 @@ export class DeliverablesService {
     this.assertInMonitoring(agreement.process_status);
   }
 
+  /**
+   * Los Informes Semestrales y el Informe Final solo pueden gestionarse (generar
+   * o cargar oficio de solicitud, aceptar solicitud o remitir entregable) una vez
+   * que el Plan de Trabajo se encuentra aprobado y en estado REGISTRADO.
+   */
+  private async assertWorkPlanRegisteredIfReport(
+    agreementId: bigint,
+    deliverableType: string,
+  ) {
+    if (deliverableType === 'PLAN_DE_TRABAJO') return;
+    const plan = await this.prisma.deliverables.findFirst({
+      where: { agreement_id: agreementId, type: 'PLAN_DE_TRABAJO' },
+      select: { status: true },
+    });
+    if (!plan || plan.status !== 'REGISTRADO') {
+      throw new BadRequestException(
+        'Los informes se habilitan cuando el Plan de Trabajo ha sido aprobado y registrado (estado REGISTRADO).',
+      );
+    }
+  }
+
   // ─── E3 · Contraparte acepta la solicitud ───────────────────────────────────
 
   async acceptRequest(deliverableId: number, userId?: number) {
@@ -883,6 +921,11 @@ export class DeliverablesService {
     if (!deliverable) {
       throw new NotFoundException(`Entregable #${deliverableId} no encontrado`);
     }
+
+    await this.assertWorkPlanRegisteredIfReport(
+      deliverable.agreement_id,
+      deliverable.type,
+    );
 
     if (deliverable.status !== 'SOLICITADO') {
       throw new BadRequestException(
@@ -1005,6 +1048,8 @@ export class DeliverablesService {
             );
           }
         }
+
+        await this.concludeIfComplete(tx, deliverable.agreement_id, userId);
       } else {
         // B7-2 · Tope de correcciones: evita un ciclo "observado → re-remitir →
         // observado" sin avance. Se cuenta dentro de la transacción para que

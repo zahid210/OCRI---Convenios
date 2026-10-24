@@ -31,16 +31,17 @@ export class UsersController {
   }
 
   @Post()
-  create(@Body() createDto: CreateUserDto) {
-    return this.usersService.create(createDto);
+  create(@Body() createDto: CreateUserDto, @Request() req: RequestWithUser) {
+    return this.usersService.create(createDto, req.user);
   }
 
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateUserDto,
+    @Request() req: RequestWithUser,
   ) {
-    return this.usersService.update(id, updateDto);
+    return this.usersService.update(id, updateDto, req.user);
   }
 
   @Delete(':id')
@@ -49,6 +50,6 @@ export class UsersController {
     @Request() req: RequestWithUser,
   ) {
     const requestingUserId = req.user?.id ?? 0;
-    return this.usersService.remove(id, requestingUserId);
+    return this.usersService.remove(id, requestingUserId, req.user);
   }
 }

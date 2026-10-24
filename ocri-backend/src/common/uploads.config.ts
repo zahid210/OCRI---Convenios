@@ -1,7 +1,6 @@
-import { memoryStorage } from 'multer';
 import type { Request } from 'express';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
-import { PassThrough } from 'stream';
+import type { StorageEngine } from 'multer';
 import { basename, extname } from 'path';
 import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
 
@@ -282,16 +281,13 @@ export async function storeUploadedDocument(
 
 /**
  * Storage de multer que valida la extensión contra la lista blanca y los magic
- * bytes del stream ANTES de acceptarlo. Multer define `file.stream` únicamente
- * después de su fileFilter (ver make-middleware.js), por lo que el sniffing se
- * hace en `_handleFile`: se reemplaza el stream por un PassThrough que replica
- * el original mientras se acumulan los primeros bytes; si no coinciden con la
- * extensión, se aborta sin llegar a almacenar nada y se devuelve 400.
+ * bytes del stream ANTES de aceptarlo. Acumula directamente los chunks en
+ * memoria sin duplicar el buffer en un `PassThrough` intermedio.
  *
- * Los archivos se guardan en memoria (`memoryStorage`) y los sube el servicio
- * a S3: no queda nada en el disco del contenedor.
+ * Los archivos se guardan en memoria y los sube el servicio a S3: no queda
+ * nada en el disco del contenedor.
  */
-type MulterStorageEngine = ReturnType<typeof memoryStorage>;
+type MulterStorageEngine = StorageEngine;
 
 /**
  * Bytes acumulados en TODO el request (suma de archivos). Se guarda por
@@ -302,12 +298,11 @@ type MulterStorageEngine = ReturnType<typeof memoryStorage>;
 const uploadTotalByReq = new WeakMap<Request, number>();
 
 function safeStorageEngine(): MulterStorageEngine {
-  const memory = memoryStorage();
-
   return {
     _handleFile(req: Request, file: Express.Multer.File, cb: MulterCb) {
       const ext = extname(normalizeUploadName(file.originalname)).toLowerCase();
       if (!ALLOWED_EXTENSIONS.has(ext)) {
+        file.stream.resume();
         return cb(
           new BadRequestException(
             `Tipo de archivo no permitido (${ext || 'sin extensión'}). Permitidos: ${[...ALLOWED_EXTENSIONS].join(', ')}`,
@@ -317,19 +312,16 @@ function safeStorageEngine(): MulterStorageEngine {
 
       const check = MAGIC_BY_EXT[ext];
       const original = file.stream;
-      const passthrough = new PassThrough();
-      Object.defineProperty(file, 'stream', {
-        configurable: true,
-        enumerable: false,
-        value: passthrough,
-      });
 
       let headLen = 0;
       const head: Buffer[] = [];
+      const chunks: Buffer[] = [];
+      let fileSize = 0;
       let rejected = false;
       const reject = (err: Error) => {
+        if (rejected) return;
         rejected = true;
-        passthrough.destroy();
+        original.resume();
         cb(err);
       };
 
@@ -339,6 +331,7 @@ function safeStorageEngine(): MulterStorageEngine {
       original.on('data', (chunk: Buffer) => {
         if (rejected) return;
 
+        fileSize += chunk.length;
         totalBytes += chunk.length;
         uploadTotalByReq.set(req, totalBytes);
         if (totalBytes > MAX_TOTAL_UPLOAD_BYTES) {
@@ -354,7 +347,7 @@ function safeStorageEngine(): MulterStorageEngine {
           head.push(chunk.subarray(0, need));
           headLen += need;
         }
-        passthrough.write(chunk);
+        chunks.push(chunk);
       });
 
       original.on('end', () => {
@@ -367,8 +360,10 @@ function safeStorageEngine(): MulterStorageEngine {
             ),
           );
         }
-        passthrough.end();
-        memory._handleFile(req, file, cb);
+        cb(null, {
+          buffer: Buffer.concat(chunks, fileSize),
+          size: fileSize,
+        });
       });
 
       original.on('error', (err: Error) => reject(err));
@@ -379,7 +374,7 @@ function safeStorageEngine(): MulterStorageEngine {
       file: Express.Multer.File,
       cb: (error: Error | null) => void,
     ) {
-      // Con memoryStorage no hay nada que borrar: el buffer se libera solo.
+      delete (file as Partial<Express.Multer.File>).buffer;
       cb(null);
     },
   };

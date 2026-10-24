@@ -67,8 +67,8 @@ describe('ProcessService · avance a OPINIONES_COMPLETAS', () => {
     service = module.get(ProcessService);
   });
 
-  it('avanza a OPINIONES_COMPLETAS cuando todas quedaron validadas/canceladas', async () => {
-    statuses = [{ status: 'CANCELADA' }, { status: 'VALIDADA' }];
+  it('avanza a OPINIONES_COMPLETAS cuando todas quedaron validadas', async () => {
+    statuses = [{ status: 'VALIDADA' }, { status: 'VALIDADA' }];
 
     await service.cancelOpinionRequest(7, 3);
 
@@ -78,6 +78,14 @@ describe('ProcessService · avance a OPINIONES_COMPLETAS', () => {
     expect(findManyArgs).toEqual(
       expect.objectContaining({ select: { status: true } }),
     );
+  });
+
+  it('no avanza si alguna opinión fue cancelada y no validada', async () => {
+    statuses = [{ status: 'CANCELADA' }, { status: 'VALIDADA' }];
+
+    await service.cancelOpinionRequest(7, 3);
+
+    expect(agreementUpdates).toHaveLength(0);
   });
 
   it('no avanza si aún hay opiniones pendientes', async () => {

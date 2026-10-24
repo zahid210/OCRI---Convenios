@@ -306,16 +306,41 @@ describe('ReportsService', () => {
       expect(r.map((f) => f.titulo)).toEqual(['Vencido', 'Vencido antiguo']);
       expect(r.every((f) => f.estado === 'Vencido')).toBe(true);
     });
+    it('expiring y expired excluyen propuestas en trámite o no suscritas aunque tengan fecha fin', async () => {
+      prisma.agreements.findMany.mockResolvedValue([
+        ...filas,
+        convenio({
+          id: 5n,
+          process_status: 'RECEPCIONADA',
+          end_date: enDias(30),
+          title: 'Propuesta en trámite',
+        }),
+        convenio({
+          id: 6n,
+          process_status: 'NO_SUSCRITO',
+          end_date: enDias(-10),
+          title: 'Propuesta rechazada',
+        }),
+      ]);
+
+      const porVencer = await service.expiring({});
+      const vencidos = await service.expired({});
+
+      expect(porVencer.map((f) => f.titulo)).toEqual(['Por vencer']);
+      expect(vencidos.map((f) => f.titulo)).toEqual(['Vencido']);
+    });
   });
 
   describe('exportXlsx', () => {
-    it('genera un archivo .xlsx con las siete hojas y los datos esperados', async () => {
+    it('genera un archivo .xlsx con las siete hojas y los datos esperados consultando BD una sola vez', async () => {
       prisma.agreements.findMany.mockResolvedValue([
         convenio({ id: 1n, end_date: enDias(45), title: 'Por vencer' }),
         convenio({ id: 2n, end_date: enDias(-20), title: 'Vencido' }),
       ]);
 
       const buffer = await service.exportXlsx({});
+
+      expect(prisma.agreements.findMany).toHaveBeenCalledTimes(1);
 
       expect(Buffer.isBuffer(buffer)).toBe(true);
       expect(buffer.subarray(0, 2).toString()).toBe('PK');

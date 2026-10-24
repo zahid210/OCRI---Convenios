@@ -240,4 +240,92 @@ describe('DeliverablesService', () => {
       expect(tx.deliverables.create).not.toHaveBeenCalled();
     });
   });
+
+  // ─── H1 · Auto-conclusión al aprobar último entregable ─────────────────────
+
+  describe('evaluateDeliverable · auto-conclusión de seguimiento (H1)', () => {
+    it('concluye el seguimiento automáticamente cuando todos los entregables (incluido INFORME_FINAL) quedan REGISTRADOS', async () => {
+      const prisma = (service as unknown as { prisma: Record<string, unknown> })
+        .prisma;
+      const agreementUpdates: unknown[] = [];
+      prisma.deliverables = {
+        findUnique: jest.fn(() =>
+          Promise.resolve(
+            deliverableRow({
+              id: 20n,
+              type: 'INFORME_FINAL',
+              title: 'Informe Final',
+              status: 'RECIBIDO',
+            }),
+          ),
+        ),
+        findUniqueOrThrow: jest.fn(() =>
+          Promise.resolve(
+            deliverableRow({
+              id: 20n,
+              type: 'INFORME_FINAL',
+              status: 'REGISTRADO',
+              observations: [],
+            }),
+          ),
+        ),
+        update: jest.fn(() => Promise.resolve({})),
+        findMany: jest.fn(() =>
+          Promise.resolve([
+            { id: 10n, type: 'PLAN_DE_TRABAJO', status: 'REGISTRADO' },
+            { id: 20n, type: 'INFORME_FINAL', status: 'REGISTRADO' },
+          ]),
+        ),
+      };
+      prisma.agreements = {
+        findUnique: jest.fn(() =>
+          Promise.resolve({ process_status: 'EN_SEGUIMIENTO' }),
+        ),
+        update: jest.fn((args: unknown) => {
+          agreementUpdates.push(args);
+          return Promise.resolve({});
+        }),
+      };
+      const tx = {
+        deliverables: prisma.deliverables,
+        agreements: prisma.agreements,
+        process_events: { create: jest.fn() },
+      };
+      prisma.$transaction = jest.fn(txRunner(tx));
+
+      await service.evaluateDeliverable(20, 'APPROVED', undefined, 1);
+
+      expect(agreementUpdates).toHaveLength(1);
+      const updateArg = agreementUpdates[0] as {
+        data?: { process_status?: string };
+      };
+      expect(updateArg.data?.process_status).toBe('SEGUIMIENTO_CONCLUIDO');
+    });
+  });
+
+  // ─── H2 · Bloqueo de informes mientras el Plan de Trabajo no esté REGISTRADO ─
+
+  describe('prerrequisito de Plan de Trabajo REGISTRADO para informes (H2)', () => {
+    it('impide aceptar la solicitud de un informe si el Plan de Trabajo no está REGISTRADO', async () => {
+      const prisma = (service as unknown as { prisma: Record<string, unknown> })
+        .prisma;
+      prisma.deliverables = {
+        findUnique: jest.fn(() =>
+          Promise.resolve(
+            deliverableRow({
+              id: 15n,
+              type: 'INFORME_SEMESTRAL',
+              title: 'Informe Semestral',
+              status: 'SOLICITADO',
+            }),
+          ),
+        ),
+        findFirst: jest.fn(() => Promise.resolve({ status: 'SOLICITADO' })),
+      };
+
+      await expect(service.acceptRequest(15, 1)).rejects.toThrow(
+        'Plan de Trabajo ha sido aprobado y registrado',
+      );
+    });
+  });
 });

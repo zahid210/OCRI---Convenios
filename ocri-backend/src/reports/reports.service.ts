@@ -144,11 +144,7 @@ export class ReportsService {
     return TEMPORAL_STATUS_LABEL[ts] ?? ts;
   }
 
-  async summary(
-    filter: FilterReportsDto,
-    role?: string,
-  ): Promise<ReportSummary> {
-    const agreements = await this.getAgreements(filter, role);
+  private computeSummary(agreements: AgreementWithRelations[]): ReportSummary {
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -167,8 +163,15 @@ export class ReportsService {
     };
   }
 
-  async byStatus(filter: FilterReportsDto, role?: string) {
+  async summary(
+    filter: FilterReportsDto,
+    role?: string,
+  ): Promise<ReportSummary> {
     const agreements = await this.getAgreements(filter, role);
+    return this.computeSummary(agreements);
+  }
+
+  private computeByStatus(agreements: AgreementWithRelations[]) {
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -182,12 +185,16 @@ export class ReportsService {
     }));
   }
 
+  async byStatus(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
+    return this.computeByStatus(agreements);
+  }
+
   private normalizeCountry(c: string | null | undefined): string {
     return (c ?? '').trim().toUpperCase() || 'SIN PAÍS';
   }
 
-  async byCountry(filter: FilterReportsDto, role?: string) {
-    const agreements = await this.getAgreements(filter, role);
+  private computeByCountry(agreements: AgreementWithRelations[]) {
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -200,8 +207,12 @@ export class ReportsService {
       .sort((x, y) => y.cantidad - x.cantidad);
   }
 
-  async byType(filter: FilterReportsDto, role?: string) {
+  async byCountry(filter: FilterReportsDto, role?: string) {
     const agreements = await this.getAgreements(filter, role);
+    return this.computeByCountry(agreements);
+  }
+
+  private computeByType(agreements: AgreementWithRelations[]) {
     const counts: Record<string, number> = {};
 
     for (const a of agreements) {
@@ -214,8 +225,12 @@ export class ReportsService {
       .sort((x, y) => y.cantidad - x.cantidad);
   }
 
-  async byInstitution(filter: FilterReportsDto, role?: string) {
+  async byType(filter: FilterReportsDto, role?: string) {
     const agreements = await this.getAgreements(filter, role);
+    return this.computeByType(agreements);
+  }
+
+  private computeByInstitution(agreements: AgreementWithRelations[]) {
     const counts: Record<
       string,
       { institucion: string; pais: string; cantidad: number }
@@ -236,31 +251,39 @@ export class ReportsService {
     return Object.values(counts).sort((x, y) => y.cantidad - x.cantidad);
   }
 
+  async byInstitution(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
+    return this.computeByInstitution(agreements);
+  }
+
   async topInstitutions(filter: FilterReportsDto, role?: string) {
     const top = filter.top ?? 10;
     const byInstitution = await this.byInstitution(filter, role);
     return byInstitution.slice(0, top);
   }
 
-  async expiring(filter: FilterReportsDto, role?: string) {
-    const agreements = await this.getAgreements(filter, role);
+  private computeExpiring(agreements: AgreementWithRelations[]) {
     return agreements
-      .filter(
-        (a) =>
-          deriveTemporalStatus(a.end_date).temporal_status === 'POR_VENCER',
-      )
+      .filter((a) => this.deriveStatus(a) === 'Por Vencer')
       .map((a) => this.serializeRow(a))
       .sort((x, y) => (x.fecha_fin ?? '').localeCompare(y.fecha_fin ?? ''));
   }
 
-  async expired(filter: FilterReportsDto, role?: string) {
+  async expiring(filter: FilterReportsDto, role?: string) {
     const agreements = await this.getAgreements(filter, role);
+    return this.computeExpiring(agreements);
+  }
+
+  private computeExpired(agreements: AgreementWithRelations[]) {
     return agreements
-      .filter(
-        (a) => deriveTemporalStatus(a.end_date).temporal_status === 'VENCIDO',
-      )
+      .filter((a) => this.deriveStatus(a) === 'Vencido')
       .map((a) => this.serializeRow(a))
       .sort((x, y) => (y.fecha_fin ?? '').localeCompare(x.fecha_fin ?? ''));
+  }
+
+  async expired(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
+    return this.computeExpired(agreements);
   }
 
   private serializeRow(a: AgreementWithRelations) {
@@ -281,23 +304,14 @@ export class ReportsService {
   }
 
   async exportXlsx(filter: FilterReportsDto, role?: string): Promise<Buffer> {
-    const [
-      summary,
-      byStatus,
-      byCountry,
-      byType,
-      byInstitution,
-      expiring,
-      expired,
-    ] = await Promise.all([
-      this.summary(filter, role),
-      this.byStatus(filter, role),
-      this.byCountry(filter, role),
-      this.byType(filter, role),
-      this.byInstitution(filter, role),
-      this.expiring(filter, role),
-      this.expired(filter, role),
-    ]);
+    const agreements = await this.getAgreements(filter, role);
+    const summary = this.computeSummary(agreements);
+    const byStatus = this.computeByStatus(agreements);
+    const byCountry = this.computeByCountry(agreements);
+    const byType = this.computeByType(agreements);
+    const byInstitution = this.computeByInstitution(agreements);
+    const expiring = this.computeExpiring(agreements);
+    const expired = this.computeExpired(agreements);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'OCRI-UNCP';

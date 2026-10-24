@@ -41,8 +41,11 @@ export class InstitutionsController {
   }
 
   @Get()
-  findAll(@Query() filterDto: FilterInstitutionsDto) {
-    return this.institutionsService.findAll(filterDto);
+  findAll(
+    @Query() filterDto: FilterInstitutionsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.institutionsService.findAll(filterDto, req.user?.role);
   }
 
   @Get('search')

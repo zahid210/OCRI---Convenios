@@ -3,10 +3,12 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Prisma, user_role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditActor, AuditService } from '../audit/audit.service';
 import { BCRYPT_ROUNDS } from '../auth/auth.constants';
 import { serializeBigInt } from '../common/process.constants';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -20,7 +22,10 @@ interface UserFilters {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly audit?: AuditService,
+  ) {}
 
   async findByEmail(email: string) {
     return this.prisma.users.findUnique({
@@ -96,7 +101,7 @@ export class UsersService {
     };
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, actor?: AuditActor) {
     const email = UsersService.normalizeEmail(dto.email);
 
     const existing = await this.prisma.users.findUnique({
@@ -128,6 +133,19 @@ export class UsersService {
         },
       });
 
+      await this.audit?.record({
+        entity: 'users',
+        entityId: user.id,
+        action: 'CREATE',
+        actor,
+        description: `${user.email} (${user.role})`,
+        changes: {
+          name: { before: null, after: user.name },
+          email: { before: null, after: user.email },
+          role: { before: null, after: user.role },
+        },
+      });
+
       return serializeBigInt(user);
     } catch (err) {
       // La comprobación previa no basta: dos altas simultáneas del mismo correo
@@ -140,7 +158,7 @@ export class UsersService {
     }
   }
 
-  async update(id: number, dto: UpdateUserDto) {
+  async update(id: number, dto: UpdateUserDto, actor?: AuditActor) {
     const user = await this.prisma.users.findUnique({
       where: { id: BigInt(id) },
     });
@@ -229,6 +247,31 @@ export class UsersService {
             select,
           });
 
+      const changes: Record<string, { before: unknown; after: unknown }> = {};
+      if (updated.name !== user.name) {
+        changes.name = { before: user.name, after: updated.name };
+      }
+      if (updated.email !== user.email) {
+        changes.email = { before: user.email, after: updated.email };
+      }
+      if (updated.role !== user.role) {
+        changes.role = { before: user.role, after: updated.role };
+      }
+      if (dto.password) {
+        changes.password = { before: '***', after: '*** (actualizada)' };
+      }
+
+      if (Object.keys(changes).length > 0) {
+        await this.audit?.record({
+          entity: 'users',
+          entityId: updated.id,
+          action: 'UPDATE',
+          actor,
+          description: `${updated.email} (${updated.role})`,
+          changes,
+        });
+      }
+
       return serializeBigInt(updated);
     } catch (err) {
       if (UsersService.isUniqueViolation(err)) {
@@ -238,7 +281,7 @@ export class UsersService {
     }
   }
 
-  async remove(id: number, requestingUserId: number) {
+  async remove(id: number, requestingUserId: number, actor?: AuditActor) {
     if (id === requestingUserId) {
       throw new BadRequestException('No puedes eliminar tu propia cuenta.');
     }
@@ -266,6 +309,19 @@ export class UsersService {
     } else {
       await this.prisma.users.delete({ where: { id: BigInt(id) } });
     }
+
+    await this.audit?.record({
+      entity: 'users',
+      entityId: user.id,
+      action: 'DELETE',
+      actor,
+      description: `${user.email} (${user.role})`,
+      changes: {
+        name: { before: user.name, after: null },
+        email: { before: user.email, after: null },
+        role: { before: user.role, after: null },
+      },
+    });
 
     return { message: `Usuario "${user.name}" eliminado correctamente.` };
   }

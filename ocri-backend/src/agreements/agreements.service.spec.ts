@@ -81,3 +81,88 @@ describe('AgreementsService · getExpirationTracking (confinamiento B6-9)', () =
     );
   });
 });
+
+describe('AgreementsService · autogeneración correlativa de tramite_code (H14)', () => {
+  let service: AgreementsService;
+  let existingCodes: Array<{ tramite_code: string }>;
+  let createdData: Record<string, unknown> | undefined;
+
+  beforeEach(async () => {
+    existingCodes = [];
+    createdData = undefined;
+
+    const tx = {
+      agreements: {
+        findFirst: jest.fn(() => Promise.resolve(null)),
+        create: jest.fn((args: { data: Record<string, unknown> }) => {
+          createdData = args.data;
+          return Promise.resolve({
+            id: 10n,
+            ...args.data,
+          });
+        }),
+      },
+      document_types: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({ id: 1n, name: 'Dictamen' }),
+        ),
+      },
+      documents: {
+        create: jest.fn(() => Promise.resolve({ id: 1n })),
+      },
+      process_events: {
+        create: jest.fn(() => Promise.resolve({ id: 1n })),
+      },
+    };
+
+    const prisma = {
+      agreements: {
+        findMany: jest.fn(() => Promise.resolve(existingCodes)),
+      },
+      $transaction: jest.fn(
+        (fn: (t: typeof tx) => Promise<unknown>): Promise<unknown> => fn(tx),
+      ),
+    };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        AgreementsService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: StorageService,
+          useValue: {
+            putUnique: jest.fn((relPath: string) => Promise.resolve(relPath)),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get(AgreementsService);
+  });
+
+  it('genera 001-YYYY cuando no hay propuestas previas en el año actual', async () => {
+    const year = new Date().getFullYear();
+    existingCodes = [];
+
+    await service.create({
+      title: 'Propuesta nueva',
+      institution_id: 1,
+      agreement_type_id: 1,
+    });
+
+    expect(createdData?.tramite_code).toBe(`001-${year}`);
+  });
+
+  it('genera el correlativo siguiente (002-YYYY) a partir del mayor del año actual', async () => {
+    const year = new Date().getFullYear();
+    existingCodes = [{ tramite_code: `001-${year}` }];
+
+    await service.create({
+      title: 'Segunda propuesta',
+      institution_id: 1,
+      agreement_type_id: 1,
+    });
+
+    expect(createdData?.tramite_code).toBe(`002-${year}`);
+  });
+});

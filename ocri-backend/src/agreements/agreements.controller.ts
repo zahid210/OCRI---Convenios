@@ -91,6 +91,7 @@ export class AgreementsController {
   )
   create(
     @Body() createAgreementDto: CreateAgreementDto,
+    @Req() req: AuthenticatedRequest,
     @UploadedFiles()
     files?: {
       dictamen?: UploadFile[];
@@ -102,7 +103,7 @@ export class AgreementsController {
         'Debe adjuntar el Dictamen de Rectorado para registrar la propuesta.',
       );
     }
-    return this.agreementsService.create(createAgreementDto, files);
+    return this.agreementsService.create(createAgreementDto, files, req.user);
   }
 
   @Roles(...FLOW_ROLES)
@@ -110,19 +111,26 @@ export class AgreementsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateAgreementDto: UpdateAgreementDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.agreementsService.update(id, updateAgreementDto);
+    return this.agreementsService.update(id, updateAgreementDto, req.user);
   }
 
   @Roles('admin')
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.agreementsService.remove(id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.agreementsService.remove(id, req.user);
   }
 
   @Roles('admin')
   @Delete('documents/:docId')
-  removeAgreementDocument(@Param('docId', ParseIntPipe) docId: number) {
-    return this.agreementsService.removeAgreementDocument(docId);
+  removeAgreementDocument(
+    @Param('docId', ParseIntPipe) docId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.agreementsService.removeAgreementDocument(docId, req.user);
   }
 }

@@ -100,8 +100,16 @@ describe('ProcessService · guardas de expediente', () => {
     );
   });
 
-  it('generateExpediente procede cuando todas están resueltas', async () => {
+  it('generateExpediente lanza si hay opiniones sin validar (incluyendo canceladas)', async () => {
     opinions = [{ status: 'VALIDADA' }, { status: 'CANCELADA' }];
+
+    await expect(service.generateExpediente(1)).rejects.toThrow(
+      'No se puede generar el expediente',
+    );
+  });
+
+  it('generateExpediente procede cuando todas están validadas', async () => {
+    opinions = [{ status: 'VALIDADA' }, { status: 'VALIDADA' }];
 
     await expect(service.generateExpediente(1)).resolves.toBeDefined();
   });

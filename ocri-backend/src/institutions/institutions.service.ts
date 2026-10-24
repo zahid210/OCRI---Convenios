@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ProcessStatus } from '../common/process.constants';
+import { ProcessStatus, serializeBigInt } from '../common/process.constants';
 import { isRestrictedRole, restrictStatusList } from '../common/visibility';
 import { AuditActor, AuditService } from '../audit/audit.service';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
@@ -112,7 +112,7 @@ export class InstitutionsService {
     });
 
     if (existingInstitution) {
-      return existingInstitution;
+      return serializeBigInt(existingInstitution);
     }
 
     const finalType = this.categorizeType(nameUpper, dto.type);
@@ -138,10 +138,10 @@ export class InstitutionsService {
       },
     });
 
-    return created;
+    return serializeBigInt(created);
   }
 
-  async findAll(filter: FilterInstitutionsDto) {
+  async findAll(filter: FilterInstitutionsDto, role?: string) {
     const { search, page = 1, limit = 12, per_page } = filter;
     const take = Number(per_page || limit);
     const skip = (Number(page) - 1) * take;
@@ -157,6 +157,8 @@ export class InstitutionsService {
       ];
     }
 
+    const restricted = isRestrictedRole(role);
+
     const [data, total] = await Promise.all([
       this.prisma.institutions.findMany({
         where,
@@ -165,21 +167,31 @@ export class InstitutionsService {
         orderBy: { id: 'desc' },
         include: {
           _count: {
-            select: { agreements: true },
+            select: {
+              agreements: restricted
+                ? {
+                    where: {
+                      process_status: {
+                        in: restrictStatusList(undefined) as ProcessStatus[],
+                      },
+                    },
+                  }
+                : true,
+            },
           },
         },
       }),
       this.prisma.institutions.count({ where }),
     ]);
 
-    return {
+    return serializeBigInt({
       data,
       meta: {
         total,
         page: Number(page),
         last_page: Math.ceil(total / take),
       },
-    };
+    });
   }
 
   /** Búsqueda liviana para el buscador del header (name, country) */
@@ -189,7 +201,7 @@ export class InstitutionsService {
       return [];
     }
 
-    return this.prisma.institutions.findMany({
+    const rows = await this.prisma.institutions.findMany({
       where: {
         OR: [{ name: { contains: term } }, { country: { contains: term } }],
       },
@@ -197,6 +209,8 @@ export class InstitutionsService {
       take: 8,
       orderBy: { id: 'desc' },
     });
+
+    return serializeBigInt(rows);
   }
 
   /** Autocompletado por nombre: exacto primero, luego prefijo y luego resto. */
@@ -230,7 +244,7 @@ export class InstitutionsService {
       (a, b) => a.score - b.score || a.record.name.localeCompare(b.record.name),
     );
 
-    return scored.slice(0, 8).map((s) => s.record);
+    return serializeBigInt(scored.slice(0, 8).map((s) => s.record));
   }
 
   async getCountries(): Promise<string[]> {
@@ -279,7 +293,7 @@ export class InstitutionsService {
       throw new NotFoundException(`Institución con ID ${id} no encontrada.`);
     }
 
-    return institution;
+    return serializeBigInt(institution);
   }
 
   async update(id: number, dto: UpdateInstitutionDto, actor?: AuditActor) {
@@ -346,7 +360,7 @@ export class InstitutionsService {
       });
     }
 
-    return updated;
+    return serializeBigInt(updated);
   }
 
   async remove(id: number, actor?: AuditActor) {
@@ -386,6 +400,6 @@ export class InstitutionsService {
       },
     });
 
-    return deleted;
+    return serializeBigInt(deleted);
   }
 }

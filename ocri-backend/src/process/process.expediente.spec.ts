@@ -53,10 +53,10 @@ describe('ProcessService · generateExpediente (reemplazo)', () => {
       agreements: {
         findUnique: jest.fn(() => Promise.resolve(agreement)),
       },
-      // Todas las opiniones resueltas: la guarda de generateExpediente pasa.
+      // Todas las opiniones validadas: la guarda de generateExpediente pasa.
       opinion_requests: {
         findMany: jest.fn(() =>
-          Promise.resolve([{ status: 'VALIDADA' }, { status: 'CANCELADA' }]),
+          Promise.resolve([{ status: 'VALIDADA' }, { status: 'VALIDADA' }]),
         ),
       },
       documents: {

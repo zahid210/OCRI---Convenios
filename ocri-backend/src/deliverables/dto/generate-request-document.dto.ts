@@ -1,11 +1,11 @@
 import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { MAX_OFICIO_HTML_LENGTH } from '../../common/sanitize-oficio-html';
 
 export class GenerateRequestDocumentDto {
   @IsOptional()
   @IsString()
-  @MaxLength(5000000, {
-    message:
-      'El contenido del oficio no puede superar los 5 000 000 caracteres',
+  @MaxLength(MAX_OFICIO_HTML_LENGTH, {
+    message: `El contenido del oficio no puede superar los ${MAX_OFICIO_HTML_LENGTH} caracteres`,
   })
   bodyHtml?: string;
 

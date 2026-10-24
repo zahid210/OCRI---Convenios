@@ -311,7 +311,7 @@ export class PdfMergerService {
       where: { agreement_id: BigInt(agreementId) },
       include: {
         document_types: { select: { code: true } },
-        opinion_requests: { select: { response_date: true } },
+        opinion_requests: { select: { response_date: true, status: true } },
       },
     });
 
@@ -332,13 +332,17 @@ export class PdfMergerService {
 
     // Separamos los documentos de opinión (solicitudes y respuestas, que
     // comparten opinion_request_id) de los que no pertenecen a una opinión.
-    const opinionDocs = pdfDocs.filter(
+    // Solo se fusionan en el Expediente Técnico las opiniones VALIDADAS.
+    const allOpinionDocs = pdfDocs.filter(
       (d) =>
         d.opinion_request_id != null &&
         (d.document_types?.code === 'OFICIO_SOLICITUD_OPINION' ||
           d.document_types?.code === 'OFICIO_RESPUESTA_OPINION'),
     );
-    const nonOpinionDocs = pdfDocs.filter((d) => !opinionDocs.includes(d));
+    const opinionDocs = allOpinionDocs.filter(
+      (d) => d.opinion_requests?.status === 'VALIDADA',
+    );
+    const nonOpinionDocs = pdfDocs.filter((d) => !allOpinionDocs.includes(d));
 
     // Agrupamos en parejas por opinion_request_id.
     const pairs = new Map<
