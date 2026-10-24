@@ -342,21 +342,24 @@ model process_events {
 // actor_email des-normalizados, igual que process_events.actor_user_id, para
 // no perder la trazabilidad si el usuario se elimina o cambia de correo.
 model audit_logs {
-  id            BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
-  entity        String  @db.VarChar(60)
-  entity_id     BigInt? @db.UnsignedBigInt
-  action        String  @db.VarChar(20)
-  actor_user_id BigInt? @db.UnsignedBigInt
-  actor_email   String? @db.VarChar(255)
-  actor_role    String? @db.VarChar(30)
-  description   String? @db.VarChar(500)
-  ip            String? @db.VarChar(45)
-  user_agent    String? @db.VarChar(255)
+  id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  entity        String   @db.VarChar(60)
+  entity_id     BigInt?  @db.UnsignedBigInt
+  action        String   @db.VarChar(20)
+  actor_user_id BigInt?  @db.UnsignedBigInt
+  actor_email   String?  @db.VarChar(255)
+  actor_role    String?  @db.VarChar(30)
+  description   String?  @db.VarChar(500)
+  ip            String?  @db.VarChar(45)
+  user_agent    String?  @db.VarChar(255)
   changes       Json?
-  created_at    DateTime? @db.Timestamp(0)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
 
   @@index([entity, entity_id])
   @@index([created_at])
+  @@index([actor_user_id, created_at])
+  @@index([action, created_at])
+  @@index([actor_email])
 }
 
 // ─── E3: Plan de trabajo e informes ────────────────────────────────────────
