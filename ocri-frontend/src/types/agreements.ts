@@ -178,11 +178,17 @@ export interface ReportInstitutionRow {
     cantidad: number;
 }
 
+export interface ReportInstitutionTypeRow {
+    tipo: string;
+    cantidad: number;
+}
+
 export interface ReportExpiringRow {
     id: number;
     expediente: string;
     titulo: string;
     institucion: string;
+    institucion_tipo?: string;
     pais: string;
     tipo: string;
     estado: string;

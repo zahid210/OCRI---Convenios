@@ -64,6 +64,11 @@ export class InstitutionsController {
     return this.institutionsService.getCountries();
   }
 
+  @Get('types')
+  getTypes() {
+    return this.institutionsService.getTypes();
+  }
+
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,

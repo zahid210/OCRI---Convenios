@@ -41,6 +41,14 @@ export class ReportsController {
     return this.reportsService.byType(filter, req.user?.role);
   }
 
+  @Get('by-institution-type')
+  byInstitutionType(
+    @Query() filter: FilterReportsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reportsService.byInstitutionType(filter, req.user?.role);
+  }
+
   @Get('by-institution')
   byInstitution(
     @Query() filter: FilterReportsDto,

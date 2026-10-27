@@ -109,6 +109,15 @@ describe('FilterReportsDto (validación de filtros de reportes)', () => {
       );
     });
 
+    it('acepta institution_type válido y rechaza cadenas demasiado largas', async () => {
+      await expect(
+        aceptaQuery({ institution_type: 'Comunidades' }),
+      ).resolves.toBe(true);
+      await expect(
+        aceptaQuery({ institution_type: 'x'.repeat(101) }),
+      ).resolves.toBe(false);
+    });
+
     it('trata un string vacío como "sin filtro"', async () => {
       await expect(aceptaQuery({ country: '' })).resolves.toBe(true);
     });

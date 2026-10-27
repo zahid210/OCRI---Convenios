@@ -24,7 +24,7 @@ const IN_FLIGHT = [...IN_FLIGHT_STATUSES];
 
 type AgreementWithRelations = Prisma.agreementsGetPayload<{
   include: {
-    institutions: { select: { name: true; country: true } };
+    institutions: { select: { name: true; country: true; type: true } };
     agreement_types: { select: { name: true } };
   };
 }>;
@@ -49,8 +49,11 @@ export class ReportsService {
   ): Prisma.agreementsWhereInput {
     const where: Prisma.agreementsWhereInput = {};
 
-    if (filter.country) {
-      where.institutions = { country: filter.country };
+    if (filter.country || filter.institution_type) {
+      where.institutions = {
+        ...(filter.country ? { country: filter.country } : {}),
+        ...(filter.institution_type ? { type: filter.institution_type } : {}),
+      };
     }
 
     if (filter.agreement_type_id) {
@@ -128,7 +131,7 @@ export class ReportsService {
     return this.prisma.agreements.findMany({
       where: this.buildWhere(filter, role),
       include: {
-        institutions: { select: { name: true, country: true } },
+        institutions: { select: { name: true, country: true, type: true } },
         agreement_types: { select: { name: true } },
       },
       orderBy: { id: 'desc' },
@@ -262,6 +265,24 @@ export class ReportsService {
     return byInstitution.slice(0, top);
   }
 
+  private computeByInstitutionType(agreements: AgreementWithRelations[]) {
+    const counts: Record<string, number> = {};
+
+    for (const a of agreements) {
+      const type = a.institutions?.type?.trim() || 'Sin tipo';
+      counts[type] = (counts[type] ?? 0) + 1;
+    }
+
+    return Object.entries(counts)
+      .map(([tipo, cantidad]) => ({ tipo, cantidad }))
+      .sort((x, y) => y.cantidad - x.cantidad);
+  }
+
+  async byInstitutionType(filter: FilterReportsDto, role?: string) {
+    const agreements = await this.getAgreements(filter, role);
+    return this.computeByInstitutionType(agreements);
+  }
+
   private computeExpiring(agreements: AgreementWithRelations[]) {
     return agreements
       .filter((a) => this.deriveStatus(a) === 'Por Vencer')
@@ -292,6 +313,7 @@ export class ReportsService {
       expediente: a.tramite_code || a.resolution_number || `Convenio #${a.id}`,
       titulo: a.title,
       institucion: a.institutions?.name || 'No especificada',
+      institucion_tipo: a.institutions?.type || 'Sin tipo',
       pais: this.normalizeCountry(a.institutions?.country),
       tipo: a.agreement_types?.name || 'Sin tipo',
       estado: this.deriveStatus(a),
@@ -309,6 +331,7 @@ export class ReportsService {
     const byStatus = this.computeByStatus(agreements);
     const byCountry = this.computeByCountry(agreements);
     const byType = this.computeByType(agreements);
+    const byInstitutionType = this.computeByInstitutionType(agreements);
     const byInstitution = this.computeByInstitution(agreements);
     const expiring = this.computeExpiring(agreements);
     const expired = this.computeExpired(agreements);
@@ -388,6 +411,12 @@ export class ReportsService {
     );
 
     addSimpleSheet(
+      'Por Tipo de Institución',
+      ['Tipo de Institución', 'Cantidad'],
+      byInstitutionType.map((r) => ({ tipo: r.tipo, cantidad: r.cantidad })),
+    );
+
+    addSimpleSheet(
       'Por Institución',
       ['Institución', 'País', 'Cantidad'],
       byInstitution.map((r) => ({
@@ -418,7 +447,9 @@ export class ReportsService {
 
     addDetailSheet('Próximos a Vencer', expiring, [
       'expediente',
+      'titulo',
       'institucion',
+      'institucion_tipo',
       'pais',
       'tipo',
       'fecha_inicio',
@@ -428,7 +459,9 @@ export class ReportsService {
 
     addDetailSheet('Vencidos', expired, [
       'expediente',
+      'titulo',
       'institucion',
+      'institucion_tipo',
       'pais',
       'tipo',
       'fecha_inicio',

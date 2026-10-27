@@ -118,6 +118,22 @@ describe('ReportsService', () => {
       expect(ultimoWhere().institutions).toEqual({ country: 'Argentina' });
     });
 
+    it('filtra por tipo de institución exacto', async () => {
+      await service.summary({ institution_type: 'Comunidades' });
+      expect(ultimoWhere().institutions).toEqual({ type: 'Comunidades' });
+    });
+
+    it('combina país y tipo de institución sin sobreescribir', async () => {
+      await service.summary({
+        country: 'Perú',
+        institution_type: 'Sector Público',
+      });
+      expect(ultimoWhere().institutions).toEqual({
+        country: 'Perú',
+        type: 'Sector Público',
+      });
+    });
+
     it('convierte agreement_type_id e institution_id a BigInt', async () => {
       await service.summary({ agreement_type_id: 7, institution_id: 4 });
       expect(ultimoWhere().agreement_type_id).toBe(7n);
@@ -229,13 +245,36 @@ describe('ReportsService', () => {
     });
   });
 
-  describe('byType / byInstitution / topInstitutions', () => {
+  describe('byType / byInstitutionType / byInstitution / topInstitutions', () => {
     it('usa "Sin tipo" cuando el tipo es null', async () => {
       prisma.agreements.findMany.mockResolvedValue([
         convenio({ agreement_types: null }),
       ]);
       expect(await service.byType({})).toEqual([
         { tipo: 'Sin tipo', cantidad: 1 },
+      ]);
+    });
+
+    it('agrupa por tipo de institución y ordena desc', async () => {
+      prisma.agreements.findMany.mockResolvedValue([
+        convenio({
+          id: 1n,
+          institutions: { name: 'Comunidad A', type: 'Comunidades' },
+        }),
+        convenio({
+          id: 2n,
+          institutions: { name: 'Comunidad B', type: 'Comunidades' },
+        }),
+        convenio({
+          id: 3n,
+          institutions: { name: 'Hospital C', type: 'Salud' },
+        }),
+      ]);
+
+      const r = await service.byInstitutionType({});
+      expect(r).toEqual([
+        { tipo: 'Comunidades', cantidad: 2 },
+        { tipo: 'Salud', cantidad: 1 },
       ]);
     });
 
@@ -356,6 +395,7 @@ describe('ReportsService', () => {
         'Por Estado',
         'Por País',
         'Por Tipo',
+        'Por Tipo de Institución',
         'Por Institución',
         'Próximos a Vencer',
         'Vencidos',

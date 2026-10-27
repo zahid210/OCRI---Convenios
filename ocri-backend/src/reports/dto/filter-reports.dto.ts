@@ -68,6 +68,14 @@ export class FilterReportsDto {
   institution_id?: number;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(100, {
+    message: 'institution_type no debe exceder los 100 caracteres',
+  })
+  @Transform(normalizeOptionalString)
+  institution_type?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'top debe ser un número entero' })
   @Min(1, { message: 'top debe ser al menos 1' })

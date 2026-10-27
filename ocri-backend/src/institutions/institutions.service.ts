@@ -20,12 +20,8 @@ export class InstitutionsService {
   ) {}
 
   /**
-   * Forzado de categorización alineado a las 5 opciones oficiales:
-   * 1. Universidad Nacional
-   * 2. Universidad Privada
-   * 3. Entidad Gubernamental
-   * 4. Empresa Privada
-   * 5. Organización Internacional
+   * Forzado de categorización alineado a las opciones canónicas del sistema.
+   * Si el usuario selecciona explícitamente un tipo válido, se respeta.
    */
   private categorizeType(name: string, inputType: string): string {
     const cleanName = name.trim().toUpperCase();
@@ -34,10 +30,22 @@ export class InstitutionsService {
     const OFFICIAL_TYPES = [
       'Universidad Nacional',
       'Universidad Privada',
+      'Universidad Internacional',
+      'Sector Público',
       'Entidad Gubernamental',
+      'Educación',
+      'Salud',
+      'Comunidades',
+      'Empresa Nacional',
+      'Empresa Internacional',
       'Empresa Privada',
       'Organización Internacional',
+      'Otros',
     ];
+
+    // Si coincide exactamente con alguna categoría válida enviada en inputType, se respeta
+    const matched = OFFICIAL_TYPES.find((t) => t.toUpperCase() === cleanType);
+    if (matched) return matched;
 
     // 1. Universidades
     if (cleanName.includes('UNIVERSIDAD')) {
@@ -48,6 +56,8 @@ export class InstitutionsService {
     // 2. Entidad Gubernamental / Sector Público / Salud / Educación
     if (
       cleanType.includes('GUBERNAMENTAL') ||
+      cleanType.includes('SECTOR PÚBLICO') ||
+      cleanType.includes('SECTOR PUBLICO') ||
       cleanType.includes('SALUD') ||
       cleanType.includes('EDUCACIÓN') ||
       cleanType.includes('EDUCACION') ||
@@ -68,10 +78,15 @@ export class InstitutionsService {
       cleanName.includes('COLEGIO') ||
       cleanName.includes('INSTITUTO')
     ) {
-      return 'Entidad Gubernamental';
+      return 'Sector Público';
     }
 
-    // 3. Empresa Privada
+    // 3. Comunidades
+    if (cleanType.includes('COMUNIDAD') || cleanName.includes('COMUNIDAD')) {
+      return 'Comunidades';
+    }
+
+    // 4. Empresa Privada / Nacional
     if (
       cleanType.includes('EMPRESA PRIVADA') ||
       cleanType.includes('EMPRESA') ||
@@ -84,7 +99,7 @@ export class InstitutionsService {
       return 'Empresa Privada';
     }
 
-    // 4. Organización Internacional
+    // 5. Organización Internacional
     if (
       cleanType.includes('INTERNACIONAL') ||
       cleanName.includes('ORGANIZACION') ||
@@ -96,11 +111,7 @@ export class InstitutionsService {
       return 'Organización Internacional';
     }
 
-    // Si coincide exactamente con alguna categoría oficial enviada en inputType
-    const matched = OFFICIAL_TYPES.find((t) => t.toUpperCase() === cleanType);
-    if (matched) return matched;
-
-    return 'Entidad Gubernamental';
+    return 'Otros';
   }
 
   async create(dto: CreateInstitutionDto, actor?: AuditActor) {
@@ -262,6 +273,23 @@ export class InstitutionsService {
     return records
       .map((r: { country: string | null }) => r.country)
       .filter((c: string | null): c is string => Boolean(c));
+  }
+
+  async getTypes(): Promise<string[]> {
+    const records = await this.prisma.institutions.findMany({
+      select: { type: true },
+      distinct: ['type'],
+      where: {
+        type: {
+          not: '',
+        },
+      },
+      orderBy: { type: 'asc' },
+    });
+
+    return records
+      .map((r: { type: string | null }) => r.type)
+      .filter((t: string | null): t is string => Boolean(t && t.trim() !== ''));
   }
 
   async findOne(id: number, role?: string) {

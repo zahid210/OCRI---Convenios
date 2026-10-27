@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   ReportsSummary,
   ReportStatusRow,
   ReportCountryRow,
   ReportTypeRow,
+  ReportInstitutionTypeRow,
   ReportInstitutionRow,
   ReportExpiringRow,
-  Institution,
   AgreementType,
 } from "@/types/agreements";
 import { fetcher, downloadFile } from "@/lib/api";
@@ -24,23 +25,27 @@ import {
   AlertTriangle,
   Layers,
   ChevronDown,
+  CheckCircle2,
+  CalendarX,
+  ExternalLink,
 } from "lucide-react";
 
 interface ReportFilters {
   status: string;
   country: string;
   typeId: string;
-  institutionId: string;
+  institutionType: string;
 }
 
 const EMPTY_FILTERS: ReportFilters = {
   status: "",
   country: "",
   typeId: "",
-  institutionId: "",
+  institutionType: "",
 };
 
 export default function ReportsPage() {
+  const router = useRouter();
   const toast = useToast();
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
   const [activeFilters, setActiveFilters] =
@@ -50,9 +55,9 @@ export default function ReportsPage() {
   const [byStatus, setByStatus] = useState<ReportStatusRow[]>([]);
   const [byCountry, setByCountry] = useState<ReportCountryRow[]>([]);
   const [byType, setByType] = useState<ReportTypeRow[]>([]);
-  const [byInstitution, setByInstitution] = useState<ReportInstitutionRow[]>(
-    [],
-  );
+  const [byInstitutionType, setByInstitutionType] = useState<
+    ReportInstitutionTypeRow[]
+  >([]);
   const [topInstitutions, setTopInstitutions] = useState<
     ReportInstitutionRow[]
   >([]);
@@ -61,7 +66,7 @@ export default function ReportsPage() {
 
   const [countries, setCountries] = useState<string[]>([]);
   const [types, setTypes] = useState<AgreementType[]>([]);
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [institutionTypes, setInstitutionTypes] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,29 +77,29 @@ export default function ReportsPage() {
 
     async function loadLookups() {
       try {
-        const [countriesRes, typesRes, institutionsRes] = await Promise.all([
+        const [countriesRes, typesRes, instTypesRes] = await Promise.all([
           fetcher<string[]>("/institutions/countries").catch(
             () => [] as string[],
           ),
           fetcher<AgreementType[]>("/agreements/lookups/types").catch(
             () => [] as AgreementType[],
           ),
-          fetcher<Institution[]>("/agreements/lookups/institutions").catch(
-            () => [] as Institution[],
+          fetcher<string[]>("/institutions/types").catch(
+            () => [] as string[],
           ),
         ]);
         if (isMounted) {
           setCountries(Array.isArray(countriesRes) ? countriesRes : []);
           setTypes(Array.isArray(typesRes) ? typesRes : []);
-          setInstitutions(
-            Array.isArray(institutionsRes) ? institutionsRes : [],
+          setInstitutionTypes(
+            Array.isArray(instTypesRes) ? instTypesRes : [],
           );
         }
       } catch {
         if (isMounted) {
           setCountries([]);
           setTypes([]);
-          setInstitutions([]);
+          setInstitutionTypes([]);
         }
       }
     }
@@ -118,8 +123,8 @@ export default function ReportsPage() {
         if (activeFilters.country) params.set("country", activeFilters.country);
         if (activeFilters.typeId)
           params.set("agreement_type_id", activeFilters.typeId);
-        if (activeFilters.institutionId)
-          params.set("institution_id", activeFilters.institutionId);
+        if (activeFilters.institutionType)
+          params.set("institution_type", activeFilters.institutionType);
         const query = params.toString();
         const suffix = query ? `?${query}` : "";
 
@@ -128,7 +133,7 @@ export default function ReportsPage() {
           byStatusRes,
           byCountryRes,
           byTypeRes,
-          byInstitutionRes,
+          byInstTypeRes,
           topRes,
           expiringRes,
           expiredRes,
@@ -137,7 +142,9 @@ export default function ReportsPage() {
           fetcher<ReportStatusRow[]>(`/reports/by-status${suffix}`),
           fetcher<ReportCountryRow[]>(`/reports/by-country${suffix}`),
           fetcher<ReportTypeRow[]>(`/reports/by-type${suffix}`),
-          fetcher<ReportInstitutionRow[]>(`/reports/by-institution${suffix}`),
+          fetcher<ReportInstitutionTypeRow[]>(
+            `/reports/by-institution-type${suffix}`,
+          ),
           fetcher<ReportInstitutionRow[]>(`/reports/top-institutions${suffix}`),
           fetcher<ReportExpiringRow[]>(`/reports/expiring${suffix}`),
           fetcher<ReportExpiringRow[]>(`/reports/expired${suffix}`),
@@ -148,7 +155,7 @@ export default function ReportsPage() {
           setByStatus(byStatusRes);
           setByCountry(byCountryRes);
           setByType(byTypeRes);
-          setByInstitution(byInstitutionRes);
+          setByInstitutionType(byInstTypeRes);
           setTopInstitutions(topRes);
           setExpiring(expiringRes);
           setExpired(expiredRes);
@@ -188,8 +195,8 @@ export default function ReportsPage() {
       if (activeFilters.country) params.set("country", activeFilters.country);
       if (activeFilters.typeId)
         params.set("agreement_type_id", activeFilters.typeId);
-      if (activeFilters.institutionId)
-        params.set("institution_id", activeFilters.institutionId);
+      if (activeFilters.institutionType)
+        params.set("institution_type", activeFilters.institutionType);
       const query = params.toString();
       await downloadFile(
         `/reports/export${query ? `?${query}` : ""}`,
@@ -212,6 +219,11 @@ export default function ReportsPage() {
   const maxByType = useMemo(
     () => Math.max(1, ...byType.map((t) => t.cantidad)),
     [byType],
+  );
+
+  const maxByInstitutionType = useMemo(
+    () => Math.max(1, ...byInstitutionType.map((t) => t.cantidad)),
+    [byInstitutionType],
   );
 
   const statusColors: Record<string, string> = {
@@ -247,7 +259,7 @@ export default function ReportsPage() {
       label: "Vigentes",
       value: summary?.vigentes ?? 0,
       color: "text-green-700",
-      icon: FileType2,
+      icon: CheckCircle2,
     },
     {
       label: "Próximos a Vencer",
@@ -259,7 +271,7 @@ export default function ReportsPage() {
       label: "Vencidos",
       value: summary?.vencidos ?? 0,
       color: "text-red-700",
-      icon: Building2,
+      icon: CalendarX,
     },
   ];
 
@@ -273,7 +285,7 @@ export default function ReportsPage() {
           <h1 className="text-xl font-normal text-gray-800">Reportes</h1>
           <div className="flex items-center gap-2 text-gray-500">
             <span className="text-xs text-gray-500">
-              Estadísticas de convenios por estado, país, tipo e institución
+              Estadísticas e indicadores consolidados de convenios institucionales
             </span>
           </div>
         </div>
@@ -304,7 +316,7 @@ export default function ReportsPage() {
           <button
             type="button"
             onClick={resetFilters}
-            className="text-xs font-semibold text-blue-600 hover:underline"
+            className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
           >
             Limpiar filtros
           </button>
@@ -383,20 +395,20 @@ export default function ReportsPage() {
 
           <div className="space-y-1">
             <label className="block text-xs font-semibold uppercase text-gray-600">
-              Institución
+              Tipo de Institución
             </label>
             <div className="w-full relative">
               <select
-                value={filters.institutionId}
+                value={filters.institutionType}
                 onChange={(e) =>
-                  setFilters((f) => ({ ...f, institutionId: e.target.value }))
+                  setFilters((f) => ({ ...f, institutionType: e.target.value }))
                 }
                 className={filterSelectClass}
               >
-                <option value="">Todas las instituciones</option>
-                {institutions.map((inst) => (
-                  <option key={inst.id} value={inst.id}>
-                    {inst.name}
+                <option value="">Todos los tipos de institución</option>
+                {institutionTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
                   </option>
                 ))}
               </select>
@@ -477,7 +489,7 @@ export default function ReportsPage() {
             <div className="border border-gray-200 bg-white shadow-sm">
               <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Instituciones con más convenios
+                  Instituciones con más convenios (Top 10)
                 </span>
               </div>
               <div className="p-5 space-y-3">
@@ -521,18 +533,22 @@ export default function ReportsPage() {
                   Por País
                 </span>
               </div>
-              <div className="p-5 space-y-3">
-                {byCountry.map((row) => (
-                  <div key={row.pais} className="flex items-center gap-3">
-                    <Globe2 className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span className="flex-1 text-sm text-gray-700">
-                      {row.pais}
-                    </span>
-                    <span className="text-sm font-semibold text-gray-800">
-                      {row.cantidad}
-                    </span>
-                  </div>
-                ))}
+              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
+                {byCountry.length === 0 ? (
+                  <p className="text-sm text-gray-400">Sin datos.</p>
+                ) : (
+                  byCountry.map((row) => (
+                    <div key={row.pais} className="flex items-center gap-3">
+                      <Globe2 className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span className="flex-1 text-sm text-gray-700">
+                        {row.pais}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-800">
+                        {row.cantidad}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -542,52 +558,64 @@ export default function ReportsPage() {
                   Por Tipo de Convenio
                 </span>
               </div>
-              <div className="p-5 space-y-3">
-                {byType.map((row) => (
-                  <div key={row.tipo} className="flex items-center gap-3">
-                    <FileType2 className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span className="w-40 text-sm text-gray-700">
-                      {row.tipo}
-                    </span>
-                    <div className="flex-1 bg-gray-100 h-5">
-                      <div
-                        className="h-5 bg-primary-active"
-                        style={{
-                          width: `${(row.cantidad / maxByType) * 100}%`,
-                        }}
-                      />
+              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
+                {byType.length === 0 ? (
+                  <p className="text-sm text-gray-400">Sin datos.</p>
+                ) : (
+                  byType.map((row) => (
+                    <div key={row.tipo} className="flex items-center gap-3">
+                      <FileType2 className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span className="w-36 truncate text-sm text-gray-700" title={row.tipo}>
+                        {row.tipo}
+                      </span>
+                      <div className="flex-1 bg-gray-100 h-5">
+                        <div
+                          className="h-5 bg-primary-active"
+                          style={{
+                            width: `${(row.cantidad / maxByType) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-sm font-semibold text-gray-800">
+                        {row.cantidad}
+                      </span>
                     </div>
-                    <span className="w-10 text-right text-sm font-semibold text-gray-800">
-                      {row.cantidad}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
               <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Por Institución
+                  Por Tipo de Institución
                 </span>
               </div>
-              <div className="max-h-[320px] overflow-y-auto p-5 space-y-3">
-                {byInstitution.length === 0 ? (
+              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
+                {byInstitutionType.length === 0 ? (
                   <p className="text-sm text-gray-400">Sin datos.</p>
                 ) : (
-                  byInstitution.map((row) => (
+                  byInstitutionType.map((row) => (
                     <div
-                      key={row.institucion}
+                      key={row.tipo}
                       className="flex items-center gap-3"
                     >
-                      <Landmark className="h-4 w-4 text-gray-400 shrink-0" />
+                      <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
                       <span
-                        className="flex-1 truncate text-sm text-gray-700"
-                        title={row.institucion}
+                        className="w-36 truncate text-sm text-gray-700"
+                        title={row.tipo}
                       >
-                        {row.institucion}
+                        {row.tipo}
                       </span>
-                      <span className="text-sm font-semibold text-gray-800">
+                      <div className="flex-1 bg-gray-100 h-5">
+                        <div
+                          className="h-5 bg-gold"
+                          style={{
+                            width: `${(row.cantidad / maxByInstitutionType) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-sm font-semibold text-gray-800">
                         {row.cantidad}
                       </span>
                     </div>
@@ -612,7 +640,7 @@ export default function ReportsPage() {
                   <thead className="sticky top-0 bg-surface">
                     <tr className="border-b border-gray-200">
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
-                        Código
+                        Expediente
                       </th>
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
                         Institución
@@ -621,7 +649,7 @@ export default function ReportsPage() {
                         Vence
                       </th>
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">
-                        Días
+                        Plazo
                       </th>
                     </tr>
                   </thead>
@@ -637,12 +665,32 @@ export default function ReportsPage() {
                       </tr>
                     ) : (
                       expiring.map((row) => (
-                        <tr key={row.id} className="hover:bg-gray-50">
-                          <td className="py-3 px-4 text-sm text-gray-800">
-                            {row.expediente}
+                        <tr
+                          key={row.id}
+                          onClick={() => router.push(`/convenios/${row.id}`)}
+                          className="hover:bg-amber-50/40 cursor-pointer transition-colors group"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-semibold text-gray-800 group-hover:text-gold transition-colors">
+                                {row.expediente}
+                              </span>
+                              <ExternalLink className="h-3 w-3 text-gray-300 group-hover:text-gold transition-colors" />
+                            </div>
+                            <p
+                              className="text-xs text-gray-500 line-clamp-1 max-w-[200px]"
+                              title={row.titulo}
+                            >
+                              {row.titulo}
+                            </p>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-700">
-                            {row.institucion}
+                          <td className="py-3 px-4">
+                            <p className="text-sm text-gray-700 font-medium">
+                              {row.institucion}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {row.institucion_tipo || "—"} · {row.pais}
+                            </p>
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className="text-xs text-gray-700 bg-gray-50 px-2 py-1 border border-gray-200 font-mono">
@@ -651,7 +699,9 @@ export default function ReportsPage() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-yellow-50 text-yellow-800 border border-yellow-200">
-                              {row.dias_restantes ?? "—"} días
+                              {row.dias_restantes !== null
+                                ? `${row.dias_restantes} días restantes`
+                                : "—"}
                             </span>
                           </td>
                         </tr>
@@ -676,7 +726,7 @@ export default function ReportsPage() {
                   <thead className="sticky top-0 bg-surface">
                     <tr className="border-b border-gray-200">
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
-                        Código
+                        Expediente
                       </th>
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
                         Institución
@@ -685,7 +735,7 @@ export default function ReportsPage() {
                         Venció
                       </th>
                       <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">
-                        Días
+                        Antigüedad
                       </th>
                     </tr>
                   </thead>
@@ -701,12 +751,32 @@ export default function ReportsPage() {
                       </tr>
                     ) : (
                       expired.map((row) => (
-                        <tr key={row.id} className="hover:bg-gray-50">
-                          <td className="py-3 px-4 text-sm text-gray-800">
-                            {row.expediente}
+                        <tr
+                          key={row.id}
+                          onClick={() => router.push(`/convenios/${row.id}`)}
+                          className="hover:bg-red-50/40 cursor-pointer transition-colors group"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-semibold text-gray-800 group-hover:text-red-700 transition-colors">
+                                {row.expediente}
+                              </span>
+                              <ExternalLink className="h-3 w-3 text-gray-300 group-hover:text-red-700 transition-colors" />
+                            </div>
+                            <p
+                              className="text-xs text-gray-500 line-clamp-1 max-w-[200px]"
+                              title={row.titulo}
+                            >
+                              {row.titulo}
+                            </p>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-700">
-                            {row.institucion}
+                          <td className="py-3 px-4">
+                            <p className="text-sm text-gray-700 font-medium">
+                              {row.institucion}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {row.institucion_tipo || "—"} · {row.pais}
+                            </p>
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className="text-xs text-gray-700 bg-gray-50 px-2 py-1 border border-gray-200 font-mono">
@@ -715,7 +785,9 @@ export default function ReportsPage() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-                              {row.dias_restantes ?? "—"} días
+                              {row.dias_restantes !== null
+                                ? `Hace ${Math.abs(row.dias_restantes)} días`
+                                : "—"}
                             </span>
                           </td>
                         </tr>
