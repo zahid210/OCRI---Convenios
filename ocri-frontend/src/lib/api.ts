@@ -460,6 +460,11 @@ export async function getDefaultOpinionTargets() {
   return fetchApi("/dependencias/default-opinions");
 }
 
+/** Obtiene todas las unidades orgánicas activas para emisión de opiniones */
+export async function getActiveOpinionTargets() {
+  return fetchApi("/dependencias?kind=UNIDAD_ORGANICA&is_active=true");
+}
+
 // ─── Etapa 2: Publicación y Registro de Convenio ───────────────────────
 
 /** Rectorado decide sobre la propuesta (APPROVED / REJECTED) */

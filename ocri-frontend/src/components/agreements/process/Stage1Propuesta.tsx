@@ -10,6 +10,7 @@ import {
   generateOficioOpinion,
   generateOpinionRequests,
   getDefaultOpinionTargets,
+  getActiveOpinionTargets,
   generateOficioRectorado,
   openDocumentPreview,
   replaceProcessDocument,
@@ -274,13 +275,23 @@ export default function Stage1Propuesta({
 
   useEffect(() => {
     let cancelled = false;
-    getDefaultOpinionTargets()
+    getActiveOpinionTargets()
       .then((targets) => {
-        if (!cancelled) {
-          setDefaultTargets(targets as Dependencia[]);
+        if (!cancelled && Array.isArray(targets) && targets.length > 0) {
+          setDefaultTargets(targets);
+        } else {
+          return getDefaultOpinionTargets().then((defs) => {
+            if (!cancelled) setDefaultTargets(defs as Dependencia[]);
+          });
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        getDefaultOpinionTargets()
+          .then((defs) => {
+            if (!cancelled) setDefaultTargets(defs as Dependencia[]);
+          })
+          .catch(() => {});
+      });
     return () => {
       cancelled = true;
     };

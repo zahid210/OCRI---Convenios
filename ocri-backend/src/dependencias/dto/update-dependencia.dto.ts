@@ -23,7 +23,7 @@ export class UpdateDependenciaDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  @Matches(/^[\w.\-() °º\u00A0-\u017F]+$/, {
+  @Matches(/^[\w.\-(),/&:"' °º\u00A0-\u017F]+$/, {
     message: 'name contiene caracteres no permitidos',
   })
   name?: string;
