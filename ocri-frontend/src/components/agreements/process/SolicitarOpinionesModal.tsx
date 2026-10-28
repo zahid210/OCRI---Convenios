@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, MessageSquare, Search, CheckSquare, Square } from "lucide-react";
+import { Loader2, MessageSquare, Search, Square } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ModalShell } from "./shared";
 import type { Dependencia } from "@/types/agreements";
@@ -19,9 +19,7 @@ export default function SolicitarOpinionesModal({
 }: SolicitarOpinionesModalProps) {
   const toast = useToast();
 
-  const [selectedDeps, setSelectedDeps] = useState<number[]>(() =>
-    dependencies.map((dep) => dep.id),
-  );
+  const [selectedDeps, setSelectedDeps] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -32,10 +30,6 @@ export default function SolicitarOpinionesModal({
       dep.name.toLowerCase().includes(q) || dep.code.toLowerCase().includes(q)
     );
   });
-
-  const selectAll = () => {
-    setSelectedDeps(dependencies.map((dep) => dep.id));
-  };
 
   const clearAll = () => {
     setSelectedDeps([]);
@@ -65,7 +59,7 @@ export default function SolicitarOpinionesModal({
         <>
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
@@ -75,13 +69,13 @@ export default function SolicitarOpinionesModal({
             className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
           >
             {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
-            Solicitar ({selectedDeps.length})
+            Solicitar{selectedDeps.length > 0 ? ` (${selectedDeps.length})` : ""}
           </button>
         </>
       }
     >
       <div className="p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div className="relative flex-1">
             <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -92,26 +86,16 @@ export default function SolicitarOpinionesModal({
             />
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 text-xs">
+          {selectedDeps.length > 0 && (
             <button
               type="button"
-              onClick={selectAll}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
+              onClick={clearAll}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors cursor-pointer text-xs shrink-0"
             >
-              <CheckSquare className="h-3.5 w-3.5 text-gray-500" />
-              Todas ({dependencies.length})
+              <Square className="h-3.5 w-3.5" />
+              Limpiar
             </button>
-            {selectedDeps.length > 0 && (
-              <button
-                type="button"
-                onClick={clearAll}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors cursor-pointer"
-              >
-                <Square className="h-3.5 w-3.5" />
-                Limpiar
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
         <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-100 border border-gray-200 bg-white">
@@ -148,7 +132,7 @@ export default function SolicitarOpinionesModal({
                     className="h-4 w-4 text-gold border-gray-300 rounded focus:ring-gold"
                   />
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-gray-800 truncate block">
+                    <span className="text-sm font-normal text-gray-800 truncate block">
                       {dep.name}
                     </span>
                     <span className="font-mono text-xs text-gray-500 mt-0.5 block">

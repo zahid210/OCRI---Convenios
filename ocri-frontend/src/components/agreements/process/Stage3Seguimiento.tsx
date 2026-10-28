@@ -30,6 +30,7 @@ import {
   Handshake,
   Loader2,
   Plus,
+  ShieldCheck,
   Upload,
 } from "lucide-react";
 import {
@@ -70,10 +71,6 @@ function DeliverableCard({
   const [busyAction, setBusyAction] = useState<null | "accept">(null);
   const toast = useToast();
   const documents = deliverable.documents ?? [];
-  const observations = [...(deliverable.observations ?? [])].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
 
   const isSolicitudDoc = (doc: (typeof documents)[number]) =>
     doc.direction === "SALIDA" ||
@@ -250,35 +247,6 @@ function DeliverableCard({
             </p>
           )}
 
-          {observations.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase text-gray-500">
-                Historial de correcciones
-              </div>
-              {observations.map((obs, idx) => (
-                <div
-                  key={obs.id}
-                  className={`p-3 text-sm ${
-                    idx === 0
-                      ? "bg-red-50 border border-red-200 text-red-800"
-                      : "bg-gray-50 border border-gray-200 text-gray-700"
-                  }`}
-                >
-                  <div
-                    className={`font-semibold text-xs uppercase mb-1 ${
-                      idx === 0 ? "text-red-600" : "text-gray-500"
-                    }`}
-                  >
-                    {idx === 0 ? "Última observación" : "Corrección anterior"} ·{" "}
-                    {obs.created_by?.name ?? "OCRI"} ·{" "}
-                    {new Date(obs.created_at).toLocaleString("es-PE")}
-                  </div>
-                  {obs.comment}
-                </div>
-              ))}
-            </div>
-          )}
-
           {canManage && blockedByPlan && deliverable.status !== "REGISTRADO" && (
             <div className="pt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2">
               Los informes se habilitan cuando el Plan de Trabajo ha sido aprobado y registrado.
@@ -287,13 +255,14 @@ function DeliverableCard({
 
           {canManage && !blockedByPlan && (
             <div className="flex flex-wrap gap-2 pt-2">
-              {deliverable.status === "SOLICITADO" && !hasSolicitudDoc && (
+              {((deliverable.status === "SOLICITADO" && !hasSolicitudDoc) ||
+                deliverable.status === "OBSERVADO") && (
                 <>
                   <button
                     type="button"
                     onClick={() => onCargarSolicitud(deliverable)}
                     title="Cargar un oficio de solicitud ya elaborado"
-                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
+                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     Cargar solicitud
@@ -301,7 +270,7 @@ function DeliverableCard({
                   <button
                     type="button"
                     onClick={() => onOpenDocEditor(deliverable)}
-                    className="inline-flex items-center gap-1.5 border border-gold text-gold hover:bg-gold/10 px-3 py-1.5 text-sm transition-colors"
+                    className="inline-flex items-center gap-1.5 border border-gold text-gold hover:bg-gold/10 px-3 py-1.5 text-sm transition-colors cursor-pointer"
                   >
                     <FileText className="h-3.5 w-3.5" />
                     Generar Documento de Solicitud
@@ -309,52 +278,41 @@ function DeliverableCard({
                 </>
               )}
               {canAcceptRequest && (
-                <button
-                  type="button"
-                  onClick={handleAccept}
-                  disabled={busyAction === "accept"}
-                  className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-                >
-                  {busyAction === "accept" ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Handshake className="h-3.5 w-3.5" />
-                  )}
-                  Solicitud Aceptada
-                </button>
-              )}
-              {(deliverable.status === "ACEPTADO" ||
-                deliverable.status === "OBSERVADO") && (
-                <button
-                  type="button"
-                  onClick={() => onAttachResponse(deliverable)}
-                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  Adjuntar respuesta
-                </button>
-              )}
-              {deliverable.status === "RECIBIDO" && (
                 <>
                   <button
-                    onClick={() =>
-                      onEvaluate(deliverable.id, deliverable.title, "APPROVED")
-                    }
-                    className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors"
+                    type="button"
+                    onClick={handleAccept}
+                    disabled={busyAction === "accept"}
+                    className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50 cursor-pointer"
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Aprobar
+                    {busyAction === "accept" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    )}
+                    Validar
                   </button>
                   <button
+                    type="button"
                     onClick={() =>
                       onEvaluate(deliverable.id, deliverable.title, "OBSERVED")
                     }
-                    className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
+                    className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
                   >
                     <AlertTriangle className="h-3.5 w-3.5" />
                     Observar
                   </button>
                 </>
+              )}
+              {deliverable.status === "ACEPTADO" && (
+                <button
+                  type="button"
+                  onClick={() => onAttachResponse(deliverable)}
+                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Adjuntar respuesta
+                </button>
               )}
               {deliverable.status === "REGISTRADO" && (
                 <span className="inline-flex items-center gap-1.5 text-xs text-green-700">
@@ -429,12 +387,12 @@ export default function Stage3Seguimiento({
     try {
       await acceptDeliverableRequest(deliverable.id);
       toast.success(
-        "Solicitud aceptada. Cuando reciba el documento, adjúntelo con \"Adjuntar respuesta\".",
+        "Solicitud validada. Cuando reciba el documento, adjúntelo con \"Adjuntar respuesta\".",
       );
       await onRefresh();
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Error al aceptar la solicitud";
+        err instanceof Error ? err.message : "Error al validar la solicitud";
       toast.error(message);
     }
   };
@@ -480,7 +438,7 @@ export default function Stage3Seguimiento({
     try {
       await submitDeliverable(deliverableId, file);
       toast.success(
-        "Respuesta adjuntada. Revise el documento para aprobarlo u observarlo.",
+        "Respuesta adjuntada exitosamente. Entregable registrado.",
       );
       setAdjuntarRespuestaModal(null);
       await onRefresh();

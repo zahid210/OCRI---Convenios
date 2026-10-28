@@ -325,10 +325,11 @@ export class DeliverablesService {
     if (opts.replace || opts.bodyHtml) {
       if (
         deliverable.status !== 'SOLICITADO' &&
-        deliverable.status !== 'ACEPTADO'
+        deliverable.status !== 'ACEPTADO' &&
+        deliverable.status !== 'OBSERVADO'
       ) {
         throw new BadRequestException(
-          'El oficio de solicitud solo puede generarse o editarse mientras la solicitud está en SOLICITADO o ACEPTADO (antes de remitir el entregable).',
+          'El oficio de solicitud solo puede generarse o editarse mientras la solicitud está en SOLICITADO, ACEPTADO u OBSERVADO (antes de remitir el entregable).',
         );
       }
     } else {
@@ -401,6 +402,13 @@ export class DeliverablesService {
           },
         });
 
+        if (deliverable.status === 'OBSERVADO') {
+          await tx.deliverables.update({
+            where: { id: deliverable.id },
+            data: { status: 'SOLICITADO', updated_at: new Date() },
+          });
+        }
+
         await this.logEvent(
           tx,
           deliverable.agreement_id,
@@ -471,16 +479,16 @@ export class DeliverablesService {
       deliverable.type,
     );
 
-    if (deliverable.status !== 'SOLICITADO') {
+    if (deliverable.status !== 'SOLICITADO' && deliverable.status !== 'OBSERVADO') {
       throw new BadRequestException(
-        `El oficio de solicitud solo puede cargarse mientras el entregable está en SOLICITADO. Estado actual: ${deliverable.status}`,
+        `El oficio de solicitud solo puede cargarse mientras el entregable está en SOLICITADO u OBSERVADO. Estado actual: ${deliverable.status}`,
       );
     }
 
     const existing = await this.prisma.documents.findFirst({
       where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
     });
-    if (existing) {
+    if (existing && deliverable.status !== 'OBSERVADO') {
       throw new BadRequestException(
         'Este entregable ya tiene un oficio de solicitud. Use la edición del documento para reemplazarlo.',
       );
@@ -507,6 +515,10 @@ export class DeliverablesService {
 
     const doc = await this.prisma
       .$transaction(async (tx) => {
+        if (existing) {
+          await tx.documents.delete({ where: { id: existing.id } });
+        }
+
         const docType = await tx.document_types.findUnique({
           where: { code: SOLICITUD_DOC_TYPE_BY_DELIVERABLE[type] },
         });
@@ -532,6 +544,13 @@ export class DeliverablesService {
             updated_at: new Date(),
           },
         });
+
+        if (deliverable.status === 'OBSERVADO') {
+          await tx.deliverables.update({
+            where: { id: deliverable.id },
+            data: { status: 'SOLICITADO', updated_at: new Date() },
+          });
+        }
 
         await this.logEvent(
           tx,
@@ -842,9 +861,10 @@ export class DeliverablesService {
         const d = await tx.deliverables.update({
           where: { id: deliverable.id },
           data: {
-            status: 'RECIBIDO',
+            status: 'REGISTRADO',
             version: isCorrection ? { increment: 1 } : undefined,
             submitted_at: new Date(),
+            registered_at: new Date(),
             updated_at: new Date(),
           },
         });
@@ -852,10 +872,8 @@ export class DeliverablesService {
         await this.logEvent(
           tx,
           deliverable.agreement_id,
-          isCorrection ? 'CORRECCION_RECIBIDA' : 'ENTREGABLE_RECIBIDO',
-          isCorrection
-            ? `Los responsables remitieron la correccion de "${deliverable.title}" (version ${nextVersion}).`
-            : `Los responsables remitieron: ${deliverable.title}.`,
+          'ENTREGABLE_REGISTRADO',
+          `OCRI recibió y registró: ${deliverable.title} (versión ${isCorrection ? nextVersion : 1}).`,
           userId,
           {
             deliverable_type: deliverable.type,
@@ -863,6 +881,33 @@ export class DeliverablesService {
             version: isCorrection ? nextVersion : 1,
           },
         );
+
+        if (deliverable.type === 'PLAN_DE_TRABAJO') {
+          const agreement = await tx.agreements.findUnique({
+            where: { id: deliverable.agreement_id },
+            select: { process_status: true },
+          });
+          if (agreement && agreement.process_status === 'PUBLICADO') {
+            validateTransition('PUBLICADO', 'EN_SEGUIMIENTO');
+            await tx.agreements.update({
+              where: { id: deliverable.agreement_id },
+              data: {
+                process_status: 'EN_SEGUIMIENTO',
+                stage: 'ETAPA_3_SEGUIMIENTO',
+                updated_at: new Date(),
+              },
+            });
+            await this.logEvent(
+              tx,
+              deliverable.agreement_id,
+              'SEGUIMIENTO_INICIADO',
+              'Plan de Trabajo aprobado y registrado. Inicia formalmente la etapa de seguimiento.',
+              userId,
+            );
+          }
+        }
+
+        await this.concludeIfComplete(tx, deliverable.agreement_id, userId);
 
         return d;
       })
@@ -986,9 +1031,13 @@ export class DeliverablesService {
 
     await this.assertInMonitoringByDeliverable(deliverable.agreement_id);
 
-    if (deliverable.status !== 'RECIBIDO') {
+    if (
+      deliverable.status !== 'RECIBIDO' &&
+      deliverable.status !== 'SOLICITADO' &&
+      deliverable.status !== 'ACEPTADO'
+    ) {
       throw new BadRequestException(
-        `Solo se revisan entregables ya recibidos (RECIBIDO). Estado actual: ${deliverable.status}`,
+        `Solo se revisan entregables en estado SOLICITADO, ACEPTADO o RECIBIDO. Estado actual: ${deliverable.status}`,
       );
     }
 

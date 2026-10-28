@@ -27,7 +27,6 @@ export default function ResponderSolicitudModal({
   const toast = useToast();
 
   const [respondDate, setRespondDate] = useState("");
-  const [respondObs, setRespondObs] = useState("");
   const [respondFile, setRespondFile] = useState<File | null>(null);
   const [isResponding, setIsResponding] = useState(false);
 
@@ -47,7 +46,6 @@ export default function ResponderSolicitudModal({
         request.id,
         {
           response_date: respondDate,
-          observations: respondObs || undefined,
         },
         respondFile || undefined,
       );
@@ -66,14 +64,14 @@ export default function ResponderSolicitudModal({
         <>
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             disabled={isResponding || !respondDate || !respondFile}
-            className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
           >
             {isResponding && <Loader2 className="h-4 w-4 animate-spin" />}
             <FileCheck className="h-4 w-4" />
@@ -102,18 +100,6 @@ export default function ResponderSolicitudModal({
             value={respondDate}
             onChange={(e) => setRespondDate(e.target.value)}
             className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
-            Observaciones
-          </label>
-          <textarea
-            value={respondObs}
-            onChange={(e) => setRespondObs(e.target.value)}
-            rows={3}
-            className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-            placeholder="Observaciones de la dependencia (opcional)..."
           />
         </div>
       </div>

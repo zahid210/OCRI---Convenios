@@ -109,7 +109,7 @@ export const DOC_TYPE_ACCEPT: Record<string, string> = {
 
 export const DELIVERABLE_STATUS_LABELS: Record<DeliverableStatus, string> = {
     SOLICITADO: 'Solicitado',
-    ACEPTADO: 'Solicitud aceptada',
+    ACEPTADO: 'Solicitud validada',
     RECIBIDO: 'Recibido',
     OBSERVADO: 'Observado',
     REGISTRADO: 'Registrado',

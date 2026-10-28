@@ -46,20 +46,20 @@ export default function ValidarOpinionModal({
 
   return (
     <ModalShell
-      title={valid ? "Validar Opinión" : "Observar Opinión"}
+      title={valid ? "Validar Solicitud" : "Observar Solicitud"}
       icon={valid ? ShieldCheck : AlertTriangle}
       footer={
         <>
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             disabled={isValidating || (!valid && !observations.trim())}
-            className={`px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2 ${
+            className={`px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer ${
               valid ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
             }`}
           >
@@ -72,8 +72,8 @@ export default function ValidarOpinionModal({
       <div className="p-6">
         <p className="text-sm text-gray-600 mb-4">
           {valid
-            ? "Confirme que la opinión recibida es satisfactoria."
-            : "Indique las observaciones para que la dependencia reenvíe su opinión."}
+            ? "Confirme que la solicitud de opinión se encuentra conforme."
+            : "Indique las observaciones encontradas en esta solicitud de opinión."}
         </p>
         {!valid && (
           <div className="mb-4">

@@ -970,98 +970,147 @@ export default function Stage1Propuesta({
                   Pendientes de Respuesta ({pendingRequests.length})
                 </h3>
                 <div className="divide-y divide-gray-100">
-                  {pendingRequests.map((req) => (
-                    <OpinionRequestRow
-                      key={req.id}
-                      request={req}
-                      expanded={expandedRequest === req.id}
-                      onToggle={() =>
-                        setExpandedRequest(
-                          expandedRequest === req.id ? null : req.id,
-                        )
-                      }
-                      extraBadge={
-                        req.status !== "CANCELADA" ? (
-                          <TemporalBadge
-                            dueAt={req.due_at}
-                            warningDays={config?.warning_days ?? 3}
-                          />
-                        ) : null
-                      }
-                      subline={
-                        (oficioDocumentLabel(documents, req.id) ??
-                          req.oficio_number) ? (
-                          <span className="text-xs text-gray-500">
-                            Oficio:{" "}
-                            {oficioDocumentLabel(documents, req.id) ??
-                              req.oficio_number}
-                          </span>
-                        ) : null
-                      }
-                      actions={
-                        <>
-                          {actionsOpen && req.status === "GENERADA" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openGenerateOficioModal(req.id);
-                              }}
-                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Generar Oficio
-                            </button>
-                          )}
-                          {actionsOpen && req.status === "GENERADA" && !oficioDocumentLabel(documents, req.id) && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowCargarOficioModal(req.id);
-                              }}
-                              className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm transition-colors"
-                            >
-                              <Upload className="h-4 w-4" />
-                              Cargar Oficio
-                            </button>
-                          )}
-                          {actionsOpen && req.status === "ENVIADA" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openRespondModal(req.id);
-                              }}
-                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Adjuntar Respuesta
-                            </button>
-                          )}
-                          {actionsOpen && req.status === "OBSERVADA" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openRespondModal(req.id);
-                              }}
-                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Adjuntar Corrección
-                            </button>
-                          )}
-                          {actionsOpen && req.status === "GENERADA" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRequest(req.id);
-                              }}
-                              className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Eliminar
-                            </button>
-                          )}
-                        </>
-                      }
+                  {pendingRequests.map((req) => {
+                    const hasOficio = Boolean(
+                      oficioDocumentLabel(documents, req.id) ||
+                        req.oficio_number ||
+                        req.status === "ENVIADA",
+                    );
+                    return (
+                      <OpinionRequestRow
+                        key={req.id}
+                        request={req}
+                        expanded={expandedRequest === req.id}
+                        onToggle={() =>
+                          setExpandedRequest(
+                            expandedRequest === req.id ? null : req.id,
+                          )
+                        }
+                        extraBadge={
+                          req.status !== "CANCELADA" ? (
+                            <TemporalBadge
+                              dueAt={req.due_at}
+                              warningDays={config?.warning_days ?? 3}
+                            />
+                          ) : null
+                        }
+                        subline={
+                          (oficioDocumentLabel(documents, req.id) ??
+                            req.oficio_number) ? (
+                            <span className="text-xs text-gray-500">
+                              Oficio:{" "}
+                              {oficioDocumentLabel(documents, req.id) ??
+                                req.oficio_number}
+                            </span>
+                          ) : null
+                        }
+                        actions={
+                          <>
+                            {actionsOpen && req.status === "GENERADA" && !hasOficio && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openGenerateOficioModal(req.id);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  Generar Oficio
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCargarOficioModal(req.id);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                                >
+                                  <Upload className="h-4 w-4" />
+                                  Cargar Oficio
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteRequest(req.id);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Eliminar
+                                </button>
+                              </>
+                            )}
+
+                            {actionsOpen && hasOficio && req.status !== "VALIDADA" && req.status !== "OBSERVADA" && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setValidateModal({
+                                      id: req.id,
+                                      valid: true,
+                                    });
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                                >
+                                  <ShieldCheck className="h-4 w-4" />
+                                  Validar
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setValidateModal({
+                                      id: req.id,
+                                      valid: false,
+                                    });
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                  Observar
+                                </button>
+                              </>
+                            )}
+
+                            {actionsOpen && req.status === "OBSERVADA" && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openGenerateOficioModal(req.id);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  Generar Oficio
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCargarOficioModal(req.id);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                                >
+                                  <Upload className="h-4 w-4" />
+                                  Cargar Oficio
+                                </button>
+                              </>
+                            )}
+
+                            {actionsOpen && req.status === "VALIDADA" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRespondModal(req.id);
+                                }}
+                                className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                              >
+                                <FileText className="h-4 w-4" />
+                                Adjuntar Respuesta
+                              </button>
+                            )}
+                          </>
+                        }
                       detail={
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -1104,7 +1153,8 @@ export default function Stage1Propuesta({
                         </div>
                       }
                     />
-                  ))}
+                  );
+                })}
                 </div>
               </div>
             )}
@@ -1142,70 +1192,7 @@ export default function Stage1Propuesta({
                           )}
                         </div>
                       }
-                      actions={
-                        <>
-                          {actionsOpen && req.status === "RESPONDIDA" && (
-                            <>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setValidateModal({
-                                    id: req.id,
-                                    valid: true,
-                                  });
-                                }}
-                                className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm transition-colors"
-                              >
-                                <ShieldCheck className="h-4 w-4" />
-                                Validar
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setValidateModal({
-                                    id: req.id,
-                                    valid: false,
-                                  });
-                                }}
-                                className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors"
-                              >
-                                <AlertTriangle className="h-4 w-4" />
-                                Observar
-                              </button>
-                            </>
-                          )}
-                          {actionsOpen &&
-                            (req.status === "ENVIADA" ||
-                              req.status === "RESPONDIDA" ||
-                              req.status === "OBSERVADA") && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCancelRequest(
-                                  req.id,
-                                  req.dependencias?.name,
-                                );
-                              }}
-                              className="inline-flex items-center gap-1.5 bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 text-sm transition-colors"
-                            >
-                              <Ban className="h-4 w-4" />
-                              Cancelar
-                            </button>
-                          )}
-                          {actionsOpen && req.status === "OBSERVADA" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openRespondModal(req.id);
-                              }}
-                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Adjuntar Corrección
-                            </button>
-                          )}
-                        </>
-                      }
+                      actions={null}
                       detail={
                         <div className="grid grid-cols-2 gap-4">
                           <div>

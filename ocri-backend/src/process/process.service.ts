@@ -188,12 +188,14 @@ export class ProcessService {
   ) {
     const allRequests = await tx.opinion_requests.findMany({
       where: { agreement_id: agreementId },
-      select: { status: true },
+      select: { status: true, response_date: true },
     });
 
     const allValidated =
       allRequests.length > 0 &&
-      allRequests.every((r) => r.status === 'VALIDADA');
+      allRequests.every(
+        (r) => r.status === 'VALIDADA' && r.response_date !== null,
+      );
 
     const currentStatus = await tx.agreements.findUnique({
       where: { id: agreementId },
@@ -790,17 +792,17 @@ export class ProcessService {
         const updated = await tx.opinion_requests.updateMany({
           where: {
             id: BigInt(opinionRequestId),
-            status: { in: ['ENVIADA', 'RESPONDIDA', 'OBSERVADA', 'VALIDADA'] },
+            status: { in: ['ENVIADA', 'RESPONDIDA', 'OBSERVADA', 'VALIDADA', 'GENERADA'] },
           },
           data: {
-            status: 'RESPONDIDA',
+            status: 'VALIDADA',
             response_date: dto.response_date
               ? new Date(dto.response_date)
               : isCorrection
                 ? (request.response_date ?? new Date())
                 : new Date(),
             observations: dto.observations ?? null,
-            validated_at: isCorrection ? null : request.validated_at,
+            validated_at: new Date(),
             updated_at: new Date(),
           },
         });
@@ -912,12 +914,16 @@ export class ProcessService {
       );
     }
 
-    // Solo una opinión RESPONDIDA es validable. Una OBSERVADA vuelve a
-    // RESPONDIDA únicamente cuando la dependencia adjunta su corrección, de modo
-    // que no se puede "revalidar" como válida algo que nunca fue enmendado.
-    if (request.status !== 'RESPONDIDA') {
+    // Puede validarse u observarse tras generar/cargar la solicitud o tras recibir respuesta.
+    const validatableStatuses: string[] = [
+      'GENERADA',
+      'ENVIADA',
+      'RESPONDIDA',
+      'OBSERVADA',
+    ];
+    if (!validatableStatuses.includes(request.status)) {
       throw new BadRequestException(
-        `Solo se puede validar una opinión RESPONDIDA. Si fue observada, la dependencia debe adjuntar su corrección primero. Estado actual: ${request.status}`,
+        `No se puede validar u observar una solicitud en estado ${request.status}.`,
       );
     }
 
@@ -931,12 +937,10 @@ export class ProcessService {
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
-        // Update condicional por estado de origen (RESPONDIDA):
-        // impide que dos validaciones concurrentes avancen la misma solicitud.
         const updated = await tx.opinion_requests.updateMany({
           where: {
             id: BigInt(opinionRequestId),
-            status: 'RESPONDIDA',
+            status: request.status,
           },
           data: {
             status: newStatus,
@@ -950,7 +954,7 @@ export class ProcessService {
 
         if (updated.count === 0) {
           throw new ConflictException(
-            'La solicitud ya no está en estado RESPONDIDA y no puede validarse nuevamente.',
+            `La solicitud ya no está en estado ${request.status} y no puede actualizarse nuevamente.`,
           );
         }
 
@@ -1476,12 +1480,13 @@ export class ProcessService {
           const updated = await tx.opinion_requests.update({
             where: { id: BigInt(opinionRequestId) },
             data: {
-              status: isCorrection ? request.status : 'ENVIADA',
+              status: 'ENVIADA',
               sent_via: dto.sent_via ?? request.sent_via ?? null,
               adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
               oficio_number: dto.oficio_number ?? request.oficio_number,
               directed_to: dto.directed_to ?? request.directed_to,
               sent_at: isCorrection ? request.sent_at : new Date(),
+              observations: request.status === 'OBSERVADA' ? null : request.observations,
               updated_at: new Date(),
             },
           });
@@ -1687,12 +1692,13 @@ export class ProcessService {
               status: { not: 'CANCELADA' },
             },
             data: {
-              ...(isCorrection ? {} : { status: 'ENVIADA' }),
+              status: 'ENVIADA',
               oficio_number: dto.oficio_number ?? request.oficio_number,
               adesa_number: dto.adesa_number ?? request.adesa_number ?? null,
               sent_via: dto.sent_via ?? request.sent_via,
               directed_to: dto.directed_to ?? request.directed_to,
               sent_at: isCorrection ? (request.sent_at ?? sentAt) : sentAt,
+              observations: request.status === 'OBSERVADA' ? null : request.observations,
               updated_at: new Date(),
             },
           });
