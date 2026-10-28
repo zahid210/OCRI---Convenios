@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -33,4 +34,9 @@ export class UserFiltersDto {
   @IsString()
   @MaxLength(100)
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['admin', 'procesador', 'asistente', 'viewer'])
+  role?: string;
 }

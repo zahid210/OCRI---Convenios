@@ -18,6 +18,7 @@ interface UserFilters {
   search?: string;
   page?: string | number;
   per_page?: string | number;
+  role?: string;
 }
 
 @Injectable()
@@ -63,14 +64,18 @@ export class UsersService {
     const perPage = Math.min(100, Math.max(1, Number(filters.per_page) || 10));
     const skip = (page - 1) * perPage;
 
-    const where = filters.search
-      ? {
-          OR: [
-            { name: { contains: filters.search.trim() } },
-            { email: { contains: filters.search.trim() } },
-          ],
-        }
-      : {};
+    const where: Prisma.usersWhereInput = {};
+
+    if (filters.search) {
+      where.OR = [
+        { name: { contains: filters.search.trim() } },
+        { email: { contains: filters.search.trim() } },
+      ];
+    }
+
+    if (filters.role) {
+      where.role = filters.role as user_role;
+    }
 
     const [total, data] = await Promise.all([
       this.prisma.users.count({ where }),

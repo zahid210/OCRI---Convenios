@@ -51,6 +51,7 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
 
@@ -75,6 +76,7 @@ export default function UsersPage() {
           page: page.toString(),
           per_page: perPage.toString(),
           ...(activeSearch && { search: activeSearch }),
+          ...(roleFilter && { role: roleFilter }),
         });
         const res = await fetcher<PaginatedResponse<UserItem>>(
           `/users?${params.toString()}`,
@@ -95,7 +97,7 @@ export default function UsersPage() {
     return () => {
       isMounted = false;
     };
-  }, [page, perPage, activeSearch]);
+  }, [page, perPage, activeSearch, roleFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,6 +259,22 @@ export default function UsersPage() {
               placeholder="Buscar por nombre o correo..."
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
+          </div>
+          <div className="w-full sm:w-44">
+            <select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full px-3 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 cursor-pointer"
+            >
+              <option value="">Todos los roles</option>
+              <option value="admin">Administrador</option>
+              <option value="procesador">Procesador</option>
+              <option value="asistente">Asistente</option>
+              <option value="viewer">Viewer</option>
+            </select>
           </div>
           <button
             type="button"
