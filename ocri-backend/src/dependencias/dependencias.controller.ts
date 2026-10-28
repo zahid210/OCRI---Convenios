@@ -43,8 +43,6 @@ export class DependenciasController {
   @Get()
   findAll(@Query() filters: FilterDependenciasDto) {
     return this.dependenciasService.findAll({
-      kind: filters.kind,
-      is_active: filters.is_active,
       search: filters.search,
     });
   }

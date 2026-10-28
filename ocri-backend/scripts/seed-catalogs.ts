@@ -55,16 +55,10 @@ async function main() {
         where: { code: d.code },
         update: {
           name: d.name,
-          kind: d.kind,
-          is_default_opinion: d.is_default_opinion,
         },
         create: {
           code: d.code,
           name: d.name,
-          kind: d.kind,
-          is_default_opinion: d.is_default_opinion,
-          sort_order: d.sort_order,
-          is_active: true,
         },
       });
     }

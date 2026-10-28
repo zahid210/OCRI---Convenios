@@ -455,14 +455,14 @@ export async function sendToRectorado(agreementId: number) {
   });
 }
 
-/** Obtiene las dependencias que son targets por defecto de opiniones */
+/** Obtiene las dependencias para emisión de opiniones */
 export async function getDefaultOpinionTargets() {
-  return fetchApi("/dependencias/default-opinions");
+  return fetchApi("/dependencias");
 }
 
-/** Obtiene todas las unidades orgánicas activas para emisión de opiniones */
+/** Obtiene todas las dependencias para emisión de opiniones */
 export async function getActiveOpinionTargets() {
-  return fetchApi("/dependencias?kind=UNIDAD_ORGANICA&is_active=true");
+  return fetchApi("/dependencias");
 }
 
 // ─── Etapa 2: Publicación y Registro de Convenio ───────────────────────

@@ -9,7 +9,6 @@ import {
   generateExpediente,
   generateOficioOpinion,
   generateOpinionRequests,
-  getDefaultOpinionTargets,
   getActiveOpinionTargets,
   generateOficioRectorado,
   openDocumentPreview,
@@ -277,21 +276,11 @@ export default function Stage1Propuesta({
     let cancelled = false;
     getActiveOpinionTargets()
       .then((targets) => {
-        if (!cancelled && Array.isArray(targets) && targets.length > 0) {
-          setDefaultTargets(targets);
-        } else {
-          return getDefaultOpinionTargets().then((defs) => {
-            if (!cancelled) setDefaultTargets(defs as Dependencia[]);
-          });
+        if (!cancelled && Array.isArray(targets)) {
+          setDefaultTargets(targets as Dependencia[]);
         }
       })
-      .catch(() => {
-        getDefaultOpinionTargets()
-          .then((defs) => {
-            if (!cancelled) setDefaultTargets(defs as Dependencia[]);
-          })
-          .catch(() => {});
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };

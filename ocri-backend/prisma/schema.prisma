@@ -69,11 +69,6 @@ enum opinion_request_status {
   CANCELADA
 }
 
-enum dependencia_kind {
-  RECTORADO
-  OCRI
-  UNIDAD_ORGANICA
-}
 
 enum rectorate_decision_type {
   APPROVED // convenio suscrito
@@ -150,20 +145,13 @@ model agreement_types {
 }
 
 model dependencias {
-  id                 BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
-  code               String           @unique @db.VarChar(30)
-  name               String           @db.VarChar(255)
-  kind               dependencia_kind
-  email              String?          @db.VarChar(255)
-  is_default_opinion Boolean          @default(false)
-  sort_order         Int              @default(0)
-  is_active          Boolean          @default(true)
-  created_at         DateTime?        @default(now()) @db.Timestamp(0)
-  updated_at         DateTime?        @default(now()) @updatedAt @db.Timestamp(0)
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  code       String    @unique @db.VarChar(30)
+  name       String    @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 
   opinion_requests opinion_requests[]
-
-  @@index([is_active])
 }
 
 model document_types {

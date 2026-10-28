@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, MessageSquare, Search, CheckSquare, Square, Sparkles } from "lucide-react";
+import { Loader2, MessageSquare, Search, CheckSquare, Square } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ModalShell } from "./shared";
 import type { Dependencia } from "@/types/agreements";
@@ -20,7 +20,7 @@ export default function SolicitarOpinionesModal({
   const toast = useToast();
 
   const [selectedDeps, setSelectedDeps] = useState<number[]>(() =>
-    dependencies.filter((dep) => dep.is_default_opinion).map((dep) => dep.id),
+    dependencies.map((dep) => dep.id),
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [search, setSearch] = useState("");
@@ -32,12 +32,6 @@ export default function SolicitarOpinionesModal({
       dep.name.toLowerCase().includes(q) || dep.code.toLowerCase().includes(q)
     );
   });
-
-  const defaultOpinionDeps = dependencies.filter((dep) => dep.is_default_opinion);
-
-  const selectSuggested = () => {
-    setSelectedDeps(defaultOpinionDeps.map((dep) => dep.id));
-  };
 
   const selectAll = () => {
     setSelectedDeps(dependencies.map((dep) => dep.id));
@@ -99,16 +93,6 @@ export default function SolicitarOpinionesModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0 text-xs">
-            {defaultOpinionDeps.length > 0 && (
-              <button
-                type="button"
-                onClick={selectSuggested}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors font-medium cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-600" />
-                Sugeridas ({defaultOpinionDeps.length})
-              </button>
-            )}
             <button
               type="button"
               onClick={selectAll}
@@ -164,22 +148,12 @@ export default function SolicitarOpinionesModal({
                     className="h-4 w-4 text-gold border-gray-300 rounded focus:ring-gold"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-800 truncate">
-                        {dep.name}
-                      </span>
-                      {dep.is_default_opinion && (
-                        <span className="inline-flex items-center px-1.5 py-0.2 text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
-                          Sugerida
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                      <span className="font-mono">{dep.code}</span>
-                      {dep.email && (
-                        <span className="truncate text-gray-400">· {dep.email}</span>
-                      )}
-                    </div>
+                    <span className="text-sm font-medium text-gray-800 truncate block">
+                      {dep.name}
+                    </span>
+                    <span className="font-mono text-xs text-gray-500 mt-0.5 block">
+                      {dep.code}
+                    </span>
                   </div>
                 </label>
               );

@@ -16,7 +16,6 @@ import {
 // -----------------------------------------------------------------------------
 
 const DIRECTIONS = ['ENTRADA', 'SALIDA', 'INTERNO'];
-const KINDS = ['RECTORADO', 'OCRI', 'UNIDAD_ORGANICA'];
 
 describe('Catálogos canónicos', () => {
   it('tipos de documento: 20, códigos únicos y dirección válida', () => {
@@ -41,18 +40,18 @@ describe('Catálogos canónicos', () => {
     );
   });
 
-  it('dependencias: 66, códigos únicos, kind válido y un solo RECTORADO/OCRI', () => {
-    expect(DEPENDENCIAS_SEED).toHaveLength(66);
+  it('dependencias: 6 canónicas, códigos únicos y sin OCRI/RECTORADO', () => {
+    expect(DEPENDENCIAS_SEED).toHaveLength(6);
     const codes = DEPENDENCIAS_SEED.map((d) => d.code);
     expect(new Set(codes).size).toBe(codes.length);
     for (const d of DEPENDENCIAS_SEED) {
-      expect(KINDS).toContain(d.kind);
-      expect(typeof d.is_default_opinion).toBe('boolean');
-      expect(typeof d.sort_order).toBe('number');
+      expect(d.name.trim().length).toBeGreaterThan(0);
     }
-    expect(codes.filter((c) => c === 'RECTORADO')).toHaveLength(1);
-    expect(codes.filter((c) => c === 'OCRI')).toHaveLength(1);
-    // Códigos heredados que el script obsoleto introducía por error:
+    expect(codes).toEqual(
+      expect.arrayContaining(['CEID', 'CEPRE', 'OAJ', 'VRAC', 'VRAD', 'VRI']),
+    );
+    expect(codes).not.toContain('RECTORADO');
+    expect(codes).not.toContain('OCRI');
     expect(codes).not.toContain('VRIE');
     expect(codes).not.toContain('ASEL');
     expect(codes).not.toContain('REC');

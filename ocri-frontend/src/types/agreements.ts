@@ -264,11 +264,6 @@ export interface Dependencia {
     id: number;
     code: string;
     name: string;
-    kind: 'RECTORADO' | 'OCRI' | 'UNIDAD_ORGANICA';
-    email?: string | null;
-    is_default_opinion: boolean;
-    sort_order: number;
-    is_active: boolean;
     created_at?: string;
     updated_at?: string;
     _count?: { opinion_requests?: number };
