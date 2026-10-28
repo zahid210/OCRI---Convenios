@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -66,6 +67,16 @@ export class DependenciasController {
   @Roles('admin')
   @Patch(':id')
   update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateDependenciaDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.dependenciasService.update(id, dto, req.user);
+  }
+
+  @Roles('admin')
+  @Put(':id')
+  updatePut(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateDependenciaDto,
     @Req() req: AuthenticatedRequest,

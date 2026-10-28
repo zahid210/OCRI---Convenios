@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   Query,
@@ -109,6 +110,16 @@ export class AgreementsController {
   @Roles(...FLOW_ROLES)
   @Patch(':id')
   update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateAgreementDto: UpdateAgreementDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.agreementsService.update(id, updateAgreementDto, req.user);
+  }
+
+  @Roles(...FLOW_ROLES)
+  @Put(':id')
+  updatePut(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateAgreementDto: UpdateAgreementDto,
     @Req() req: AuthenticatedRequest,

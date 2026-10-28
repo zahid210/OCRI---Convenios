@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Request,
 } from '@nestjs/common';
@@ -37,6 +38,15 @@ export class UsersController {
 
   @Patch(':id')
   update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: UpdateUserDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.usersService.update(id, updateDto, req.user);
+  }
+
+  @Put(':id')
+  updatePut(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateUserDto,
     @Request() req: RequestWithUser,

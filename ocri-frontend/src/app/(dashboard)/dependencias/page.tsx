@@ -145,7 +145,7 @@ export default function DependenciasPage() {
 
       if (editingId) {
         await fetchApi(`/dependencias/${editingId}`, {
-          method: "PUT",
+          method: "PATCH",
           body: JSON.stringify(body),
         });
       } else {

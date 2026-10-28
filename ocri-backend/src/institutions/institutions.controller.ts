@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -80,6 +81,16 @@ export class InstitutionsController {
   @Roles('admin')
   @Patch(':id')
   update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: UpdateInstitutionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.institutionsService.update(id, updateDto, req.user);
+  }
+
+  @Roles('admin')
+  @Put(':id')
+  updatePut(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateInstitutionDto,
     @Req() req: AuthenticatedRequest,
