@@ -43,6 +43,7 @@ export function yearSubdir(filename: string): string {
  * Esta función es pura: solo compone la ruta. El archivo vive en el bucket.
  */
 export function storePath(filename: string): string {
+  if (filename.includes('/')) return filename;
   const year = yearSubdir(filename);
   return year ? `${year}/${filename}` : filename;
 }
@@ -73,19 +74,21 @@ export function agreementDir(
 
 /**
  * Subcarpeta para documentos de opinión de una dependencia dentro del
- * convenio. Formato: `{año}/{código}/opiniones/{dependencia}`.
+ * convenio, nombrada con el código de la dependencia (p. ej. VRI, VRAC, OAJ).
+ * Formato: `{año}/{código}/opiniones/{código_dependencia}`.
  */
 export function opinionDir(
   tramiteCode: string,
   createdAt: Date | string | null,
-  dependenciaName: string,
+  dependenciaCode: string,
 ): string {
-  if (!DEPENDENCIA_NAME_RE.test(dependenciaName || '')) {
+  const cleanCode = (dependenciaCode || '').trim();
+  if (!DEPENDENCIA_NAME_RE.test(cleanCode)) {
     throw new BadRequestException(
-      'Nombre de dependencia inválido para la carpeta',
+      'Código de dependencia inválido para la carpeta',
     );
   }
-  return `${agreementDir(tramiteCode, createdAt)}/opiniones/${dependenciaName}`;
+  return `${agreementDir(tramiteCode, createdAt)}/opiniones/${cleanCode}`;
 }
 
 /**
@@ -254,29 +257,34 @@ export function sanitizeUploadName(name: string): string {
 
 /** Subconjunto de StorageService que necesita `storeUploadedDocument`. */
 export interface DocumentStorer {
-  putUnique(dir: string, filename: string, body: Buffer): Promise<string>;
+  putUnique(
+    dir: string,
+    filename: string,
+    body: Buffer,
+    ignorePaths?: Iterable<string | null | undefined>,
+  ): Promise<string>;
 }
 
 /**
- * Sube un archivo recién subido por multer a la carpeta de su convenio y
- * devuelve la ruta relativa definitiva (la que se persiste en `documents`).
- *
- * Sustituye a `moveIntoAgreementDir`: ahí el archivo nacía en disco y se
- * movía con `renameSync` antes de reflejarse en el bucket; ahora los bytes ya
- * vienen en memoria y se escriben directamente en el destino final.
+ * Sube un archivo recién subido por multer a la carpeta de su convenio (o a
+ * `opts.customDir` si se especifica, como la carpeta de opiniones por código
+ * de dependencia) conservando siempre el nombre original del archivo subido.
  */
 export async function storeUploadedDocument(
   storer: DocumentStorer,
   file: { originalname: string; buffer: Buffer },
   tramiteCode: string,
   createdAt: Date | string | null,
+  opts?: {
+    customDir?: string;
+    ignorePaths?: Iterable<string | null | undefined>;
+  },
 ): Promise<string> {
   const name = sanitizeUploadName(file.originalname);
-  return storer.putUnique(
-    agreementDir(tramiteCode, createdAt),
-    name,
-    file.buffer,
-  );
+  const dir = opts?.customDir ?? agreementDir(tramiteCode, createdAt);
+  return opts?.ignorePaths
+    ? storer.putUnique(dir, name, file.buffer, opts.ignorePaths)
+    : storer.putUnique(dir, name, file.buffer);
 }
 
 /**

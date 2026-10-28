@@ -346,6 +346,16 @@ export class DeliverablesService {
     const bodyHtml = opts.bodyHtml ?? context.bodyHtml;
     const type = context.type;
 
+    // Consulta cualquier oficio previo del entregable antes de renderizar el
+    // nuevo PDF para conservar el nombre exacto sin sufijos (1) al reemplazarlo.
+    const previousDocs =
+      opts.replace || opts.bodyHtml
+        ? await this.prisma.documents.findMany({
+            where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
+            select: { id: true, file_path: true },
+          })
+        : [];
+
     // B7-3 · Se genera el PDF nuevo ANTES de tocar el previo: si el render
     // falla, el oficio anterior permanece intacto (antes se borraba primero y
     // un fallo dejaba al entregable sin oficio).
@@ -354,6 +364,9 @@ export class DeliverablesService {
       oficioNumber,
       context.tramiteCode,
       context.createdAt,
+      previousDocs.length > 0
+        ? { ignorePaths: previousDocs.map((d) => d.file_path) }
+        : undefined,
     );
 
     const docType = await this.prisma.document_types.findUnique({
@@ -434,10 +447,12 @@ export class DeliverablesService {
     // borrado en el bucket falla queda un objeto huérfano, pero la BD ya es
     // consistente (el oficio nuevo es el vigente).
     for (const path of replacedPaths) {
-      try {
-        await this.storage.removeRel(path);
-      } catch {
-        // best-effort: objeto ausente o ya borrado en el bucket.
+      if (path && path !== filename) {
+        try {
+          await this.storage.removeRel(path);
+        } catch {
+          // best-effort: objeto ausente o ya borrado en el bucket.
+        }
       }
     }
 
@@ -485,10 +500,11 @@ export class DeliverablesService {
       );
     }
 
-    const existing = await this.prisma.documents.findFirst({
+    const previousDocs = await this.prisma.documents.findMany({
       where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
+      select: { id: true, file_path: true },
     });
-    if (existing && deliverable.status !== 'OBSERVADO') {
+    if (previousDocs.length > 0 && deliverable.status !== 'OBSERVADO') {
       throw new BadRequestException(
         'Este entregable ya tiene un oficio de solicitud. Use la edición del documento para reemplazarlo.',
       );
@@ -511,12 +527,17 @@ export class DeliverablesService {
       file,
       deliverable.agreements?.tramite_code ?? '',
       deliverable.agreements?.created_at ?? null,
+      previousDocs.length > 0
+        ? { ignorePaths: previousDocs.map((d) => d.file_path) }
+        : undefined,
     );
 
     const doc = await this.prisma
       .$transaction(async (tx) => {
-        if (existing) {
-          await tx.documents.delete({ where: { id: existing.id } });
+        if (previousDocs.length > 0) {
+          await tx.documents.deleteMany({
+            where: { id: { in: previousDocs.map((d) => d.id) } },
+          });
         }
 
         const docType = await tx.document_types.findUnique({
@@ -572,6 +593,17 @@ export class DeliverablesService {
         }
         throw err;
       });
+
+    // Purga de los oficios reemplazados en OBS después del commit.
+    for (const prev of previousDocs) {
+      if (prev.file_path && prev.file_path !== relPath) {
+        try {
+          await this.storage.removeRel(prev.file_path);
+        } catch {
+          // best-effort
+        }
+      }
+    }
 
     return serializeBigInt(stripDocumentFilePath(doc));
   }
@@ -820,6 +852,14 @@ export class DeliverablesService {
 
     const originalName = normalizeUploadName(file.originalname);
 
+    // Si existían versiones previas de respuesta (ENTRADA) para este entregable,
+    // se retiran en la transacción y se purgan de OBS después del commit para no
+    // dejar archivos obsoletos ni sufijos (1).
+    const previousDocs = await this.prisma.documents.findMany({
+      where: { deliverable_id: deliverable.id, direction: 'ENTRADA' },
+      select: { id: true, file_path: true },
+    });
+
     // Sube el archivo ANTES de la transacción: no se mantiene un lock de BD
     // durante el I/O de red; si la transacción falla, se purga el objeto.
     const relPath = await storeUploadedDocument(
@@ -827,10 +867,19 @@ export class DeliverablesService {
       file,
       deliverable.agreements?.tramite_code ?? '',
       deliverable.agreements?.created_at ?? null,
+      previousDocs.length > 0
+        ? { ignorePaths: previousDocs.map((d) => d.file_path) }
+        : undefined,
     );
 
     const updated = await this.prisma
       .$transaction(async (tx) => {
+        if (previousDocs.length > 0) {
+          await tx.documents.deleteMany({
+            where: { id: { in: previousDocs.map((d) => d.id) } },
+          });
+        }
+
         const docTypeCode = DOC_TYPE_BY_DELIVERABLE[deliverable.type];
         const docType = docTypeCode
           ? await tx.document_types.findUnique({ where: { code: docTypeCode } })
@@ -842,7 +891,7 @@ export class DeliverablesService {
           data: {
             agreements: { connect: { id: deliverable.agreement_id } },
             deliverables: { connect: { id: deliverable.id } },
-            name: `${deliverable.title} v${isCorrection ? nextVersion : 1}`,
+            name: deliverable.title,
             file_path: relPath,
             original_name: originalName,
             extension: extname(originalName).replace(/^\./, '').slice(0, 10),
@@ -920,6 +969,17 @@ export class DeliverablesService {
         }
         throw err;
       });
+
+    // Purga de las respuestas previas reemplazadas en OBS después del commit.
+    for (const prev of previousDocs) {
+      if (prev.file_path && prev.file_path !== relPath) {
+        try {
+          await this.storage.removeRel(prev.file_path);
+        } catch {
+          // best-effort
+        }
+      }
+    }
 
     return serializeBigInt(updated);
   }

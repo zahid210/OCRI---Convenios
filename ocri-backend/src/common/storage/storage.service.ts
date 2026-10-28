@@ -167,20 +167,27 @@ export class StorageService implements OnModuleInit {
    * existe (`dictamen.pdf`, `dictamen(1).pdf`, ...), igual que se hacía contra
    * el disco con `existsSync`, y devuelve la ruta relativa definitiva.
    *
-   * La comprobación usa HeadObject contra el bucket porque ya no hay disco que
-   * consultar: el bucket es el único lugar donde puede existir el archivo.
+   * Si se indican `ignorePaths` (rutas que están siendo reemplazadas en la
+   * misma operación), permite reutilizar directamente ese nombre sin agregar
+   * sufijos `(1)`, conservando intacto el nombre original o generado.
    */
   async putUnique(
     dir: string,
     filename: string,
     body: Buffer,
+    ignorePaths?: Iterable<string | null | undefined>,
   ): Promise<string> {
     const dot = filename.lastIndexOf('.');
     const stem = dot > 0 ? filename.slice(0, dot) : filename;
     const ext = dot > 0 ? filename.slice(dot) : '';
     const base = dir ? `${dir}/${filename}` : filename;
+    const ignored = new Set(
+      ignorePaths
+        ? [...ignorePaths].filter((p): p is string => Boolean(p))
+        : [],
+    );
 
-    if (!(await this.exists(base))) {
+    if (ignored.has(base) || !(await this.exists(base))) {
       await this.put(base, body);
       return base;
     }
@@ -189,7 +196,7 @@ export class StorageService implements OnModuleInit {
       const candidate = dir
         ? `${dir}/${stem}(${counter})${ext}`
         : `${stem}(${counter})${ext}`;
-      if (await this.exists(candidate)) continue;
+      if (!ignored.has(candidate) && (await this.exists(candidate))) continue;
       await this.put(candidate, body);
       return candidate;
     }

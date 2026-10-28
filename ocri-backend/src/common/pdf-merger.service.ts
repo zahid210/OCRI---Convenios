@@ -435,12 +435,23 @@ export class PdfMergerService {
     const mergedBytes = await mergedPdf.save();
     const filename = 'expediente-tecnico.pdf';
     const subdir = agreementDir(tramiteCode, createdAt ?? null);
+    const existingExpedientePaths = documents
+      .filter((d) => d.document_types?.code === 'EXPEDIENTE_TECNICO')
+      .map((d) => d.file_path);
 
-    const relPath = await this.storage.putUnique(
-      subdir,
-      filename,
-      Buffer.from(mergedBytes),
-    );
+    const relPath =
+      existingExpedientePaths.length > 0
+        ? await this.storage.putUnique(
+            subdir,
+            filename,
+            Buffer.from(mergedBytes),
+            existingExpedientePaths,
+          )
+        : await this.storage.putUnique(
+            subdir,
+            filename,
+            Buffer.from(mergedBytes),
+          );
 
     this.logger.log(
       `Expediente técnico generado: ${relPath} (${orderedDocs.length} documentos PDF fusionados, en parejas por opinión)`,
@@ -604,6 +615,10 @@ export class PdfMergerService {
     oficioNumber?: string,
     tramiteCode?: string,
     createdAt?: Date | string | null,
+    opts?: {
+      customSubdir?: string;
+      ignorePaths?: Iterable<string | null | undefined>;
+    },
   ): Promise<string> {
     const template = await this.readOficioOpinionTemplate();
     // El número digitado siempre gana sobre el que trae la plantilla, y ahora
@@ -630,15 +645,22 @@ export class PdfMergerService {
     });
 
     const filename = `${normalizeOficioNumber(oficioNumber)}.pdf`;
-    const subdir = tramiteCode
-      ? agreementDir(tramiteCode, createdAt ?? null)
-      : '';
+    const subdir =
+      opts?.customSubdir ??
+      (tramiteCode ? agreementDir(tramiteCode, createdAt ?? null) : '');
 
-    const relPath = await this.storage.putUnique(
-      subdir,
-      filename,
-      Buffer.from(pdfBuffer),
-    );
+    const relPath = opts?.ignorePaths
+      ? await this.storage.putUnique(
+          subdir,
+          filename,
+          Buffer.from(pdfBuffer),
+          opts.ignorePaths,
+        )
+      : await this.storage.putUnique(
+          subdir,
+          filename,
+          Buffer.from(pdfBuffer),
+        );
     this.logger.log(`Oficio de solicitud de opinión generado: ${relPath}`);
 
     return relPath;

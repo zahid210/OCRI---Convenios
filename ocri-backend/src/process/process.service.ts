@@ -20,7 +20,6 @@ import {
   UploadFile,
   DOC_TYPE_EXTENSIONS,
   normalizeUploadName,
-  oficioSolicitudFilename,
   opinionDir,
   storePath,
   storeUploadedDocument,
@@ -297,7 +296,12 @@ export class ProcessService {
       tx: Prisma.TransactionClient,
       relPath: string | undefined,
     ) => Promise<T>,
-    options?: { maxWait?: number; timeout?: number },
+    options?: {
+      maxWait?: number;
+      timeout?: number;
+      customDir?: string;
+      ignorePaths?: Iterable<string | null | undefined>;
+    },
   ): Promise<T> {
     const relPath = file
       ? await storeUploadedDocument(
@@ -305,10 +309,20 @@ export class ProcessService {
           file,
           agreement.tramite_code,
           agreement.created_at,
+          options?.customDir || options?.ignorePaths
+            ? {
+                customDir: options.customDir,
+                ignorePaths: options.ignorePaths,
+              }
+            : undefined,
         )
       : undefined;
     try {
-      return await this.prisma.$transaction((tx) => work(tx, relPath), options);
+      const txOpts =
+        options?.maxWait !== undefined || options?.timeout !== undefined
+          ? { maxWait: options.maxWait, timeout: options.timeout }
+          : undefined;
+      return await this.prisma.$transaction((tx) => work(tx, relPath), txOpts);
     } catch (err) {
       if (relPath) {
         try {
@@ -566,60 +580,6 @@ export class ProcessService {
         throw error;
       });
 
-    const dependencias = await this.prisma.dependencias.findMany({
-      where: { id: { in: dependenciaIds.map((id) => BigInt(id)) } },
-      select: { id: true, name: true },
-    });
-
-    const depMap = new Map(dependencias.map((d) => [Number(d.id), d.name]));
-
-    const requestedOficio = options?.oficioNumber?.trim();
-    const oficioNumber =
-      requestedOficio && requestedOficio.length > 0
-        ? requestedOficio
-        : `OF. OCRI-SOL-${Date.now()}`;
-
-    for (let i = 0; i < dependenciaIds.length; i++) {
-      const depId = dependenciaIds[i];
-      try {
-        const depName = depMap.get(depId) ?? 'Dependencia';
-        const requestId = created[i]?.id;
-        const filename = await this.pdfMerger.generateOficioSolicitud(
-          agreementId,
-          depName,
-          oficioNumber,
-          agreement.tramite_code,
-          options?.directedTo,
-          agreement.created_at,
-        );
-
-        const docType = await this.prisma.document_types.findFirst({
-          where: { code: 'OFICIO_SOLICITUD_OPINION' },
-        });
-
-        await this.prisma.documents.create({
-          data: {
-            agreement_id: BigInt(agreementId),
-            name: `Oficio Solicitud Opinión - ${depName}`,
-            file_path: storePath(filename),
-            original_name: basename(filename),
-            extension: 'pdf',
-            document_type_id: docType?.id ?? null,
-            opinion_request_id: requestId ? BigInt(requestId) : undefined,
-            direction: 'SALIDA',
-            stage: 'ETAPA_1_PROPUESTA',
-            uploaded_by_id: userId != null ? BigInt(userId) : undefined,
-            created_at: new Date(),
-            updated_at: new Date(),
-          },
-        });
-      } catch (err) {
-        this.logger.warn(
-          `No se pudo generar oficio de solicitud para dependencia ${depId}: ${err}`,
-        );
-      }
-    }
-
     return serializeBigInt(created);
   }
 
@@ -730,7 +690,7 @@ export class ProcessService {
       where: { id: BigInt(opinionRequestId) },
       include: {
         agreements: true,
-        dependencias: { select: { name: true } },
+        dependencias: { select: { name: true, code: true } },
       },
     });
 
@@ -781,10 +741,22 @@ export class ProcessService {
         })
       : [];
 
+    const depCode =
+      (request.dependencias as { code?: string | null; name?: string | null } | null)?.code?.trim() ||
+      request.dependencias?.name?.trim() ||
+      'DEP';
+    const targetOpinionDir = opinionDir(
+      request.agreements.tramite_code,
+      request.agreements.created_at,
+      depCode,
+    );
+
+    let uploadedRelPath: string | undefined;
     const updated = await this.withStoredFile(
       file,
       request.agreements,
       async (tx, relPath) => {
+        uploadedRelPath = relPath;
         // Guarda de integridad: solo se registra una respuesta sobre una
         // solicitud realmente en curso. No se permite reanimar una CANCELADA ni
         // responder un oficio que nunca se envió (GENERADA). El guard por estado
@@ -871,12 +843,19 @@ export class ProcessService {
 
         return result;
       },
-      { maxWait: 10000, timeout: 30000 },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+        customDir: targetOpinionDir,
+        ...(previousResponseDocs.length > 0
+          ? { ignorePaths: previousResponseDocs.map((d) => d.file_path) }
+          : {}),
+      },
     );
 
     // Purga las respuestas reemplazadas en OBS, después del commit.
     for (const doc of previousResponseDocs) {
-      if (doc.file_path) {
+      if (doc.file_path && doc.file_path !== uploadedRelPath) {
         try {
           await this.storage.removeRel(doc.file_path);
         } catch (e) {
@@ -1394,7 +1373,10 @@ export class ProcessService {
   ) {
     const request = await this.prisma.opinion_requests.findUnique({
       where: { id: BigInt(opinionRequestId) },
-      include: { agreements: true, dependencias: { select: { name: true } } },
+      include: {
+        agreements: true,
+        dependencias: { select: { name: true, code: true } },
+      },
     });
 
     if (!request) {
@@ -1414,6 +1396,26 @@ export class ProcessService {
       );
     }
 
+    // Se consulta siempre cualquier oficio previo de esta solicitud para
+    // retirarlo en la transacción y evitar duplicados o sufijos (1) en OBS.
+    const previousDocs = await this.prisma.documents.findMany({
+      where: {
+        opinion_request_id: BigInt(opinionRequestId),
+        document_types: { code: 'OFICIO_SOLICITUD_OPINION' },
+      },
+      select: { id: true, file_path: true },
+    });
+
+    const depCode =
+      (request.dependencias as { code?: string | null; name?: string | null } | null)?.code?.trim() ||
+      request.dependencias?.name?.trim() ||
+      'DEP';
+    const targetOpinionDir = opinionDir(
+      request.agreements?.tramite_code,
+      request.agreements?.created_at,
+      depCode,
+    );
+
     // El número de oficio se sobrescribe dentro de `renderOficioOpinionPdf`
     // (ver `applyOficioNumberToBody`), para que opinión, rectorado y solicitud
     // compartan un único criterio.
@@ -1422,6 +1424,12 @@ export class ProcessService {
       dto.oficio_number,
       request.agreements?.tramite_code,
       request.agreements?.created_at,
+      {
+        customSubdir: targetOpinionDir,
+        ...(previousDocs.length > 0
+          ? { ignorePaths: previousDocs.map((d) => d.file_path) }
+          : {}),
+      },
     );
 
     const docType = await this.prisma.document_types.findUnique({
@@ -1429,18 +1437,6 @@ export class ProcessService {
     });
 
     const agreementId = request.agreement_id;
-
-    // En una corrección se retira el oficio previo de esta solicitud y, tras el
-    // commit, su objeto en OBS. Nunca se borra antes de crear el nuevo.
-    const previousDocs = isCorrection
-      ? await this.prisma.documents.findMany({
-          where: {
-            opinion_request_id: BigInt(opinionRequestId),
-            document_types: { code: 'OFICIO_SOLICITUD_OPINION' },
-          },
-          select: { id: true, file_path: true },
-        })
-      : [];
 
     const newPath = storePath(filename);
 
@@ -1578,7 +1574,10 @@ export class ProcessService {
   ) {
     const request = await this.prisma.opinion_requests.findUnique({
       where: { id: BigInt(opinionRequestId) },
-      include: { agreements: true, dependencias: { select: { name: true } } },
+      include: {
+        agreements: true,
+        dependencias: { select: { name: true, code: true } },
+      },
     });
 
     if (!request) {
@@ -1624,33 +1623,44 @@ export class ProcessService {
     });
 
     const dependenciaName = request.dependencias?.name ?? 'Dependencia';
+    const depCode =
+      (request.dependencias as { code?: string | null; name?: string | null } | null)?.code?.trim() ||
+      request.dependencias?.name?.trim() ||
+      'DEP';
+    const targetOpinionDir = opinionDir(
+      agreement.tramite_code,
+      agreement.created_at,
+      depCode,
+    );
 
-    // Mismo nombre y carpeta que el oficio generado por el sistema
-    // (`oficioSolicitudFilename` + `opinionDir` son la fuente de verdad
-    // compartida). `putUnique` no pisa el oficio previo si se vuelve a cargar:
-    // desambigua con `(1)`, `(2)`… en lugar de duplicar variantes.
-    const filename = oficioSolicitudFilename(dependenciaName);
-    const relPath = await this.storage.putUnique(
-      opinionDir(agreement.tramite_code, agreement.created_at, dependenciaName),
-      filename,
-      file.buffer,
+    // Se consulta siempre cualquier oficio previo de esta solicitud para
+    // retirarlo en la transacción y permitir reutilizar el nombre original en OBS.
+    const previousDocs = await this.prisma.documents.findMany({
+      where: {
+        opinion_request_id: BigInt(opinionRequestId),
+        document_types: { code: 'OFICIO_SOLICITUD_OPINION' },
+      },
+      select: { id: true, file_path: true },
+    });
+
+    // Conserva el nombre original del archivo subido dentro de la subcarpeta
+    // opiniones/{código_dependencia}/ del convenio.
+    const relPath = await storeUploadedDocument(
+      this.storage,
+      file,
+      agreement.tramite_code,
+      agreement.created_at,
+      {
+        customDir: targetOpinionDir,
+        ...(previousDocs.length > 0
+          ? { ignorePaths: previousDocs.map((d) => d.file_path) }
+          : {}),
+      },
     );
 
     const sentAt = dto.sent_at
       ? parseLocalCalendarDate(dto.sent_at)
       : new Date();
-
-    // En una corrección se retira el oficio previo de esta solicitud y, tras el
-    // commit, su objeto en OBS. Nunca se borra antes de crear el nuevo.
-    const previousDocs = isCorrection
-      ? await this.prisma.documents.findMany({
-          where: {
-            opinion_request_id: BigInt(opinionRequestId),
-            document_types: { code: 'OFICIO_SOLICITUD_OPINION' },
-          },
-          select: { id: true, file_path: true },
-        })
-      : [];
 
     try {
       const result = await this.prisma.$transaction(
@@ -1799,19 +1809,6 @@ export class ProcessService {
       );
     }
 
-    // El número de oficio se sobrescribe dentro de `renderOficioOpinionPdf`
-    // (ver `applyOficioNumberToBody`).
-    const filename = await this.pdfMerger.renderOficioOpinionPdf(
-      dto.bodyHtml,
-      dto.oficio_number,
-      agreement.tramite_code,
-      agreement.created_at,
-    );
-
-    const docType = await this.prisma.document_types.findUnique({
-      where: { code: 'OFICIO_RESPUESTA_RECTORADO' },
-    });
-
     // Idempotencia por tipo: si el oficio ya fue generado, esto es una
     // regeneración (corrección) y solo se reemplaza el archivo existente.
     const previousDocs = await this.prisma.documents.findMany({
@@ -1820,6 +1817,22 @@ export class ProcessService {
         document_types: { code: 'OFICIO_RESPUESTA_RECTORADO' },
       },
       select: { id: true, file_path: true },
+    });
+
+    // El número de oficio se sobrescribe dentro de `renderOficioOpinionPdf`
+    // (ver `applyOficioNumberToBody`).
+    const filename = await this.pdfMerger.renderOficioOpinionPdf(
+      dto.bodyHtml,
+      dto.oficio_number,
+      agreement.tramite_code,
+      agreement.created_at,
+      previousDocs.length > 0
+        ? { ignorePaths: previousDocs.map((d) => d.file_path) }
+        : undefined,
+    );
+
+    const docType = await this.prisma.document_types.findUnique({
+      where: { code: 'OFICIO_RESPUESTA_RECTORADO' },
     });
 
     const isCorrection = previousDocs.length > 0;
@@ -2054,13 +2067,6 @@ export class ProcessService {
       );
     }
 
-    const relPath = await storeUploadedDocument(
-      this.storage,
-      file,
-      agreement.tramite_code,
-      agreement.created_at,
-    );
-
     // Duplicados históricos del mismo tipo (p. ej. de cargas repetidas antes de
     // esta corrección): se colapsan para dejar una sola copia por tipo.
     const duplicates = await this.prisma.documents.findMany({
@@ -2071,6 +2077,19 @@ export class ProcessService {
       },
       select: { id: true, file_path: true },
     });
+
+    const relPath = await storeUploadedDocument(
+      this.storage,
+      file,
+      agreement.tramite_code,
+      agreement.created_at,
+      {
+        ignorePaths: [
+          doc.file_path,
+          ...duplicates.map((d) => d.file_path),
+        ],
+      },
+    );
 
     const now = new Date();
     const dupNote =
