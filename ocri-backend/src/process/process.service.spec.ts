@@ -75,10 +75,8 @@ describe('ProcessService · avance a OPINIONES_COMPLETAS', () => {
     expect(agreementUpdates).toHaveLength(1);
     const updateData = agreementUpdates[0].data as { process_status?: string };
     expect(updateData.process_status).toBe('OPINIONES_COMPLETAS');
-    expect(findManyArgs).toEqual(
-      expect.objectContaining({
-        select: expect.objectContaining({ status: true }),
-      }),
+    expect(findManyArgs?.select).toEqual(
+      expect.objectContaining({ status: true }),
     );
   });
 

@@ -742,7 +742,7 @@ export class ProcessService {
       : [];
 
     const depCode =
-      (request.dependencias as { code?: string | null; name?: string | null } | null)?.code?.trim() ||
+      request.dependencias?.code?.trim() ||
       request.dependencias?.name?.trim() ||
       'DEP';
     const targetOpinionDir = opinionDir(
@@ -764,7 +764,15 @@ export class ProcessService {
         const updated = await tx.opinion_requests.updateMany({
           where: {
             id: BigInt(opinionRequestId),
-            status: { in: ['ENVIADA', 'RESPONDIDA', 'OBSERVADA', 'VALIDADA', 'GENERADA'] },
+            status: {
+              in: [
+                'ENVIADA',
+                'RESPONDIDA',
+                'OBSERVADA',
+                'VALIDADA',
+                'GENERADA',
+              ],
+            },
           },
           data: {
             status: 'VALIDADA',
@@ -1407,7 +1415,7 @@ export class ProcessService {
     });
 
     const depCode =
-      (request.dependencias as { code?: string | null; name?: string | null } | null)?.code?.trim() ||
+      request.dependencias?.code?.trim() ||
       request.dependencias?.name?.trim() ||
       'DEP';
     const targetOpinionDir = opinionDir(
@@ -1482,7 +1490,8 @@ export class ProcessService {
               oficio_number: dto.oficio_number ?? request.oficio_number,
               directed_to: dto.directed_to ?? request.directed_to,
               sent_at: isCorrection ? request.sent_at : new Date(),
-              observations: request.status === 'OBSERVADA' ? null : request.observations,
+              observations:
+                request.status === 'OBSERVADA' ? null : request.observations,
               updated_at: new Date(),
             },
           });
@@ -1624,7 +1633,7 @@ export class ProcessService {
 
     const dependenciaName = request.dependencias?.name ?? 'Dependencia';
     const depCode =
-      (request.dependencias as { code?: string | null; name?: string | null } | null)?.code?.trim() ||
+      request.dependencias?.code?.trim() ||
       request.dependencias?.name?.trim() ||
       'DEP';
     const targetOpinionDir = opinionDir(
@@ -1708,7 +1717,8 @@ export class ProcessService {
               sent_via: dto.sent_via ?? request.sent_via,
               directed_to: dto.directed_to ?? request.directed_to,
               sent_at: isCorrection ? (request.sent_at ?? sentAt) : sentAt,
-              observations: request.status === 'OBSERVADA' ? null : request.observations,
+              observations:
+                request.status === 'OBSERVADA' ? null : request.observations,
               updated_at: new Date(),
             },
           });
@@ -2084,10 +2094,7 @@ export class ProcessService {
       agreement.tramite_code,
       agreement.created_at,
       {
-        ignorePaths: [
-          doc.file_path,
-          ...duplicates.map((d) => d.file_path),
-        ],
+        ignorePaths: [doc.file_path, ...duplicates.map((d) => d.file_path)],
       },
     );
 

@@ -494,7 +494,10 @@ export class DeliverablesService {
       deliverable.type,
     );
 
-    if (deliverable.status !== 'SOLICITADO' && deliverable.status !== 'OBSERVADO') {
+    if (
+      deliverable.status !== 'SOLICITADO' &&
+      deliverable.status !== 'OBSERVADO'
+    ) {
       throw new BadRequestException(
         `El oficio de solicitud solo puede cargarse mientras el entregable está en SOLICITADO u OBSERVADO. Estado actual: ${deliverable.status}`,
       );

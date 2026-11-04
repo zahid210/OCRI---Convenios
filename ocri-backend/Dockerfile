@@ -14,9 +14,9 @@ RUN apt-get update -y \
 FROM base AS deps
 WORKDIR /app
 
-# postinstall (sync-motor) copia vendor/html-pdf-lite sobre el paquete instalado
-# y @prisma/client genera el cliente al instalar: necesitan estos archivos previos.
-COPY package.json package-lock.json ./
+# postinstall (prisma generate + sync-motor) genera Prisma Client y copia
+# vendor/html-pdf-lite sobre el paquete instalado: necesitan estos archivos previos.
+COPY package.json package-lock.json prisma.config.ts ./
 COPY scripts/sync-motor.mjs ./scripts/sync-motor.mjs
 COPY vendor/ ./vendor/
 COPY prisma/ ./prisma/

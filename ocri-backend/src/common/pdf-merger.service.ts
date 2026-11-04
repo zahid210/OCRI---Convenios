@@ -656,11 +656,7 @@ export class PdfMergerService {
           Buffer.from(pdfBuffer),
           opts.ignorePaths,
         )
-      : await this.storage.putUnique(
-          subdir,
-          filename,
-          Buffer.from(pdfBuffer),
-        );
+      : await this.storage.putUnique(subdir, filename, Buffer.from(pdfBuffer));
     this.logger.log(`Oficio de solicitud de opinión generado: ${relPath}`);
 
     return relPath;
