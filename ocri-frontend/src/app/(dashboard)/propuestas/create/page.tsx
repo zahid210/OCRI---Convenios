@@ -614,7 +614,7 @@ export default function CreatePropuestaPage() {
                   required
                   value={applicantUnit}
                   onChange={(e) => setApplicantUnit(e.target.value)}
-                  placeholder="EJ: FACULTAD DE INGENIERÍA / DIRECCIÓN DE RELACIONES INSTITUCIONALES"
+                  placeholder="EJ: DIRECCIÓN DE INNOVACIÓN, ESCUELA DE POSGRADO, FACULTAD, INSTITUTO..."
                   className="h-10 w-full px-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
               </div>
