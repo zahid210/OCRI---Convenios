@@ -64,11 +64,6 @@ export class RegisterAgreementDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500, { message: 'drive_link no debe exceder 500 caracteres' })
-  drive_link?: string;
-
-  @IsOptional()
-  @IsString()
   @MaxLength(5000, { message: 'observations no debe exceder 5000 caracteres' })
   observations?: string;
 

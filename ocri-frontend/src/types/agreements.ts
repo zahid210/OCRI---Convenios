@@ -103,7 +103,6 @@ export interface Agreement {
     resolution_number?: string | null;
     start_date: string | null;
     end_date: string | null;
-    drive_link?: string | null;
 
     process_status: ProcessStatus;
     validity_status: ValidityStatus;
@@ -412,5 +411,4 @@ export interface ExpirationTrackingItem {
     temporal_status: 'VIGENTE' | 'POR_VENCER' | 'VENCIDO' | 'SIN_FECHA';
     days_remaining: number | null;
     responsables?: AgreementResponsable[];
-    drive_link?: string | null;
 }

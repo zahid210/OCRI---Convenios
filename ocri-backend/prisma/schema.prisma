@@ -185,7 +185,6 @@ model agreements {
   resolution_number String?   @unique(map: "agreements_resolution_number_unique") @db.VarChar(255)
   start_date        DateTime? @db.Date
   end_date          DateTime? @db.Date
-  drive_link        String?   @db.VarChar(500) // repositorio institucional
 
   // Estado del proceso
   process_status  process_status  @default(RECEPCIONADA)

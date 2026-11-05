@@ -381,7 +381,6 @@ export class ProcessController {
         resolution_number: body.resolution_number ?? '',
         start_date: body.start_date ?? '',
         end_date: body.end_date ?? '',
-        drive_link: body.drive_link,
         observations: body.observations,
         responsables: this.parseResponsables(body.responsables),
       },

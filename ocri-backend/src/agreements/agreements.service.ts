@@ -796,16 +796,14 @@ export class AgreementsService {
         temporal_status: temporal.temporal_status,
         days_remaining: temporal.days_remaining,
         responsables: a.responsables,
-        drive_link: a.drive_link,
       };
 
       // B6-9 · Confinamiento de campos: el rol restringido (`viewer`) ve el
-      // semáforo (estado/vigencia) pero no los datos internos de gestión —el
-      // enlace de trabajo `drive_link` ni los responsables con sus datos de
-      // contacto—. Se omiten en el origen para no depender de que el cliente
-      // decida no mostrarlos.
+      // semáforo (estado/vigencia) pero no los datos internos de gestión —los
+      // responsables con sus datos de contacto—. Se omiten en el origen para
+      // no depender de que el cliente decida no mostrarlos.
       if (restricted) {
-        return { ...row, responsables: undefined, drive_link: undefined };
+        return { ...row, responsables: undefined };
       }
       return row;
     });

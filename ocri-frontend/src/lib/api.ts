@@ -511,7 +511,6 @@ export async function registerConvenio(
       email?: string;
       phone?: string;
     }>;
-    drive_link?: string;
     observations?: string;
   },
   file?: File,
@@ -523,7 +522,6 @@ export async function registerConvenio(
   if (data.end_date) formData.append("end_date", data.end_date);
   if (data.responsables)
     formData.append("responsables", JSON.stringify(data.responsables));
-  if (data.drive_link) formData.append("drive_link", data.drive_link);
   if (data.observations) formData.append("observations", data.observations);
   if (file) formData.append("file", file);
 

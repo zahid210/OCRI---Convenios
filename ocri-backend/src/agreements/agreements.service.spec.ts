@@ -17,7 +17,6 @@ function agreementRow(overrides: Record<string, unknown> = {}) {
     institutions: { name: 'UNCP' },
     agreement_types: { name: 'MARCO' },
     responsables: [{ id: 1n, name: 'Pepe', email: 'pepe@uncp.edu.pe' }],
-    drive_link: 'https://drive.example/abc',
     registered_at: new Date('2021-01-02'),
     ...overrides,
   };
@@ -43,21 +42,19 @@ describe('AgreementsService · getExpirationTracking (confinamiento B6-9)', () =
     service = module.get(AgreementsService);
   });
 
-  it('incluye drive_link y responsables para un rol operativo', async () => {
+  it('incluye responsables para un rol operativo', async () => {
     const rows = (await service.getExpirationTracking('procesador')) as Array<
       Record<string, unknown>
     >;
-    expect(rows[0].drive_link).toBe('https://drive.example/abc');
     expect(rows[0].responsables).toEqual([
       expect.objectContaining({ name: 'Pepe' }),
     ]);
   });
 
-  it('omite drive_link y responsables para el rol viewer (B6-9)', async () => {
+  it('omite responsables para el rol viewer (B6-9)', async () => {
     const rows = (await service.getExpirationTracking('viewer')) as Array<
       Record<string, unknown>
     >;
-    expect(rows[0].drive_link).toBeUndefined();
     expect(rows[0].responsables).toBeUndefined();
     // El semáforo (lo visible para el rol) sigue presente.
     expect(rows[0].temporal_status).toBe('VIGENTE');

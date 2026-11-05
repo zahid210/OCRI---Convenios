@@ -2663,7 +2663,6 @@ export class ProcessService {
       resolution_number: string;
       start_date: string;
       end_date: string;
-      drive_link?: string;
       observations?: string;
       responsables: Array<{
         name: string;
@@ -2761,9 +2760,6 @@ export class ProcessService {
               end_date: new Date(data.end_date),
               validity_status: 'VIGENTE',
               registered_at: now,
-              ...(data.drive_link?.trim()
-                ? { drive_link: data.drive_link.trim() }
-                : {}),
               ...(data.observations?.trim()
                 ? { observations: data.observations.trim() }
                 : {}),
@@ -2774,7 +2770,6 @@ export class ProcessService {
                 start_date: data.start_date,
                 end_date: data.end_date,
                 responsables_count: data.responsables.length,
-                drive_link: data.drive_link ?? null,
               }),
             ) as Record<string, unknown>,
           },
