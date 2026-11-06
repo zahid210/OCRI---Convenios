@@ -395,6 +395,9 @@ export class ProcessService {
         title: true,
         name: true,
         tramite_code: true,
+        applicant_name: true,
+        applicant_email: true,
+        applicant_unit: true,
         process_status: true,
         validity_status: true,
         stage: true,
@@ -404,6 +407,17 @@ export class ProcessService {
         registered_at: true,
         monitoring_concluded_at: true,
         rectorate_oficio_number: true,
+        responsables: {
+          orderBy: [{ side: 'asc' }, { id: 'asc' }],
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            side: true,
+            email: true,
+            phone: true,
+          },
+        },
       },
     });
 

@@ -132,6 +132,7 @@ export default function SeguimientoDetailPage({
                 processStatus={agreement.process_status}
                 deliverables={deliverables}
                 isLoadingDeliverables={isLoadingDeliverables}
+                responsables={agreement.responsables}
                 canManage={manage}
                 onRefresh={loadData}
             />

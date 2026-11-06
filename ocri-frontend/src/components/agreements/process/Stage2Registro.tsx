@@ -24,6 +24,8 @@ import { NEXT_STAGE_DESTINATION, SectionCard } from './shared';
 import RechazarPropuestaModal from './RechazarPropuestaModal';
 import PublicarConvenioModal from './PublicarConvenioModal';
 import RegistrarConvenioModal from './RegistrarConvenioModal';
+import ResponsablesCard from './ResponsablesCard';
+import { AgreementResponsable } from '@/types/agreements';
 
 export default function Stage2Registro({
     agreementId,
@@ -33,6 +35,7 @@ export default function Stage2Registro({
     publishedAt,
     registeredAt,
     tramiteCode,
+    responsables,
     canManage,
     onRefresh,
 }: {
@@ -43,6 +46,7 @@ export default function Stage2Registro({
     publishedAt?: string | null;
     registeredAt?: string | null;
     tramiteCode?: string | null;
+    responsables?: AgreementResponsable[];
     canManage: boolean;
     onRefresh: () => Promise<void>;
 }) {
@@ -360,6 +364,11 @@ export default function Stage2Registro({
                     ))}
                 </div>
             </SectionCard>
+
+            {/* Directorio de Responsables (visible tras registrar el convenio) */}
+            {registeredAt && (
+                <ResponsablesCard responsables={responsables} />
+            )}
 
             {showRejectModal && (
                 <RechazarPropuestaModal
