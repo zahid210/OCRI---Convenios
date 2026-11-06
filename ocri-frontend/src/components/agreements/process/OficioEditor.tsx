@@ -742,11 +742,10 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
       // Sanitiza el HTML de la plantilla/BD antes de inyectarlo en un
       // contentEditable: elimina scripts y atributos de evento (stored-XSS)
       // pero conserva tablas, clases y el posicionamiento del oficio.
-      const clean = DOMPurify.sanitize(initialHtml, {
+      el.innerHTML = DOMPurify.sanitize(initialHtml, {
         FORBID_TAGS: ["script", "iframe", "object", "embed"],
         ADD_ATTR: ["contenteditable"],
       });
-      el.innerHTML = clean;
       // El papel es continuo y su alto depende del texto inyectado, así que las
       // hojas, los cortes y el tamaño se calculan tras inyectar el contenido y
       // en cada `input` (no con un ResizeObserver sobre el área de escritura,

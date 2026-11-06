@@ -39,7 +39,8 @@ export default function LoginPage() {
             });
 
             if (!data.user) {
-                throw new Error('El servidor no devolvió los datos de usuario.');
+                setError('El servidor no devolvió los datos de usuario.');
+                return;
             }
 
             // La cookie httpOnly ya la seteó el proxy en la respuesta del

@@ -43,9 +43,7 @@ export class DocumentTypesService {
     // de seed (`POST /document-types/seed` y `POST /catalogs/seed`) dejen el
     // mismo estado. `is_active` NO se toca (desactivar un tipo es una decisión
     // operativa que el seed no debe revertir).
-    const types = DOCUMENT_TYPES;
-
-    for (const t of types) {
+    for (const t of DOCUMENT_TYPES) {
       await this.prisma.document_types.upsert({
         where: { code: t.code },
         update: { name: t.name, direction: t.direction },

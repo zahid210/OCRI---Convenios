@@ -134,10 +134,10 @@ export function HeaderNotifications() {
         body: JSON.stringify({ keys }),
       });
       // Re-sincroniza con el servidor para reflejar el recuento real.
-      load({ silent: true, epoch });
+      void load({ silent: true, epoch });
     } catch {
       // Si falla, restaurar recargando desde el servidor.
-      load({ silent: true, epoch });
+      void load({ silent: true, epoch });
     } finally {
       setAcknowledging(false);
     }
@@ -154,9 +154,9 @@ export function HeaderNotifications() {
       setData((prev) =>
         prev ? { total: res.pending, items: prev.items } : prev,
       );
-      load({ silent: true, epoch });
+      void load({ silent: true, epoch });
     } catch {
-      load({ silent: true, epoch });
+      void load({ silent: true, epoch });
     } finally {
       setAcknowledging(false);
     }
@@ -172,7 +172,7 @@ export function HeaderNotifications() {
         onClick={() => {
           const next = !open;
           setOpen(next);
-          if (next) load({ silent: true, epoch: mutationEpochRef.current });
+          if (next) void load({ silent: true, epoch: mutationEpochRef.current });
         }}
         className="relative cursor-pointer border border-transparent p-2.5 text-gray-600 transition-colors hover:text-primary-hover"
         aria-label={`Notificaciones (${total})`}
