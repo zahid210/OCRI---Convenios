@@ -38,7 +38,6 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   AlertTriangle,
   Ban,
-  Building2,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -50,7 +49,6 @@ import {
   FileText,
   FolderOpen,
   Loader2,
-  Mail,
   MessageSquare,
   Pencil,
   Plus,
@@ -58,7 +56,6 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
-  User,
   Users,
 } from "lucide-react";
 import {
@@ -746,64 +743,6 @@ export default function Stage1Propuesta({
 
   return (
     <div className="space-y-6">
-      {/* Información de la Solicitud y Objeto */}
-      {(agreement.applicant_unit ||
-        agreement.applicant_name ||
-        agreement.applicant_email ||
-        agreement.name) && (
-        <SectionCard title="Información de la Solicitud" icon={Building2}>
-          <div className="space-y-4">
-            {agreement.name ? (
-              <div className="p-3.5 bg-gray-50 border border-gray-200">
-                <span className="block text-[11px] font-semibold uppercase text-gray-500 tracking-wider mb-1">
-                  Objeto del Convenio
-                </span>
-                <p className="text-sm text-gray-800 leading-relaxed">
-                  {agreement.name}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-3 border border-gray-200 bg-white space-y-1">
-                <span className="block text-[11px] font-semibold uppercase text-gray-500 tracking-wider">
-                  Unidad Solicitante
-                </span>
-                <p className="text-sm font-medium text-gray-800">
-                  {agreement.applicant_unit || "—"}
-                </p>
-              </div>
-
-              <div className="p-3 border border-gray-200 bg-white space-y-1">
-                <span className="block text-[11px] font-semibold uppercase text-gray-500 tracking-wider">
-                  Solicitante / Promotor
-                </span>
-                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                  <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                  <span className="truncate">
-                    {agreement.applicant_name || "—"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-3 border border-gray-200 bg-white space-y-1">
-                <span className="block text-[11px] font-semibold uppercase text-gray-500 tracking-wider">
-                  Correo de Contacto
-                </span>
-                {agreement.applicant_email ? (
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                    <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                    <span className="truncate">{agreement.applicant_email}</span>
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-400 italic">—</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </SectionCard>
-      )}
-
       {canManage &&
         (processStatus === "OPINIONES_COMPLETAS" ||
           processStatus === "EXPEDIENTE_TECNICO_LISTO") && (

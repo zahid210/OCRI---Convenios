@@ -53,7 +53,6 @@ export default function RegistrarConvenioModal({
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [observations, setObservations] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [responsables, setResponsables] = useState<ResponsableRow[]>([
     { ...EMPTY_RESPONSABLE },
@@ -111,7 +110,6 @@ export default function RegistrarConvenioModal({
             email: r.email.trim() || undefined,
             phone: r.phone.trim() || undefined,
           })),
-          observations: observations || undefined,
         },
         file,
       );
@@ -321,19 +319,6 @@ export default function RegistrarConvenioModal({
               <Plus className="h-3 w-3" /> Agregar responsable
             </button>
           </div>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-            Observaciones
-          </h3>
-          <textarea
-            value={observations}
-            onChange={(e) => setObservations(e.target.value)}
-            rows={2}
-            className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold resize-none"
-            placeholder="Opcional..."
-          />
         </div>
       </div>
     </ModalShell>

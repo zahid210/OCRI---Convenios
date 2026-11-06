@@ -15,6 +15,7 @@ import Stage1Propuesta from '@/components/agreements/process/Stage1Propuesta';
 import Stage2Registro from '@/components/agreements/process/Stage2Registro';
 import Stage3Seguimiento from '@/components/agreements/process/Stage3Seguimiento';
 import AgreementHeader from '@/components/agreements/process/AgreementHeader';
+import InformacionConvenioCard from '@/components/agreements/process/InformacionConvenioCard';
 import { ProcessDetail } from '@/components/agreements/process/shared';
 
 const ETAPA2_STATUSES = [
@@ -140,6 +141,9 @@ export default function ConvenioDetailPage({
                 fallbackCode={`#${agreementId}`}
             />
 
+            {/* Información del Convenio y Responsables */}
+            <InformacionConvenioCard agreement={agreement} />
+
             {/* Etapa 1: Propuesta (siempre visible) */}
             <Stage1Propuesta
                 agreementId={agreementId}
@@ -158,7 +162,6 @@ export default function ConvenioDetailPage({
                     publishedAt={agreement.published_at}
                     registeredAt={agreement.registered_at}
                     tramiteCode={agreement.tramite_code}
-                    responsables={agreement.responsables}
                     canManage={manage}
                     onRefresh={loadData}
                 />
@@ -171,7 +174,6 @@ export default function ConvenioDetailPage({
                     processStatus={agreement.process_status}
                     deliverables={deliverables}
                     isLoadingDeliverables={isLoadingDeliverables}
-                    responsables={agreement.responsables}
                     canManage={manage}
                     onRefresh={loadData}
                 />

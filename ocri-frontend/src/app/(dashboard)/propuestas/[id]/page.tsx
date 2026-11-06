@@ -131,7 +131,6 @@ export default function PropuestaDetailPage({
                     publishedAt={agreement.published_at}
                     registeredAt={agreement.registered_at}
                     tramiteCode={agreement.tramite_code}
-                    responsables={agreement.responsables}
                     canManage={manage}
                     onRefresh={loadData}
                 />

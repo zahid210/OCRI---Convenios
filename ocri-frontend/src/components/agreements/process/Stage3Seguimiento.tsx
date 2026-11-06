@@ -14,7 +14,7 @@ import {
   submitDeliverable,
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
-import { Deliverable, ProcessStatus, AgreementResponsable } from "@/types/agreements";
+import { Deliverable, ProcessStatus } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
@@ -43,7 +43,6 @@ import EvaluarEntregableModal from "./EvaluarEntregableModal";
 import GenerarSolicitudModal from "./GenerarSolicitudModal";
 import CargarSolicitudModal from "./CargarSolicitudModal";
 import AdjuntarRespuestaModal from "./AdjuntarRespuestaModal";
-import ResponsablesCard from "./ResponsablesCard";
 
 function DeliverableCard({
   deliverable,
@@ -335,7 +334,6 @@ export default function Stage3Seguimiento({
   deliverables,
   isLoadingDeliverables,
   canManage,
-  responsables,
   onRefresh,
 }: {
   agreementId: number;
@@ -343,7 +341,6 @@ export default function Stage3Seguimiento({
   deliverables: Deliverable[];
   isLoadingDeliverables: boolean;
   canManage: boolean;
-  responsables?: AgreementResponsable[];
   onRefresh: () => Promise<void>;
 }) {
   const toast = useToast();
@@ -536,11 +533,8 @@ export default function Stage3Seguimiento({
   };
 
   return (
-    <div className="space-y-6">
-      <ResponsablesCard responsables={responsables} />
-
-      <SectionCard title="Seguimiento del Convenio" icon={ClipboardList}>
-        {processStatus === "SEGUIMIENTO_CONCLUIDO" && (
+    <SectionCard title="Seguimiento del Convenio" icon={ClipboardList}>
+      {processStatus === "SEGUIMIENTO_CONCLUIDO" && (
         <div className="mb-6 bg-green-50 border border-green-200 p-4 text-sm text-green-800 flex items-start gap-2">
           El seguimiento de este convenio ha concluido.
         </div>
@@ -703,7 +697,6 @@ export default function Stage3Seguimiento({
           onCancel={() => setAdjuntarRespuestaModal(null)}
         />
       )}
-      </SectionCard>
-    </div>
+    </SectionCard>
   );
 }
