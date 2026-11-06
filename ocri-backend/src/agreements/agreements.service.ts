@@ -339,14 +339,12 @@ export class AgreementsService {
     }
 
     if (filters.scope === 'tramite') {
-      // Etapa 1 · Propuesta: solo evaluación y armado de expediente
+      // Propuestas: iniciativas en evaluación, armado de expediente o esperando firma de Rectorado
       where.process_status = { in: PROPOSAL_STATUSES };
     } else if (filters.scope === 'en_registro') {
-      // Etapa 2 · Registro: decisión de Rectorado, registro y publicación
+      // Convenios en registro: convenios formalizados tras suscripción de Rectorado
       where.process_status = {
         in: [
-          'ENVIADO_A_RECTORADO',
-          'NO_SUSCRITO',
           'SUSCRITO',
           'REGISTRADO',
           'PUBLICADO',

@@ -8,6 +8,7 @@ import { ProcessStatusResponse } from "@/types/agreements";
 import { useUser } from "@/components/user-provider";
 import { canManage } from "@/lib/auth";
 import Stage1Propuesta from "@/components/agreements/process/Stage1Propuesta";
+import Stage2Registro from "@/components/agreements/process/Stage2Registro";
 import AgreementHeader from "@/components/agreements/process/AgreementHeader";
 import { ProcessDetail } from "@/components/agreements/process/shared";
 
@@ -117,6 +118,24 @@ export default function PropuestaDetailPage({
                 canManage={manage}
                 onRefresh={loadData}
             />
+
+            {/* Decisión de Rectorado sobre la propuesta */}
+            {(agreement.process_status === "ENVIADO_A_RECTORADO" ||
+                agreement.process_status === "NO_SUSCRITO" ||
+                agreement.process_status === "SUSCRITO") && (
+                <Stage2Registro
+                    agreementId={agreementId}
+                    processStatus={agreement.process_status}
+                    decision={agreement.rectorate_decision}
+                    decidedAt={agreement.rectorate_decision_at}
+                    publishedAt={agreement.published_at}
+                    registeredAt={agreement.registered_at}
+                    tramiteCode={agreement.tramite_code}
+                    responsables={agreement.responsables}
+                    canManage={manage}
+                    onRefresh={loadData}
+                />
+            )}
         </div>
     );
 }

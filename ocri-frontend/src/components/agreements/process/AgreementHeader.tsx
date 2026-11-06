@@ -26,6 +26,7 @@ export const PROPOSAL_STATUSES: ProcessStatus[] = [
     'OPINIONES_COMPLETAS',
     'EXPEDIENTE_TECNICO_LISTO',
     'ENVIADO_A_RECTORADO',
+    'NO_SUSCRITO',
 ];
 
 export function isProposal(

@@ -60,14 +60,18 @@ export const IN_FLIGHT_STATUSES: ProcessStatus[] = [
 ];
 
 /**
- * Etapa 1 · Propuesta: estados donde OCRI aún arma y evalúa el expediente
- * (la decisión de Rectorado ya pertenece a la Etapa 2 · Registro).
+ * Propuestas: estados en los que el trámite todavía es una propuesta (no suscrita).
+ * Incluye desde la recepción y evaluación técnica hasta el envío a Rectorado y
+ * la conclusión por no suscripción.
+ * A partir de SUSCRITO, la iniciativa se convierte en Convenio y pasa a Registro.
  */
 export const PROPOSAL_STATUSES: ProcessStatus[] = [
   'RECEPCIONADA',
   'OPINIONES_EN_CURSO',
   'OPINIONES_COMPLETAS',
   'EXPEDIENTE_TECNICO_LISTO',
+  'ENVIADO_A_RECTORADO',
+  'NO_SUSCRITO',
 ];
 
 /** Documentos exigidos para remitir el expediente a Rectorado (fin de E1). */

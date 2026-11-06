@@ -721,7 +721,6 @@ export default function Stage1Propuesta({
         if (!cancelled) {
           toast.success("Expediente enviado a Rectorado correctamente.");
           await onRefresh();
-          router.replace(NEXT_STAGE_DESTINATION(agreementId).toRegistro);
         }
       } catch (err: unknown) {
         if (!cancelled) {

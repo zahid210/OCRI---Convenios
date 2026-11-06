@@ -24,7 +24,7 @@ const TRAMITE_BADGES: Record<ProcessStatus, string> = {
   OPINIONES_EN_CURSO: "bg-blue-50 text-blue-700 border-blue-200",
   OPINIONES_COMPLETAS: "bg-yellow-50 text-yellow-700 border-yellow-200",
   EXPEDIENTE_TECNICO_LISTO: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  ENVIADO_A_RECTORADO: "bg-primary text-white border-primary",
+  ENVIADO_A_RECTORADO: "bg-purple-50 text-purple-700 border-purple-200",
   NO_SUSCRITO: "bg-red-50 text-red-700 border-red-200",
   SUSCRITO: "bg-primary text-white border-primary",
   REGISTRADO: "bg-primary text-white border-primary",

@@ -78,6 +78,7 @@ export default function Stage2Registro({
             await rectorateDecision(agreementId, 'APPROVED');
             toast.success('Convenio suscrito por Rectorado.');
             await onRefresh();
+            router.replace(NEXT_STAGE_DESTINATION(agreementId).toRegistro);
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Error al registrar la decisión';
             toast.error(message);
