@@ -344,11 +344,7 @@ export class AgreementsService {
     } else if (filters.scope === 'en_registro') {
       // Convenios en registro: convenios formalizados tras suscripción de Rectorado
       where.process_status = {
-        in: [
-          'SUSCRITO',
-          'REGISTRADO',
-          'PUBLICADO',
-        ],
+        in: ['SUSCRITO', 'REGISTRADO', 'PUBLICADO'],
       };
     } else if (filters.scope === 'registrados') {
       // Etapa 3 · Seguimiento: convenios publicados ya en gestión de entregables

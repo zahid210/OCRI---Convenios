@@ -27,7 +27,6 @@ import {
   Download,
   ExternalLink,
   FileText,
-  Handshake,
   Loader2,
   Plus,
   ShieldCheck,

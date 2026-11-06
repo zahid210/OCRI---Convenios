@@ -19,7 +19,6 @@ import {
   uploadProcessDocument,
   uploadOficioOpinion,
   validateOpinionRequest,
-  cancelOpinionRequest,
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
 import AdjuntarDictamenModal from "./AdjuntarDictamenModal";
@@ -37,7 +36,6 @@ import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   AlertTriangle,
-  Ban,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -61,7 +59,6 @@ import {
 import {
   DOCUMENT_TYPE_LABELS,
   DOC_TYPE_ACCEPT,
-  NEXT_STAGE_DESTINATION,
   ProcessDetail,
   SectionCard,
   OpinionStatusIcon,
@@ -458,23 +455,6 @@ export default function Stage1Propuesta({
       await onRefresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Error al eliminar";
-      toast.error(message);
-    }
-  };
-
-  const handleCancelRequest = async (requestId: number, depName?: string) => {
-    const confirmed = await confirm({
-      title: "Cancelar opinión",
-      description: `¿Cancelar la opinión de ${depName ?? "esta dependencia"}? Recuerde que para avanzar al Expediente Técnico todas las solicitudes registradas deben encontrarse validadas.`,
-    });
-    if (!confirmed) return;
-
-    try {
-      await cancelOpinionRequest(requestId);
-      toast.success("Opinión cancelada.");
-      await onRefresh();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Error al cancelar";
       toast.error(message);
     }
   };
