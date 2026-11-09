@@ -56,6 +56,7 @@ export default function CreatePropuestaPage() {
   const [rectorateOficioNumber, setRectorateOficioNumber] = useState("");
   const [tramiteCode, setTramiteCode] = useState("");
   const [autoTramiteCode, setAutoTramiteCode] = useState(false);
+  const [suggestedCode, setSuggestedCode] = useState("");
   const [institutionId, setInstitutionId] = useState("");
   const [applicantName, setApplicantName] = useState("");
   const [applicantEmail, setApplicantEmail] = useState("");
@@ -102,12 +103,16 @@ export default function CreatePropuestaPage() {
   useEffect(() => {
     async function loadAuxData() {
       try {
-        const [typeRes, countriesRes] = await Promise.all([
+        const [typeRes, countriesRes, nextCodeRes] = await Promise.all([
           fetcher<AgreementType[]>("/agreements/lookups/types").catch(() => []),
           fetcher<string[]>("/institutions/countries").catch(() => []),
+          fetcher<{ nextCode: string }>("/agreements/next-code").catch(() => null),
         ]);
 
         setTypes(typeRes || []);
+        if (nextCodeRes?.nextCode) {
+          setSuggestedCode(nextCodeRes.nextCode);
+        }
 
         if (countriesRes && countriesRes.length > 0) {
           setCountries((prev) =>
@@ -729,7 +734,7 @@ export default function CreatePropuestaPage() {
                     onChange={(e) => setTramiteCode(e.target.value.toUpperCase())}
                     placeholder={
                       autoTramiteCode
-                        ? `AUTOGENERADO (EJ: 001-${new Date().getFullYear()})`
+                        ? suggestedCode || `001-${new Date().getFullYear()}`
                         : `EJ: 001-${new Date().getFullYear()}`
                     }
                     className={cn(

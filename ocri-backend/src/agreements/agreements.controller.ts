@@ -45,6 +45,14 @@ export class AgreementsController {
     return this.agreementsService.getAgreementTypesLookup();
   }
 
+  @Get('next-code')
+  async getNextCode() {
+    const nextCode = await this.agreementsService.generateNextTramiteCode(
+      new Date().getFullYear(),
+    );
+    return { nextCode };
+  }
+
   @Get()
   findAll(
     @Query() filters: FilterAgreementsDto,

@@ -52,7 +52,7 @@ export class AgreementsService {
    * año 2026 es `001-2026`, devuelve `002-2026`; si no hay ninguno aún en ese
    * año, devuelve `001-2026`).
    */
-  private async generateNextTramiteCode(year: number): Promise<string> {
+  async generateNextTramiteCode(year: number): Promise<string> {
     const suffix = `-${year}`;
     const existing = await this.prisma.agreements.findMany({
       where: { tramite_code: { endsWith: suffix } },
