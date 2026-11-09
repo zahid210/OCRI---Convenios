@@ -526,7 +526,7 @@ export default function CreatePropuestaPage() {
                   className={cn(
                     "h-10 w-full inline-flex items-center justify-center gap-2 text-sm border transition-colors cursor-pointer",
                     dictamenFile
-                      ? "border-primary text-primary bg-primary/5 hover:bg-primary/10"
+                      ? "border-primary/30 text-gray-800 bg-primary/5 hover:bg-primary/10"
                       : "border-gold bg-gold hover:bg-gold-dark text-white",
                   )}
                 >
