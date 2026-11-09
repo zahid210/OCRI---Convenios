@@ -82,14 +82,10 @@ export default function InformacionConvenioCard({
                 <span className="block text-[11px] font-semibold uppercase text-gray-500 tracking-wider">
                   Correo de Contacto
                 </span>
-                {applicant_email ? (
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                    <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                    <span className="truncate">{applicant_email}</span>
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-400 italic">—</span>
-                )}
+                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
+                  <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                  <span className="truncate">{applicant_email || "—"}</span>
+                </div>
               </div>
             </div>
           </div>
