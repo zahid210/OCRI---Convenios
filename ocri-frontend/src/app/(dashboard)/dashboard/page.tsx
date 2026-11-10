@@ -97,7 +97,7 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
-    loadDashboardData();
+    void loadDashboardData();
   }, []);
 
   return (

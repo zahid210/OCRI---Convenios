@@ -710,7 +710,7 @@ export default function Stage1Propuesta({
       }
     };
 
-    autoSend();
+    void autoSend();
 
     return () => {
       cancelled = true;
@@ -1010,7 +1010,7 @@ export default function Stage1Propuesta({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDeleteRequest(req.id);
+                                    void handleDeleteRequest(req.id);
                                   }}
                                   className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm transition-colors cursor-pointer"
                                 >

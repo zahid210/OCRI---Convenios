@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, type SyntheticEvent } from "react";
 import Link from "next/link";
 import { SeguimientoRow, PaginatedResponse } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
@@ -79,14 +79,14 @@ export default function SeguimientoPage() {
       }
     }
 
-    loadData();
+    void loadData();
 
     return () => {
       isMounted = false;
     };
   }, [page, perPage, activeSearch]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     setPage(1);
     setActiveSearch(search.trim());

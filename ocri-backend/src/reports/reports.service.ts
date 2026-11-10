@@ -155,10 +155,11 @@ export class ReportsService {
       counts[status] = (counts[status] ?? 0) + 1;
     }
 
+    const statusEnTramite = REPORT_STATUSES[0];
     return {
       total: agreements.length,
       por_estado: counts,
-      en_tramite: counts['En Trámite'] ?? 0,
+      en_tramite: counts[statusEnTramite] ?? 0,
       vigentes: counts['Vigente'] ?? 0,
       proximos_a_vencer: counts['Por Vencer'] ?? 0,
       vencidos: counts['Vencido'] ?? 0,

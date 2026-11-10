@@ -89,7 +89,7 @@ export function HeaderSearch() {
 
     debounceRef.current = setTimeout(() => {
       setOpen(true);
-      runSearch(term);
+      void runSearch(term);
     }, DEBOUNCE_MS);
 
     return () => {

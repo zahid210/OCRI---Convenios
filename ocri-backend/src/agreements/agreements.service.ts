@@ -581,24 +581,22 @@ export class AgreementsService {
   async remove(id: number, actor?: AuditActor) {
     const agreementId = BigInt(id);
 
-    let filePaths: (string | null)[];
-    let deletedInfo: { tramite_code: string; title: string } | null = null;
+    const agreement = await this.prisma.agreements.findUnique({
+      where: { id: agreementId },
+      include: { documents: { select: { file_path: true } } },
+    });
+
+    if (!agreement) {
+      throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
+    }
+
+    const filePaths = agreement.documents.map((d) => d.file_path);
+    const deletedInfo = {
+      tramite_code: agreement.tramite_code,
+      title: agreement.title,
+    };
+
     try {
-      const agreement = await this.prisma.agreements.findUnique({
-        where: { id: agreementId },
-        include: { documents: { select: { file_path: true } } },
-      });
-
-      if (!agreement) {
-        throw new NotFoundException(`Convenio con ID #${id} no encontrado`);
-      }
-
-      filePaths = agreement.documents.map((d) => d.file_path);
-      deletedInfo = {
-        tramite_code: agreement.tramite_code,
-        title: agreement.title,
-      };
-
       // Primero se borra la fila (los documentos caen por cascada) y solo
       // después del commit se purgan los objetos en OBS: si el borrado en BD
       // falla, no se pierden archivos de un convenio que sigue existiendo.
@@ -613,19 +611,17 @@ export class AgreementsService {
       throw error;
     }
 
-    if (deletedInfo) {
-      await this.audit?.record({
-        entity: 'agreements',
-        entityId: id,
-        action: 'DELETE',
-        actor,
-        description: `${deletedInfo.tramite_code} — ${deletedInfo.title}`,
-        changes: {
-          tramite_code: { before: deletedInfo.tramite_code, after: null },
-          title: { before: deletedInfo.title, after: null },
-        },
-      });
-    }
+    await this.audit?.record({
+      entity: 'agreements',
+      entityId: id,
+      action: 'DELETE',
+      actor,
+      description: `${deletedInfo.tramite_code} — ${deletedInfo.title}`,
+      changes: {
+        tramite_code: { before: deletedInfo.tramite_code, after: null },
+        title: { before: deletedInfo.title, after: null },
+      },
+    });
 
     // Purga en OBS después del commit; best-effort (no revierte el borrado).
     const failed = await this.purgeFiles(filePaths);
@@ -641,18 +637,17 @@ export class AgreementsService {
   }
 
   async removeAgreementDocument(docId: number, actor?: AuditActor) {
-    let filePath: string | null;
+    const doc = await this.prisma.documents.findUnique({
+      where: { id: BigInt(docId) },
+    });
+
+    if (!doc) {
+      throw new NotFoundException(`Documento con ID #${docId} no encontrado`);
+    }
+
+    const filePath = doc.file_path;
+
     try {
-      const doc = await this.prisma.documents.findUnique({
-        where: { id: BigInt(docId) },
-      });
-
-      if (!doc) {
-        throw new NotFoundException(`Documento con ID #${docId} no encontrado`);
-      }
-
-      filePath = doc.file_path;
-
       // Igual que en `remove`: la fila primero, OBS después del commit.
       await this.prisma.documents.delete({ where: { id: BigInt(docId) } });
 

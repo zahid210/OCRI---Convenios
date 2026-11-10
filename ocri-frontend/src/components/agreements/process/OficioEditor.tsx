@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import DOMPurify from "dompurify";
 import {
   Bold,
@@ -121,12 +130,12 @@ const SIZE_WARN_RATIO = 0.8;
  * 14px, line-height 1.5). Al aplicar esos estilos al contenedor editable, la
  * edición coincide con el PDF generado por html-pdf-lite.
  */
-function extractBodyStyles(css?: string): React.CSSProperties {
+function extractBodyStyles(css?: string): CSSProperties {
   if (!css) return {};
   const clean = css.replace(/\/\*[\s\S]*?\*\//g, "");
   const match = clean.match(/body\s*\{([\s\S]*?)\}/);
   if (!match) return {};
-  const out: React.CSSProperties = {};
+  const out: CSSProperties = {};
   const reg = /([a-zA-Z-]+)\s*:\s*([^;]+);?/g;
   let m: RegExpExecArray | null;
   while ((m = reg.exec(match[1])) !== null) {
@@ -152,7 +161,7 @@ function extractBodyStyles(css?: string): React.CSSProperties {
         out.fontStyle = value;
         break;
       case "text-align":
-        out.textAlign = value as React.CSSProperties["textAlign"];
+        out.textAlign = value as CSSProperties["textAlign"];
         break;
     }
   }
@@ -211,7 +220,7 @@ function ToolbarButton({
   active?: boolean;
   onClick: () => void;
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
@@ -341,7 +350,8 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
       if (bottom <= cursor + 0.5) continue;
       const cs = window.getComputedStyle(child);
       const avoid =
-        cs.breakInside === "avoid" || cs.pageBreakInside === "avoid";
+        cs.breakInside === "avoid" ||
+        cs.getPropertyValue("page-break-inside") === "avoid";
       let pageEnd =
         (Math.floor(cursor / PAGE_CONTENT_PX) + 1) * PAGE_CONTENT_PX;
       if (avoid && bottom > pageEnd + 0.5) {
@@ -485,7 +495,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
    * última red contra URLs `javascript:`.
    */
   const handlePaste = useCallback(
-    (e: React.ClipboardEvent<HTMLDivElement>) => {
+    (e: ClipboardEvent<HTMLDivElement>) => {
       const html = e.clipboardData.getData("text/html");
       if (!html) return; // Solo texto plano: el navegador respeta los saltos.
 

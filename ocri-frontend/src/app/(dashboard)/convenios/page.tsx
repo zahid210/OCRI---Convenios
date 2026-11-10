@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type SyntheticEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getExpirationTracking } from "@/lib/api";
@@ -76,13 +76,13 @@ export default function ConveniosPage() {
       }
     }
 
-    loadData();
+    void loadData();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     setPage(1);
     setActiveSearch(search.trim());

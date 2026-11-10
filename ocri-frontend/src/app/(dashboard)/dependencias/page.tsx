@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from "react";
 import { fetchApi } from "@/lib/api";
 import { Dependencia } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
@@ -92,7 +100,7 @@ export default function DependenciasPage() {
     resetForm();
   }, [resetForm]);
 
-  const handleModalKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleModalKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       e.stopPropagation();
       closeForm();
@@ -128,7 +136,7 @@ export default function DependenciasPage() {
     return null;
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: SyntheticEvent) => {
     if (e) e.preventDefault();
     const error = validateForm();
     if (error) {

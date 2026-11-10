@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { X, Loader2, ChevronDown } from "lucide-react";
 import { InstitutionItem } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
@@ -87,7 +87,7 @@ export default function InstitutionModal({
     onClose();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     const finalCountry = isCustomCountry
       ? customCountry.trim().toUpperCase()

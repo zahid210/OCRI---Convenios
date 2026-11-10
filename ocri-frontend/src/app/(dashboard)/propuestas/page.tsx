@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type SyntheticEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Agreement, PaginatedResponse, ProcessStatus } from "@/types/agreements";
@@ -75,14 +75,14 @@ export default function PropuestasPage() {
       }
     }
 
-    loadPropuestas();
+    void loadPropuestas();
 
     return () => {
       isMounted = false;
     };
   }, [page, perPage, activeSearch]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     setLoading(true);
     setPage(1);

@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type DragEvent,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -128,7 +136,7 @@ export default function CreatePropuestaPage() {
         setLoading(false);
       }
     }
-    loadAuxData();
+    void loadAuxData();
   }, []);
 
   async function searchInstitutions(query: string) {
@@ -248,14 +256,14 @@ export default function CreatePropuestaPage() {
     });
   };
 
-  const handleOrigenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOrigenChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     if (files.length === 0) return;
     addOrigenFiles(files);
     if (origenInputRef.current) origenInputRef.current.value = "";
   };
 
-  const handleOrigenDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleOrigenDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     origenDragDepth.current = 0;
     setIsDraggingOrigen(false);
@@ -310,7 +318,7 @@ export default function CreatePropuestaPage() {
     setActiveSuggestion(-1);
   };
 
-  const handleInstKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleInstKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       setSuggestionsOpen(false);
       return;
@@ -332,7 +340,7 @@ export default function CreatePropuestaPage() {
     }
   };
 
-  const handleSaveInstitution = async (e: React.FormEvent) => {
+  const handleSaveInstitution = async (e: SyntheticEvent) => {
     e.preventDefault();
 
     if (selectedExisting) {
@@ -374,7 +382,7 @@ export default function CreatePropuestaPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
 
     if (

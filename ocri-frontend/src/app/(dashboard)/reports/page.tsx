@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   ReportsSummary,
@@ -103,7 +103,7 @@ export default function ReportsPage() {
         }
       }
     }
-    loadLookups();
+    void loadLookups();
 
     return () => {
       isMounted = false;
@@ -170,14 +170,14 @@ export default function ReportsPage() {
       }
     }
 
-    loadReports();
+    void loadReports();
 
     return () => {
       isMounted = false;
     };
   }, [activeFilters]);
 
-  const applyFilters = (e: React.FormEvent) => {
+  const applyFilters = (e: SyntheticEvent) => {
     e.preventDefault();
     setActiveFilters(filters);
   };
@@ -226,14 +226,14 @@ export default function ReportsPage() {
     [byInstitutionType],
   );
 
-  const statusColors: Record<string, string> = {
-    "En Trámite": "bg-gray-500 text-white border-gray-500",
-    Vigente: "bg-green-700 text-white border-green-700",
-    "Por Vencer": "bg-yellow-500 text-white border-yellow-500",
-    Vencido: "bg-red-700 text-white border-red-700",
-    "No Suscrito": "bg-red-200 text-red-800 border-red-200",
-    "Sin Fecha": "bg-gray-300 text-gray-700 border-gray-300",
-  };
+  const statusColors: Record<string, string> = Object.fromEntries([
+    ["En Trámite", "bg-gray-500 text-white border-gray-500"],
+    ["Vigente", "bg-green-700 text-white border-green-700"],
+    ["Por Vencer", "bg-yellow-500 text-white border-yellow-500"],
+    ["Vencido", "bg-red-700 text-white border-red-700"],
+    ["No Suscrito", "bg-red-200 text-red-800 border-red-200"],
+    ["Sin Fecha", "bg-gray-300 text-gray-700 border-gray-300"],
+  ]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";

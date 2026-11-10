@@ -199,14 +199,16 @@ describe('ReportsService', () => {
       const r = await service.summary({});
 
       expect(r.total).toBe(6);
-      expect(r.por_estado).toEqual({
-        'No Suscrito': 1,
-        'En Trámite': 1,
-        Vigente: 1,
-        'Por Vencer': 1,
-        Vencido: 1,
-        'Sin Fecha': 1,
-      });
+      expect(r.por_estado).toEqual(
+        Object.fromEntries([
+          ['No Suscrito', 1],
+          ['En Trámite', 1],
+          ['Vigente', 1],
+          ['Por Vencer', 1],
+          ['Vencido', 1],
+          ['Sin Fecha', 1],
+        ]),
+      );
       expect(r.en_tramite).toBe(1);
       expect(r.vigentes).toBe(1);
       expect(r.proximos_a_vencer).toBe(1);

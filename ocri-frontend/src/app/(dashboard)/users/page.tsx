@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type SyntheticEvent } from "react";
 import { UserItem, PaginatedResponse } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { useUser } from "@/components/user-provider";
@@ -92,14 +92,14 @@ export default function UsersPage() {
       }
     }
 
-    loadUsers();
+    void loadUsers();
 
     return () => {
       isMounted = false;
     };
   }, [page, perPage, activeSearch, roleFilter]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     setPage(1);
     setActiveSearch(search.trim());
@@ -122,7 +122,7 @@ export default function UsersPage() {
     setModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (!editingUser || form.password) {
       if (!PASSWORD_POLICY_RE.test(form.password)) {

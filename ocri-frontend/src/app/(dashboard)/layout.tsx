@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import { UserProvider } from '@/components/user-provider';
 import { parseUserCookie } from '@/lib/auth';
@@ -9,7 +10,7 @@ import { ConfirmProvider } from '@/components/ui/confirm-dialog';
 export default async function DashboardLayout({
     children,
 }: {
-    children: React.ReactNode;
+    children: ReactNode;
 }) {
     const cookieStore = await cookies();
     const user = parseUserCookie(cookieStore.get('user')?.value);

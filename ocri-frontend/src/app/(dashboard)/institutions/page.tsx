@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type SyntheticEvent } from "react";
 import { InstitutionItem, InstitutionListResponse } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { useUser } from "@/components/user-provider";
@@ -51,7 +51,7 @@ export default function InstitutionsIndexPage() {
         if (isMounted) setCountries(["PERÚ"]);
       }
     }
-    loadCountries();
+    void loadCountries();
 
     return () => {
       isMounted = false;
@@ -86,14 +86,14 @@ export default function InstitutionsIndexPage() {
       }
     }
 
-    loadInstitutions();
+    void loadInstitutions();
 
     return () => {
       isMounted = false;
     };
   }, [page, perPage, activeSearch]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     setLoading(true);
     setPage(1);
@@ -167,21 +167,21 @@ export default function InstitutionsIndexPage() {
     }
   };
 
-  const typeColors: Record<string, string> = {
-    "Universidad Nacional": "bg-blue-50 text-blue-700 border-blue-200",
-    "Universidad Privada": "bg-indigo-50 text-indigo-700 border-indigo-200",
-    "Universidad Internacional": "bg-sky-50 text-sky-700 border-sky-200",
-    "Sector Público": "bg-slate-100 text-slate-700 border-slate-200",
-    "Entidad Gubernamental": "bg-gray-100 text-gray-700 border-gray-200",
-    Educación: "bg-violet-50 text-violet-700 border-violet-200",
-    Salud: "bg-rose-50 text-rose-700 border-rose-200",
-    Comunidades: "bg-teal-50 text-teal-700 border-teal-200",
-    "Empresa Nacional": "bg-emerald-50 text-emerald-700 border-emerald-200",
-    "Empresa Internacional": "bg-amber-50 text-amber-700 border-amber-200",
-    "Empresa Privada": "bg-emerald-50 text-emerald-700 border-emerald-200",
-    "Organización Internacional": "bg-amber-50 text-amber-700 border-amber-200",
-    Otros: "bg-gray-50 text-gray-600 border-gray-200",
-  };
+  const typeColors: Record<string, string> = Object.fromEntries([
+    ["Universidad Nacional", "bg-blue-50 text-blue-700 border-blue-200"],
+    ["Universidad Privada", "bg-indigo-50 text-indigo-700 border-indigo-200"],
+    ["Universidad Internacional", "bg-sky-50 text-sky-700 border-sky-200"],
+    ["Sector Público", "bg-slate-100 text-slate-700 border-slate-200"],
+    ["Entidad Gubernamental", "bg-gray-100 text-gray-700 border-gray-200"],
+    ["Educación", "bg-violet-50 text-violet-700 border-violet-200"],
+    ["Salud", "bg-rose-50 text-rose-700 border-rose-200"],
+    ["Comunidades", "bg-teal-50 text-teal-700 border-teal-200"],
+    ["Empresa Nacional", "bg-emerald-50 text-emerald-700 border-emerald-200"],
+    ["Empresa Internacional", "bg-amber-50 text-amber-700 border-amber-200"],
+    ["Empresa Privada", "bg-emerald-50 text-emerald-700 border-emerald-200"],
+    ["Organización Internacional", "bg-amber-50 text-amber-700 border-amber-200"],
+    ["Otros", "bg-gray-50 text-gray-600 border-gray-200"],
+  ]);
 
   return (
     <div className="space-y-6 pb-12 font-sans text-gray-700">
