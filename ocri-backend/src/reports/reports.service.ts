@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import * as ExcelJS from 'exceljs';
+import { SimpleWorkbook, type CellValue } from './xlsx-builder';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilterReportsDto, REPORT_STATUSES } from './dto/filter-reports.dto';
 import {
@@ -337,34 +337,13 @@ export class ReportsService {
     const expiring = this.computeExpiring(agreements);
     const expired = this.computeExpired(agreements);
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'OCRI-UNCP';
-    workbook.created = new Date();
-
-    const headerStyle: Partial<ExcelJS.Style> = {
-      font: { bold: true, color: { argb: 'FFFFFFFF' } },
-      fill: {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF094D37' },
-      },
-      alignment: { vertical: 'middle' },
-    };
-
-    const addTitleRow = (ws: ExcelJS.Worksheet, title: string) => {
-      ws.addRow([title]);
-      ws.mergeCells(1, 1, 1, 5);
-      const row = ws.getRow(1);
-      row.font = { bold: true, size: 13, color: { argb: 'FF094D37' } };
-      row.height = 24;
-    };
+    const workbook = new SimpleWorkbook();
 
     // Hoja: Resumen
     const wsResumen = workbook.addWorksheet('Resumen');
-    addTitleRow(wsResumen, 'RESUMEN DE CONVENIOS');
-    wsResumen.addRow(['Métrica', 'Cantidad']);
-    wsResumen.getRow(2).eachCell((cell) => (cell.style = headerStyle));
-    wsResumen.addRows([
+    wsResumen.addTitleRow('RESUMEN DE CONVENIOS');
+    wsResumen.addHeaderRow(['Métrica', 'Cantidad']);
+    wsResumen.addDataRows([
       ['Total de trámites/convenios', summary.total],
       ['En Trámite (propuestas)', summary.en_tramite],
       ['Vigentes', summary.vigentes],
@@ -375,8 +354,8 @@ export class ReportsService {
       ['Vencidos', summary.vencidos],
       ['No suscritos', summary.no_suscritos],
     ]);
-    wsResumen.getColumn(1).width = 40;
-    wsResumen.getColumn(2).width = 14;
+    wsResumen.setColumnWidth(1, 40);
+    wsResumen.setColumnWidth(2, 14);
 
     const addSimpleSheet = (
       name: string,
@@ -384,12 +363,11 @@ export class ReportsService {
       rows: Record<string, string | number>[],
     ) => {
       const ws = workbook.addWorksheet(name);
-      addTitleRow(ws, name.toUpperCase());
-      ws.addRow(headers);
-      ws.getRow(2).eachCell((cell) => (cell.style = headerStyle));
-      rows.forEach((r) => ws.addRow(Object.values(r)));
+      ws.addTitleRow(name.toUpperCase());
+      ws.addHeaderRow(headers);
+      rows.forEach((r) => ws.addDataRow(Object.values(r)));
       headers.forEach((h, i) => {
-        ws.getColumn(i + 1).width = Math.max(20, h.length + 6);
+        ws.setColumnWidth(i + 1, Math.max(20, h.length + 6));
       });
     };
 
@@ -429,20 +407,19 @@ export class ReportsService {
 
     const addDetailSheet = (
       name: string,
-      rows: Record<string, unknown>[],
+      rows: Record<string, CellValue>[],
       headers: string[],
     ) => {
       const ws = workbook.addWorksheet(name);
-      addTitleRow(ws, name.toUpperCase());
-      ws.addRow(headers);
-      ws.getRow(2).eachCell((cell) => (cell.style = headerStyle));
+      ws.addTitleRow(name.toUpperCase());
+      ws.addHeaderRow(headers);
       rows.forEach((r) =>
-        ws.addRow(
+        ws.addDataRow(
           headers.map((h) => (r[h] === null || r[h] === undefined ? '' : r[h])),
         ),
       );
       headers.forEach((h, i) => {
-        ws.getColumn(i + 1).width = Math.max(18, h.length + 6);
+        ws.setColumnWidth(i + 1, Math.max(18, h.length + 6));
       });
     };
 
@@ -470,8 +447,6 @@ export class ReportsService {
       'dias_restantes',
     ]);
 
-    return Buffer.from(
-      (await workbook.xlsx.writeBuffer()) as unknown as Uint8Array,
-    );
+    return Promise.resolve(workbook.toBuffer());
   }
 }

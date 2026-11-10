@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import * as ExcelJS from 'exceljs';
+import { readXlsxBuffer } from './xlsx-builder';
 import { ReportsService } from './reports.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REPORT_STATUSES } from './dto/filter-reports.dto';
@@ -386,13 +386,8 @@ describe('ReportsService', () => {
       expect(Buffer.isBuffer(buffer)).toBe(true);
       expect(buffer.subarray(0, 2).toString()).toBe('PK');
 
-      const wb = new ExcelJS.Workbook();
-      // ExcelJS tipa load() con su propio Buffer (extends ArrayBuffer); copiamos
-      // a un ArrayBuffer nuevo para no depender del buffer (con pool) de Node.
-      const copia = new ArrayBuffer(buffer.byteLength);
-      new Uint8Array(copia).set(buffer);
-      await wb.xlsx.load(copia);
-      expect(wb.worksheets.map((ws) => ws.name)).toEqual([
+      const wb = readXlsxBuffer(buffer);
+      expect(wb.sheetNames).toEqual([
         'Resumen',
         'Por Estado',
         'Por País',
@@ -405,7 +400,7 @@ describe('ReportsService', () => {
 
       const proximos = wb.getWorksheet('Próximos a Vencer');
       expect(proximos).toBeDefined();
-      expect(proximos?.getRow(3).getCell(1).text).toBe('T-0001');
+      expect(proximos?.getCellText(3, 1)).toBe('T-0001');
     });
   });
 });
