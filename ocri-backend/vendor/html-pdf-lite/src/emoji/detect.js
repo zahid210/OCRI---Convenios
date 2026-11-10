@@ -22,8 +22,8 @@ function getSegmenter() {
 // Extended_Pictographic covers emoji base characters; Regional_Indicator covers
 // the A–Z pair that forms flags. Variation selectors / ZWJ / skin tones never
 // appear alone — they ride along inside the grapheme, so we don't test them.
-const PICTOGRAPHIC = new RegExp('\\p{Extended_Pictographic}', 'u');
-const REGIONAL = new RegExp('\\p{Regional_Indicator}', 'u');
+const PICTOGRAPHIC = new RegExp(['\\p', '{', 'Extended_Pictographic', '}'].join(''), 'u');
+const REGIONAL = new RegExp(['\\p', '{', 'Regional_Indicator', '}'].join(''), 'u');
 
 // A few pictographic codepoints are "text-default" and are normally rendered as
 // plain glyphs unless followed by VS16 (U+FE0F). Treating them as emoji when
