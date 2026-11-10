@@ -618,18 +618,18 @@ async function parseHtmlToObject(
   });
 
   if (fetchExternalCss) {
-    const loadPromise = new Promise((resolve) => {
+    const loadPromise = new globalThis.Promise((resolve) => {
       dom.window.addEventListener('load', resolve, { once: true });
       dom.window.addEventListener('error', resolve, { once: true });
     });
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, loadTimeoutMs));
-    await Promise.race([loadPromise, timeoutPromise]);
+    const timeoutPromise = new globalThis.Promise((resolve) => setTimeout(resolve, loadTimeoutMs));
+    await globalThis.Promise.race([loadPromise, timeoutPromise]);
 
     // Brief settling period for any still-pending async resource loads
     // (stylesheets, images) before we snapshot the DOM tree. Only needed when
     // external resources are actually being fetched — with fetchExternalCss
     // off, JSDOM parses synchronously and this would just be dead latency.
-    await new Promise((r) => setTimeout(r, 50));
+    await new globalThis.Promise((r) => setTimeout(r, 50));
   }
 
   const { document } = dom.window;

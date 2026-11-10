@@ -91,7 +91,10 @@ function drawBox(doc, x, y, w, h, { bg, borderTop, borderRight, borderBottom, bo
  * bottom-left). Where an adjacent side is absent the edge simply ends square.
  *
  * @param {PDFDocument} doc
- * @param {number} x  @param {number} y  @param {number} w  @param {number} h
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
  * @param {number} rr  Clamped corner radius.
  * @param {{width:number,color:string|null}} bTop
  * @param {{width:number,color:string|null}} bRight
@@ -181,7 +184,9 @@ function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom
  * approximation, traced along a circle of radius (radius - inset) centred at
  * (cx, cy). The arc connects the two straight runs meeting at one corner.
  *
- * @param {number} cx  @param {number} cy  Corner centre (on the outer path).
+ * @param {PDFDocument} doc
+ * @param {number} cx  Corner centre X (on the outer path).
+ * @param {number} cy  Corner centre Y (on the outer path).
  * @param {number} radius  Outer corner radius.
  * @param {number} inset   Half the stroke width (centreline inset).
  * @param {('tl'|'tr'|'br'|'bl')} corner

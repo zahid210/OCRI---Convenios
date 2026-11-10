@@ -1,4 +1,4 @@
-const { BASE_PT, mergeStyles, styleNumber, lineHeightValue, textDecorations, styleColor } = require('./style');
+const { BASE_PT, mergeStyles, styleNumber, textDecorations } = require('./style');
 const { normalizeName, fontSupportsText, findFallbackFontForText } = require('../fonts');
 const { splitEmojiRuns } = require('../emoji/detect');
 

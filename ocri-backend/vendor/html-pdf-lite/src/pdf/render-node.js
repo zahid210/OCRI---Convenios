@@ -185,20 +185,6 @@ function groupMixedChildren(children, parentStyles) {
   return groups;
 }
 
-function hasInlineBoxStyles(styles = {}) {
-  const bg = styleColor(styles, 'background-color', null);
-  if (bg && String(bg).toLowerCase() !== 'transparent') return true;
-  if (styleNumber(styles, 'padding', 0) > 0) return true;
-  if (styleNumber(styles, 'padding-top', 0) > 0) return true;
-  if (styleNumber(styles, 'padding-right', 0) > 0) return true;
-  if (styleNumber(styles, 'padding-bottom', 0) > 0) return true;
-  if (styleNumber(styles, 'padding-left', 0) > 0) return true;
-  if (styleNumber(styles, 'border-width', 0) > 0) return true;
-  if (styleNumber(styles, 'border-radius', 0) > 0) return true;
-  const display = String(styles.display || '').toLowerCase();
-  return display === 'inline-block';
-}
-
 function runHasInlineBoxStyles(runStyles = {}, baseStyles = {}) {
   if (!runStyles) return false;
   const display = String(runStyles.display || '').toLowerCase();
@@ -274,7 +260,6 @@ function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
   // Anchura acumulada del espacio pendiente antes de la siguiente palabra. Se
   // descarta al romper línea y se colapsa (máximo un espacio) como hace el CSS.
   let pendingSpace = 0;
-  const spaceWidthOf = (s) => doc.widthOfString(' ', { characterSpacing: styleNumber(s, 'letter-spacing', 0, { baseSize: styleNumber(s, 'font-size', BASE_PT) }) });
 
   function flushLine() {
     if (current.pieces.length) {
@@ -1104,7 +1089,7 @@ async function renderNodeImpl(node, ctx) {
     // continued-text auto-wrap path can't position Type 3 glyphs or baseline
     // shifts.
     const renderRunsAsGroup = !hasLinks && (align !== 'left' || runs.length > 1 || runsHaveEmoji || runsHaveSubSup);
-    let h = renderRunsAsGroup
+    const h = renderRunsAsGroup
       ? renderInlineRunsAt(runs, ctx, {
           baseStyles: styles,
           align,
@@ -1146,7 +1131,6 @@ async function renderNodeImpl(node, ctx) {
       layout.ensureSpace(boxHeight);
       const startYInline = layout.y + paddingTop;
       const hInline = renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
-      h = hInline;
       boxHeight = hInline + paddingTop + paddingBottom;
       layout.y = Math.max(layout.y, startYInline + hInline + paddingBottom);
     }
@@ -1172,7 +1156,7 @@ async function renderNodeImpl(node, ctx) {
 
     if (!measureOnly && !useInlineBoxes) {
       if (renderRunsAsGroup) {
-        h = renderInlineRunsAt(runs, ctx, {
+        renderInlineRunsAt(runs, ctx, {
           baseStyles: styles,
           align,
           lineGap: gap,
@@ -1316,12 +1300,13 @@ async function renderNodeImpl(node, ctx) {
     const rowGap = styleNumber(styles, 'row-gap', gap);
     const alignItems = String(styles['align-items'] || 'stretch').toLowerCase();
     if (process.env.HTML_TO_PDF_DEBUG === '1' && tag === 'figure') {
+      // noinspection JSSuspiciousNameCombination
       console.log('[figure-box]', {
         paddingTop,
         paddingLeft,
         paddingRight,
-        borderLeft: borderLeft.width,
-        borderTop: borderTop.width,
+        borderLeft: borderLeft['width'],
+        borderTop: borderTop['width'],
         blockX,
         contentX,
         blockWidth,
@@ -1336,7 +1321,7 @@ async function renderNodeImpl(node, ctx) {
     if (prepaint && (node.children || []).length) {
       const debug = process.env.HTML_TO_PDF_DEBUG === '1';
       const className = node.attrs?.class || '';
-      let measuredContent = 0;
+      let measuredContent;
       if (inlineOnly) {
         const size = styleNumber(styles, 'font-size', BASE_PT);
         const gap = lineGapFor(size, styles, tag);
@@ -1430,13 +1415,14 @@ async function renderNodeImpl(node, ctx) {
       }
 
       if (debug && className) {
+        // noinspection JSSuspiciousNameCombination
         console.log('[div-measure]', {
           className,
           measuredContent,
           paddingTop,
           paddingBottom,
-          borderTop: borderTop.width,
-          borderBottom: borderBottom.width,
+          borderTop: borderTop['width'],
+          borderBottom: borderBottom['width'],
         });
       }
 
@@ -1623,6 +1609,7 @@ async function renderNodeImpl(node, ctx) {
                   wordSpacing,
                 });
           if (debugInline && plain) {
+            // noinspection JSSuspiciousNameCombination
             console.log('[inline-text]', {
               text: plain,
               size,
@@ -1631,8 +1618,8 @@ async function renderNodeImpl(node, ctx) {
               contentWidth: layout.contentWidth(),
               paddingTop,
               paddingBottom,
-              borderTop: borderTop.width,
-              borderBottom: borderBottom.width,
+              borderTop: borderTop['width'],
+              borderBottom: borderBottom['width'],
             });
           }
           layout.ensureSpace(h);
@@ -1704,13 +1691,14 @@ async function renderNodeImpl(node, ctx) {
     const endY = layout.y;
     const renderedContentHeight = Math.max(0, endY - contentStartY);
     if (process.env.HTML_TO_PDF_DEBUG === '1' && node.attrs?.class) {
+      // noinspection JSSuspiciousNameCombination
       console.log('[div-render]', {
         className: node.attrs?.class || '',
         contentHeight: renderedContentHeight,
         paddingTop,
         paddingBottom,
-        borderTop: borderTop.width,
-        borderBottom: borderBottom.width,
+        borderTop: borderTop['width'],
+        borderBottom: borderBottom['width'],
         minHeight,
       });
     }

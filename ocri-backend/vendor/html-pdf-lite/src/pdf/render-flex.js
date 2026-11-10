@@ -1,4 +1,4 @@
-const { BASE_PT, mergeStyles, styleNumber, parsePxWithOptions } = require('./style');
+const { BASE_PT, mergeStyles, styleNumber } = require('./style');
 const { selectFontForInline } = require('./text');
 const { Layout } = require('./layout');
 

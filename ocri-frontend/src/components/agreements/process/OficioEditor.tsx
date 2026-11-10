@@ -28,6 +28,27 @@ type Props = {
   onChange: (html: string) => void;
 };
 
+function execDocCommand(doc: Document, command: string, value?: string): boolean {
+  const fn = Reflect.get(doc, "execCommand") as
+    | ((commandId: string, showUI?: boolean, val?: string) => boolean)
+    | undefined;
+  return typeof fn === "function" ? fn.call(doc, command, false, value) : false;
+}
+
+function queryDocCommandState(doc: Document, command: string): boolean {
+  const fn = Reflect.get(doc, "queryCommandState") as
+    | ((commandId: string) => boolean)
+    | undefined;
+  return typeof fn === "function" ? fn.call(doc, command) : false;
+}
+
+function queryDocCommandValue(doc: Document, command: string): string {
+  const fn = Reflect.get(doc, "queryCommandValue") as
+    | ((commandId: string) => string)
+    | undefined;
+  return typeof fn === "function" ? fn.call(doc, command) : "";
+}
+
 /** Geometría de la hoja A4, en px de CSS (96dpi). */
 const PX_PER_MM = 96 / 25.4;
 const PAGE_MM = 297;
@@ -442,7 +463,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
 
   const refreshState = useCallback(() => {
     const block = String(
-      document.queryCommandValue("formatBlock") || "",
+      queryDocCommandValue(document, "formatBlock") || "",
     ).toLowerCase();
     const sel = window.getSelection();
     let bullet = false;
@@ -466,9 +487,9 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
       }
     }
     setFmt({
-      bold: document.queryCommandState("bold"),
-      italic: document.queryCommandState("italic"),
-      underline: document.queryCommandState("underline"),
+      bold: queryDocCommandState(document, "bold"),
+      italic: queryDocCommandState(document, "italic"),
+      underline: queryDocCommandState(document, "underline"),
       bullet,
       ordered,
       h2: block === "h2",
@@ -479,7 +500,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
   const exec = useCallback(
     (command: string, value?: string) => {
       contentRef.current?.focus();
-      document.execCommand(command, false, value);
+      execDocCommand(document, command, value);
       readHtml();
       refreshState();
     },
@@ -527,7 +548,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
       contentRef.current?.focus();
       // insertHTML conserva la pila de "Deshacer" (a diferencia de manipular el
       // rango a mano), igual que en las listas.
-      if (!document.execCommand("insertHTML", false, safe)) {
+      if (!execDocCommand(document, "insertHTML", safe)) {
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
@@ -707,7 +728,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
         insertRange.setEnd(lastBlock, lastBlock.childNodes.length);
         sel.removeAllRanges();
         sel.addRange(insertRange);
-        const inserted = doc.execCommand("insertHTML", false, listHtml);
+        const inserted = execDocCommand(doc, "insertHTML", listHtml);
         // Éxito: insertHTML consumió los bloques (ya no están en el documento).
         const applied = inserted && !root.contains(targets[0]);
 
@@ -769,7 +790,7 @@ export default function OficioEditor({ initialHtml, css, onChange }: Props) {
     // separador en "p" cada Enter abre un párrafo nuevo, como en Word, y el
     // HTML guardado queda limpio (sin <div> anidados). Se aplica al documento
     // entero y html-pdf-lite respeta el mismo margen `.body-text p`.
-    document.execCommand("defaultParagraphSeparator", false, "p");
+    execDocCommand(document, "defaultParagraphSeparator", "p");
   }, []);
 
   useEffect(() => {

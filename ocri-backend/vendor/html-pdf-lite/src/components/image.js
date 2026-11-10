@@ -30,6 +30,81 @@ function borderInfo(styles) {
   };
 }
 
+async function loadImageSource(src, imgLoadTimeoutMs) {
+  let buf;
+  let svgText = null;
+  if (/^data:image\//i.test(src)) {
+    const commaIndex = src.indexOf(',');
+    if (commaIndex === -1) throw new Error('Invalid data URI');
+    const header = src.slice(5, commaIndex);
+    let payload = src.slice(commaIndex + 1);
+    const parts = header.split(';').filter(Boolean);
+    const mime = (parts.shift() || '').toLowerCase();
+    const isBase64 = parts.some((p) => p.toLowerCase() === 'base64');
+
+    if (payload.includes('%')) {
+      try {
+        payload = decodeURIComponent(payload);
+      } catch (err) {
+        if (process.env.HTML_TO_PDF_DEBUG === '1') console.warn('[image] decodeURIComponent failed:', err.message || err);
+      }
+    }
+    if (isBase64) {
+      payload = payload.replace(/\s+/g, '');
+    } else if (!mime.includes('svg')) {
+      payload = payload.replace(/\s+/g, '');
+    }
+
+    if (mime.includes('svg')) {
+      if (isBase64) {
+        let normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = normalized.length % 4;
+        if (pad) normalized += '='.repeat(4 - pad);
+        svgText = Buffer.from(normalized, 'base64').toString('utf8');
+      } else {
+        svgText = payload;
+      }
+    } else if (isBase64) {
+      let normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = normalized.length % 4;
+      if (pad) normalized += '='.repeat(4 - pad);
+      buf = Buffer.from(normalized, 'base64');
+    } else {
+      buf = Buffer.from(payload, 'binary');
+    }
+
+    if (buf) {
+      const isPng = buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+      const isJpeg = buf.length > 2 && buf[0] === 0xff && buf[1] === 0xd8;
+      if (mime.includes('png') && !isPng) throw new Error('Invalid PNG data');
+      if ((mime.includes('jpeg') || mime.includes('jpg')) && !isJpeg) throw new Error('Invalid JPEG data');
+    }
+  } else if (/^https?:\/\//i.test(src)) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), imgLoadTimeoutMs);
+    try {
+      const res = await fetch(src, { signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const contentType = (res.headers.get('content-type') || '').toLowerCase();
+      if (contentType.includes('image/svg+xml')) {
+        svgText = await res.text();
+      } else {
+        buf = Buffer.from(await res.arrayBuffer());
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } else {
+    const localPath = path.isAbsolute(src) ? src : path.resolve(process.cwd(), src);
+    if (localPath.toLowerCase().endsWith('.svg')) {
+      svgText = fs.readFileSync(localPath, 'utf8');
+    } else {
+      buf = fs.readFileSync(localPath);
+    }
+  }
+  return { buf, svgText };
+}
+
 async function renderImage(node, ctx) {
   const { doc, layout } = ctx;
   const measureOnly = !!ctx?.measureOnly;
@@ -65,75 +140,9 @@ async function renderImage(node, ctx) {
   let svgText = null;
   const debug = process.env.HTML_TO_PDF_DEBUG === '1';
   try {
-    if (/^data:image\//i.test(src)) {
-      const commaIndex = src.indexOf(',');
-      if (commaIndex === -1) throw new Error('Invalid data URI');
-      const header = src.slice(5, commaIndex);
-      let payload = src.slice(commaIndex + 1);
-      const parts = header.split(';').filter(Boolean);
-      const mime = (parts.shift() || '').toLowerCase();
-      const isBase64 = parts.some((p) => p.toLowerCase() === 'base64');
-
-      if (payload.includes('%')) {
-        try {
-          payload = decodeURIComponent(payload);
-        } catch (err) {
-          if (process.env.HTML_TO_PDF_DEBUG === '1') console.warn('[image] decodeURIComponent failed:', err.message || err);
-        }
-      }
-      if (isBase64) {
-        payload = payload.replace(/\s+/g, '');
-      } else if (!mime.includes('svg')) {
-        payload = payload.replace(/\s+/g, '');
-      }
-
-      if (mime.includes('svg')) {
-        if (isBase64) {
-          let normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-          const pad = normalized.length % 4;
-          if (pad) normalized += '='.repeat(4 - pad);
-          svgText = Buffer.from(normalized, 'base64').toString('utf8');
-        } else {
-          svgText = payload;
-        }
-      } else if (isBase64) {
-        let normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-        const pad = normalized.length % 4;
-        if (pad) normalized += '='.repeat(4 - pad);
-        buf = Buffer.from(normalized, 'base64');
-      } else {
-        buf = Buffer.from(payload, 'binary');
-      }
-
-      if (buf) {
-        const isPng = buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
-        const isJpeg = buf.length > 2 && buf[0] === 0xff && buf[1] === 0xd8;
-        if (mime.includes('png') && !isPng) throw new Error('Invalid PNG data');
-        if ((mime.includes('jpeg') || mime.includes('jpg')) && !isJpeg) throw new Error('Invalid JPEG data');
-      }
-    } else if (/^https?:\/\//i.test(src)) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), imgLoadTimeoutMs);
-      try {
-        const res = await fetch(src, { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const contentType = (res.headers.get('content-type') || '').toLowerCase();
-        if (contentType.includes('image/svg+xml')) {
-          svgText = await res.text();
-        } else {
-          buf = Buffer.from(await res.arrayBuffer());
-        }
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    } else {
-      const localPath = path.isAbsolute(src) ? src : path.resolve(process.cwd(), src);
-      if (localPath.toLowerCase().endsWith('.svg')) {
-        svgText = fs.readFileSync(localPath, 'utf8');
-      } else {
-        buf = fs.readFileSync(localPath);
-      }
-    }
+    const loaded = await loadImageSource(src, imgLoadTimeoutMs);
+    buf = loaded.buf;
+    svgText = loaded.svgText;
   } catch (err) {
     if (!ignoreInvalid) console.error(`Image load failed for ${src}:`, err.message || err);
     return;

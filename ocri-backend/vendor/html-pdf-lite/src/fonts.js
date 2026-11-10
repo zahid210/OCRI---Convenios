@@ -92,7 +92,7 @@ function collectSystemFonts() {
 function isFontSupported(filePath) {
   if (!fontkit) return true;
   if (supportCache.has(filePath)) return supportCache.get(filePath);
-  let ok = false;
+  let ok;
   try {
     const font = fontkit.openSync(filePath);
     ok = !!font && typeof font.createSubset === 'function';
@@ -111,7 +111,7 @@ function fontSupportsText(filePath, text) {
   const key = `${filePath}|${chars.join('')}`;
   if (glyphSupportCache.has(key)) return glyphSupportCache.get(key);
 
-  let ok = false;
+  let ok;
   try {
     const font = fontkit.openSync(filePath);
     ok = chars.every((ch) => {
@@ -167,7 +167,6 @@ function pickFont(fonts, families, { bold = false, italic = false, allowFallback
   const familyNorms = families.map(normalizeName);
   let best = null;
   let bestScore = -Infinity;
-  const debug = process.env.HTML_TO_PDF_DEBUG_FONTS === '1';
 
   for (const font of fonts) {
     if (!isFontSupported(font.path)) continue;

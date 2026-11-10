@@ -81,7 +81,7 @@ class EmojiType3Registry {
     const png = new PNG(image.data);
     const w = png.width;
     const h = png.height;
-    const pixels = await new Promise((resolve) => png.decode((px) => resolve(px)));
+    const pixels = await new globalThis.Promise((resolve) => png.decode((px) => resolve(px)));
     if (!pixels) return null;
 
     const rgb = Buffer.alloc(w * h * 3);
