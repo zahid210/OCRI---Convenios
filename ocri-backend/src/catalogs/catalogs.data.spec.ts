@@ -18,8 +18,8 @@ import {
 const DIRECTIONS = ['ENTRADA', 'SALIDA', 'INTERNO'];
 
 describe('Catálogos canónicos', () => {
-  it('tipos de documento: 20, códigos únicos y dirección válida', () => {
-    expect(DOCUMENT_TYPES).toHaveLength(20);
+  it('tipos de documento: 21, códigos únicos y dirección válida', () => {
+    expect(DOCUMENT_TYPES).toHaveLength(21);
     const codes = DOCUMENT_TYPES.map((t) => t.code);
     expect(new Set(codes).size).toBe(codes.length);
     for (const t of DOCUMENT_TYPES) {

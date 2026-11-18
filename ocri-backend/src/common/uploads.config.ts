@@ -92,6 +92,38 @@ export function opinionDir(
 }
 
 /**
+ * Subcarpeta de una adenda dentro del convenio en S3.
+ * Formato: `{año}/{código}/adendas/adenda-01`.
+ */
+export function adendaDir(
+  tramiteCode: string,
+  createdAt: Date | string | null,
+  correlative: number,
+): string {
+  const num = String(Math.max(1, Math.trunc(correlative))).padStart(2, '0');
+  return `${agreementDir(tramiteCode, createdAt)}/adendas/adenda-${num}`;
+}
+
+/**
+ * Subcarpeta para documentos de opinión de una dependencia dentro de una adenda.
+ * Formato: `{año}/{código}/adendas/adenda-01/opiniones/{código_dependencia}`.
+ */
+export function adendaOpinionDir(
+  tramiteCode: string,
+  createdAt: Date | string | null,
+  correlative: number,
+  dependenciaCode: string,
+): string {
+  const cleanCode = (dependenciaCode || '').trim();
+  if (!DEPENDENCIA_NAME_RE.test(cleanCode)) {
+    throw new BadRequestException(
+      'Código de dependencia inválido para la carpeta',
+    );
+  }
+  return `${adendaDir(tramiteCode, createdAt, correlative)}/opiniones/${cleanCode}`;
+}
+
+/**
  * Nombre de archivo canónico del oficio de solicitud de opinión de una
  * dependencia. Es la única fuente de verdad: lo usan tanto el oficio generado
  * por el sistema (`PdfMergerService.generateOficioSolicitud`) como el que se

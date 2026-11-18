@@ -1,35 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   acceptDeliverableRequest,
   cargarSolicitud,
   completeMonitoring,
+  createAdenda,
+  deleteDeliverable,
   downloadFile,
   evaluateDeliverable,
+  getActiveOpinionTargets,
   openDocumentPreview,
   regenerateRequestDocument,
   requestReport,
   submitDeliverable,
 } from "@/lib/api";
 import { fileName } from "@/lib/utils";
-import { Deliverable, ProcessStatus } from "@/types/agreements";
+import {
+  Adenda,
+  AdendaType,
+  AgreementResponsable,
+  Deliverable,
+  Dependencia,
+  ProcessStatus,
+} from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   AlertTriangle,
-  CheckCircle2,
   CheckSquare,
   ChevronDown,
   ChevronUp,
   ClipboardList,
   Download,
   ExternalLink,
+  FilePlus2,
   FileText,
   Loader2,
   Plus,
   ShieldCheck,
+  Trash2,
   Upload,
 } from "lucide-react";
 import {
@@ -42,9 +53,12 @@ import EvaluarEntregableModal from "./EvaluarEntregableModal";
 import GenerarSolicitudModal from "./GenerarSolicitudModal";
 import CargarSolicitudModal from "./CargarSolicitudModal";
 import AdjuntarRespuestaModal from "./AdjuntarRespuestaModal";
+import AdendasSection from "./AdendasSection";
+import IniciarAdendaModal from "./IniciarAdendaModal";
 
 function DeliverableCard({
   deliverable,
+  displayTitle,
   canManage,
   blockedByPlan = false,
   onEvaluate,
@@ -52,8 +66,10 @@ function DeliverableCard({
   onOpenDocEditor,
   onCargarSolicitud,
   onAttachResponse,
+  onDelete,
 }: {
   deliverable: Deliverable;
+  displayTitle?: string;
   canManage: boolean;
   blockedByPlan?: boolean;
   onEvaluate: (
@@ -65,6 +81,7 @@ function DeliverableCard({
   onOpenDocEditor: (deliverable: Deliverable) => void;
   onCargarSolicitud: (deliverable: Deliverable) => void;
   onAttachResponse: (deliverable: Deliverable) => void;
+  onDelete?: (deliverable: Deliverable) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [busyAction, setBusyAction] = useState<null | "accept">(null);
@@ -143,9 +160,10 @@ function DeliverableCard({
   );
 
   return (
-    <div className="border border-gray-200 bg-white">
-      <div
-        role="button"
+    <div className="flex items-start gap-2">
+      <div className="flex-1 min-w-0 border border-gray-200 bg-white">
+        <div
+          role="button"
         tabIndex={0}
         aria-expanded={expanded}
         aria-controls={`deliverable-${deliverable.id}`}
@@ -173,25 +191,29 @@ function DeliverableCard({
           {badge.label}
         </span>
         <div className="flex-1 min-w-0">
-          {/* `deliverable.title` es "Plan de Trabajo" / "Informe Final de
-              Cierre", que repite el encabezado de sección ("Plan de Trabajo" /
-              "Informes") y, cuando coincide, la tarjeta mostraba el mismo texto
-              dos veces. Solo se pinta cuando aporta algo (periodo, versión u
-              otra denominación del tipo). */}
-          {deliverable.title !== DELIVERABLE_TYPE_LABELS[deliverable.type] && (
-            <div className="text-sm font-medium text-gray-800">
-              {deliverable.title}
-            </div>
-          )}
-          {(deliverable.title !== DELIVERABLE_TYPE_LABELS[deliverable.type] ||
-            deliverable.period) && (
-            <div className="text-xs text-gray-500 mt-0.5">
-              {deliverable.title !==
-                DELIVERABLE_TYPE_LABELS[deliverable.type] &&
-                `${DELIVERABLE_TYPE_LABELS[deliverable.type]} · `}
-              {deliverable.period && <>Periodo: {deliverable.period}</>}
-            </div>
-          )}
+          {(() => {
+            const typeLabel = DELIVERABLE_TYPE_LABELS[deliverable.type];
+            const resolvedTitle = displayTitle ?? deliverable.title;
+            const showTitle =
+              deliverable.type !== "PLAN_DE_TRABAJO" ||
+              Boolean(displayTitle) ||
+              resolvedTitle !== typeLabel;
+
+            return (
+              <>
+                {showTitle && (
+                  <div className="text-sm font-medium text-gray-800">
+                    {resolvedTitle}
+                  </div>
+                )}
+                {deliverable.period && (
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Periodo: {deliverable.period}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
         {deliverable.requested_at && !pendienteSolicitud && (
           <span className="text-xs text-gray-500 hidden sm:inline">
@@ -201,7 +223,7 @@ function DeliverableCard({
         )}
         {deliverable.submitted_at && (
           <span className="text-xs text-gray-500 hidden sm:inline">
-            Enviado:{" "}
+            Recibido:{" "}
             {new Date(deliverable.submitted_at).toLocaleDateString("es-PE")}
           </span>
         )}
@@ -217,33 +239,31 @@ function DeliverableCard({
           id={`deliverable-${deliverable.id}`}
           className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3"
         >
-          {hasSolicitudDoc ? (
+          {deliverable.status === "OBSERVADO" &&
+            deliverable.observations &&
+            deliverable.observations.length > 0 && (
+              <div className="text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-2">
+                <span className="font-semibold">Observación:</span>{" "}
+                {deliverable.observations[0].comment}
+              </div>
+            )}
+
+          {hasSolicitudDoc && deliverable.status !== "OBSERVADO" && (
             <div className="space-y-1">
               <div className="text-xs font-semibold uppercase text-gray-500">
                 Documento de solicitud
               </div>
               {solicitudDocs.map(renderDocumentRow)}
             </div>
-          ) : (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <FileText className="h-4 w-4 text-gray-400 shrink-0" />
-              <span className="flex-1 min-w-0">
-                Aún no se ha generado el oficio de solicitud.
-              </span>
-            </div>
           )}
 
-          {submittedDocs.length > 0 ? (
+          {submittedDocs.length > 0 && (
             <div className="space-y-1">
               <div className="text-xs font-semibold uppercase text-gray-500">
-                Documentos adjuntados
+                Documentos de respuesta
               </div>
               {submittedDocs.map(renderDocumentRow)}
             </div>
-          ) : (
-            <p className="text-sm text-gray-500">
-              Aún no se ha adjuntado el documento recibido.
-            </p>
           )}
 
           {canManage && blockedByPlan && deliverable.status !== "REGISTRADO" && (
@@ -313,15 +333,22 @@ function DeliverableCard({
                   Adjuntar respuesta
                 </button>
               )}
-              {deliverable.status === "REGISTRADO" && (
-                <span className="inline-flex items-center gap-1.5 text-xs text-green-700">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Entregable aprobado y registrado.
-                </span>
-              )}
             </div>
           )}
         </div>
+      )}
+      </div>
+
+      {canManage && onDelete && deliverable.type !== "PLAN_DE_TRABAJO" && (
+        <button
+          type="button"
+          onClick={() => void onDelete(deliverable)}
+          className="mt-2.5 p-2 text-red-500 hover:text-red-700 transition-colors cursor-pointer shrink-0"
+          title="Eliminar informe"
+          aria-label="Eliminar informe"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       )}
     </div>
   );
@@ -331,15 +358,21 @@ export default function Stage3Seguimiento({
   agreementId,
   processStatus,
   deliverables,
+  adendas = [],
   isLoadingDeliverables,
   canManage,
+  currentEndDate,
+  currentResponsables,
   onRefresh,
 }: {
   agreementId: number;
   processStatus: ProcessStatus;
   deliverables: Deliverable[];
+  adendas?: Adenda[];
   isLoadingDeliverables: boolean;
   canManage: boolean;
+  currentEndDate?: string | null;
+  currentResponsables?: AgreementResponsable[];
   onRefresh: () => Promise<void>;
 }) {
   const toast = useToast();
@@ -364,6 +397,23 @@ export default function Stage3Seguimiento({
     number | null
   >(null);
   const [isCompletingMonitoring, setIsCompletingMonitoring] = useState(false);
+  const [showIniciarAdendaModal, setShowIniciarAdendaModal] = useState(false);
+  const [dependencies, setDependencies] = useState<Dependencia[]>([]);
+
+  useEffect(() => {
+    if (!canManage || processStatus !== "EN_SEGUIMIENTO") return;
+    let cancelled = false;
+    getActiveOpinionTargets()
+      .then((targets) => {
+        if (!cancelled && Array.isArray(targets)) {
+          setDependencies(targets as Dependencia[]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage, processStatus]);
 
   const workPlans = deliverables.filter((d) => d.type === "PLAN_DE_TRABAJO");
   const reports = deliverables.filter((d) => d.type !== "PLAN_DE_TRABAJO");
@@ -374,20 +424,19 @@ export default function Stage3Seguimiento({
   const hasFinalReportRegistered = deliverables.some(
     (d) => d.type === "INFORME_FINAL" && d.status === "REGISTRADO",
   );
-  const planApproved = deliverables.some(
-    (d) => d.type === "PLAN_DE_TRABAJO" && d.status === "REGISTRADO",
-  );
+  const planApproved =
+    workPlans.length > 0 && workPlans.every((d) => d.status === "REGISTRADO");
+  const hasOpenAdenda = adendas.some((a) => a.status === "EN_OPINIONES");
   const canCompleteMonitoring =
     processStatus === "EN_SEGUIMIENTO" &&
     allRegistered &&
-    hasFinalReportRegistered;
+    hasFinalReportRegistered &&
+    !hasOpenAdenda;
 
   const handleAcceptRequest = async (deliverable: Deliverable) => {
     try {
       await acceptDeliverableRequest(deliverable.id);
-      toast.success(
-        "Solicitud validada. Cuando reciba el documento, adjúntelo con \"Adjuntar respuesta\".",
-      );
+      toast.success("Solicitud validada.");
       await onRefresh();
     } catch (err: unknown) {
       const message =
@@ -403,7 +452,7 @@ export default function Stage3Seguimiento({
     if (docEditor == null) return;
     try {
       await regenerateRequestDocument(docEditor, bodyHtml, oficioNumber);
-      toast.success("Documento de solicitud generado y adjuntado.");
+      toast.success("Solicitud generada.");
       setDocEditor(null);
       await onRefresh();
     } catch (err: unknown) {
@@ -420,7 +469,7 @@ export default function Stage3Seguimiento({
     if (cargarSolicitudModal == null) return;
     try {
       await cargarSolicitud(deliverableId, file);
-      toast.success("Oficio de solicitud cargado y adjuntado.");
+      toast.success("Solicitud cargada.");
       setCargarSolicitudModal(null);
       await onRefresh();
     } catch (err: unknown) {
@@ -433,12 +482,13 @@ export default function Stage3Seguimiento({
     }
   };
 
-  const handleAdjuntarRespuesta = async (deliverableId: number, file: File) => {
+  const handleAdjuntarRespuesta = async (
+    deliverableId: number,
+    files: File[],
+  ) => {
     try {
-      await submitDeliverable(deliverableId, file);
-      toast.success(
-        "Respuesta adjuntada exitosamente. Entregable registrado.",
-      );
+      await submitDeliverable(deliverableId, files);
+      toast.success("Respuesta adjuntada.");
       setAdjuntarRespuestaModal(null);
       await onRefresh();
     } catch (err: unknown) {
@@ -491,10 +541,10 @@ export default function Stage3Seguimiento({
 
       toast.success(
         willAutoConclude
-          ? "Entregable aprobado. Todos los entregables están registrados: seguimiento concluido."
+          ? "Seguimiento concluido."
           : decision === "APPROVED"
-            ? "Entregable aprobado y registrado."
-            : "Entregable observado. Se solicitaron correcciones.",
+            ? "Entregable aprobado."
+            : "Entregable observado.",
       );
       setEvaluateModal(null);
       await onRefresh();
@@ -519,7 +569,7 @@ export default function Stage3Seguimiento({
     setIsCompletingMonitoring(true);
     try {
       await completeMonitoring(agreementId);
-      toast.success("Seguimiento concluido exitosamente.");
+      toast.success("Seguimiento concluido.");
       await onRefresh();
       router.replace(NEXT_STAGE_DESTINATION(agreementId).toConvenio);
     } catch (err: unknown) {
@@ -531,6 +581,42 @@ export default function Stage3Seguimiento({
     }
   };
 
+  const handleDeleteReport = async (deliverable: Deliverable) => {
+    const confirmed = await confirm({
+      title: "Eliminar informe",
+      description: `¿Está seguro de eliminar "${deliverable.title}" y sus documentos adjuntos?`,
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteDeliverable(deliverable.id);
+      toast.success("Informe eliminado.");
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al eliminar el informe";
+      toast.error(message);
+    }
+  };
+
+  const handleCreateAdenda = async (data: {
+    type: AdendaType;
+    description?: string;
+    dependencia_ids: number[];
+  }) => {
+    try {
+      await createAdenda(agreementId, data);
+      toast.success("Adenda iniciada.");
+      setShowIniciarAdendaModal(false);
+      await onRefresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Error al iniciar la adenda";
+      toast.error(message);
+      throw err;
+    }
+  };
+
   return (
     <SectionCard title="Seguimiento del Convenio" icon={ClipboardList}>
       {processStatus === "SEGUIMIENTO_CONCLUIDO" && (
@@ -539,13 +625,13 @@ export default function Stage3Seguimiento({
         </div>
       )}
 
-      {isLoadingDeliverables ? (
+      {isLoadingDeliverables && deliverables.length === 0 && adendas.length === 0 ? (
         <div className="py-8 text-center">
           <Loader2 className="h-6 w-6 animate-spin text-gold mx-auto" />
         </div>
       ) : deliverables.length === 0 ? (
         <div className="py-12 text-center text-sm text-gray-500">
-          No hay entregables registrados.
+          No hay entregables solicitados.
         </div>
       ) : (
         <div className="space-y-6">
@@ -564,6 +650,7 @@ export default function Stage3Seguimiento({
                     onOpenDocEditor={(dl) => setDocEditor(dl.id)}
                     onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
                     onAttachResponse={(dl) => setAdjuntarRespuestaModal(dl.id)}
+                    onDelete={handleDeleteReport}
                     onEvaluate={(id, title, decision) =>
                       setEvaluateModal({ id, title, decision })
                     }
@@ -579,70 +666,112 @@ export default function Stage3Seguimiento({
                 Informes
               </h3>
               <div className="space-y-3">
-                {reports.map((d) => (
-                  <DeliverableCard
-                    key={d.id}
-                    deliverable={d}
-                    canManage={canManage && processStatus !== "SEGUIMIENTO_CONCLUIDO"}
-                    blockedByPlan={!planApproved}
-                    onAccept={handleAcceptRequest}
-                    onOpenDocEditor={(dl) => setDocEditor(dl.id)}
-                    onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
-                    onAttachResponse={(dl) => setAdjuntarRespuestaModal(dl.id)}
-                    onEvaluate={(id, title, decision) =>
-                      setEvaluateModal({ id, title, decision })
-                    }
-                  />
-                ))}
+                {(() => {
+                  let semestralCounter = 0;
+                  return reports.map((d) => {
+                    const displayTitle =
+                      d.type === "INFORME_SEMESTRAL"
+                        ? `Informe Semestral ${++semestralCounter}`
+                        : undefined;
+                    return (
+                      <DeliverableCard
+                        key={d.id}
+                        deliverable={d}
+                        displayTitle={displayTitle}
+                        canManage={
+                          canManage && processStatus !== "SEGUIMIENTO_CONCLUIDO"
+                        }
+                        blockedByPlan={!planApproved}
+                        onAccept={handleAcceptRequest}
+                        onOpenDocEditor={(dl) => setDocEditor(dl.id)}
+                        onCargarSolicitud={(dl) => setCargarSolicitudModal(dl.id)}
+                        onAttachResponse={(dl) =>
+                          setAdjuntarRespuestaModal(dl.id)
+                        }
+                        onDelete={handleDeleteReport}
+                        onEvaluate={(id, title, decision) =>
+                          setEvaluateModal({ id, title, decision })
+                        }
+                      />
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
 
+          <AdendasSection
+            adendas={adendas}
+            dependencies={dependencies}
+            canManage={canManage}
+            isInSeguimiento={processStatus === "EN_SEGUIMIENTO"}
+            currentEndDate={currentEndDate}
+            currentResponsables={currentResponsables}
+            onRefresh={onRefresh}
+          />
+
           {canManage && processStatus === "EN_SEGUIMIENTO" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-4 border-t border-gray-100">
-              {planApproved ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative">
-                    <select
-                      value={reportType}
-                      onChange={(e) =>
-                        setReportType(
-                          e.target.value as
-                            | "INFORME_SEMESTRAL"
-                            | "INFORME_FINAL",
-                        )
-                      }
-                      className="appearance-none border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
-                    >
-                      <option value="INFORME_SEMESTRAL">
-                        Informe Semestral
-                      </option>
-                      <option value="INFORME_FINAL">Informe Final</option>
-                    </select>
-                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  </div>
-                  {reportType === "INFORME_SEMESTRAL" && (
-                    <input
-                      value={reportPeriod}
-                      onChange={(e) => setReportPeriod(e.target.value)}
-                      placeholder="Periodo (ej: 2026-I)"
-                      className="border border-gray-300 px-3 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold w-40"
-                    />
-                  )}
-                  <button
-                    onClick={handleRequestReport}
-                    disabled={isRequestingReport}
-                    className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-                  >
-                    {isRequestingReport ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5" />
+              <div className="flex flex-wrap items-center gap-2">
+                {planApproved && (
+                  <>
+                    <div className="relative">
+                      <select
+                        value={reportType}
+                        onChange={(e) =>
+                          setReportType(
+                            e.target.value as
+                              | "INFORME_SEMESTRAL"
+                              | "INFORME_FINAL",
+                          )
+                        }
+                        className="appearance-none border border-gray-300 pl-3 pr-10 py-1.5 text-sm text-gray-800 focus:outline-none focus:border-gold"
+                      >
+                        <option value="INFORME_SEMESTRAL">
+                          Informe Semestral
+                        </option>
+                        <option value="INFORME_FINAL">Informe Final</option>
+                      </select>
+                      <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    </div>
+                    {reportType === "INFORME_SEMESTRAL" && (
+                      <input
+                        value={reportPeriod}
+                        onChange={(e) => setReportPeriod(e.target.value)}
+                        placeholder="Periodo (ej: 2026-I)"
+                        className="border border-gray-300 px-3 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gold w-40"
+                      />
                     )}
-                    Solicitar Informe
-                  </button>
-                </div>
-              ) : null}
+                    <button
+                      onClick={handleRequestReport}
+                      disabled={isRequestingReport}
+                      className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {isRequestingReport ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5" />
+                      )}
+                      Solicitar Informe
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowIniciarAdendaModal(true)}
+                  disabled={hasOpenAdenda}
+                  title={
+                    hasOpenAdenda
+                      ? "Ya existe una adenda en curso pendiente de registro o cancelación"
+                      : "Iniciar trámite de adenda (prórroga, modificación o ampliación)"
+                  }
+                  className="inline-flex items-center gap-1.5 border border-primary text-primary hover:bg-primary/5 px-3 py-1.5 text-sm transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <FilePlus2 className="h-3.5 w-3.5" />
+                  Solicitar Adenda
+                </button>
+              </div>
 
               <div className="flex items-center gap-3">
                 <button
@@ -694,6 +823,14 @@ export default function Stage3Seguimiento({
           deliverableId={adjuntarRespuestaModal}
           onUpload={handleAdjuntarRespuesta}
           onCancel={() => setAdjuntarRespuestaModal(null)}
+        />
+      )}
+
+      {showIniciarAdendaModal && (
+        <IniciarAdendaModal
+          dependencies={dependencies}
+          onSubmit={handleCreateAdenda}
+          onCancel={() => setShowIniciarAdendaModal(false)}
         />
       )}
     </SectionCard>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteOpinionRequest,
@@ -31,14 +31,12 @@ import SubirDocumentoModal from "./SubirDocumentoModal";
 import CargarOficioModal from "./CargarOficioModal";
 import SolicitarOpinionesModal from "./SolicitarOpinionesModal";
 import EditarOficioSolicitudModal from "./EditarOficioSolicitudModal";
-import { AgreementDocument, Dependencia, OpinionRequest } from "@/types/agreements";
+import { AgreementDocument, Dependencia } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   ClipboardList,
   Clock,
   Download,
@@ -59,9 +57,9 @@ import {
 import {
   DOCUMENT_TYPE_LABELS,
   DOC_TYPE_ACCEPT,
+  OpinionRequestRow,
   ProcessDetail,
   SectionCard,
-  OpinionStatusIcon,
   TemporalBadge,
 } from "./shared";
 
@@ -80,71 +78,6 @@ function formatDateOnly(value?: string | null) {
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
   return `${dd}/${mm}/${yyyy}`;
-}
-
-function OpinionRequestRow({
-  request,
-  expanded,
-  onToggle,
-  extraBadge,
-  subline,
-  actions,
-  detail,
-}: {
-  request: OpinionRequest;
-  expanded: boolean;
-  onToggle: () => void;
-  extraBadge?: ReactNode;
-  subline?: ReactNode;
-  actions?: ReactNode;
-  detail?: ReactNode;
-}) {
-  return (
-    <div className="py-4">
-      <div
-        role="button"
-        tabIndex={0}
-        aria-expanded={expanded}
-        aria-controls={`opinion-${request.id}`}
-        className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-        onClick={onToggle}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onToggle();
-          }
-        }}
-      >
-        <OpinionStatusIcon status={request.status} sentAt={request.sent_at} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-sm text-gray-800">
-              {request.dependencias?.name ?? "Dependencia"}
-            </span>
-            {extraBadge}
-          </div>
-          {subline}
-        </div>
-        <div className="flex items-center gap-2">
-          {actions}
-          {expanded ? (
-            <ChevronUp className="h-4 w-4 text-gray-400" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          )}
-        </div>
-      </div>
-
-      {expanded && (
-        <div
-          id={`opinion-${request.id}`}
-          className="mt-3 ml-6 p-4 bg-surface border border-gray-200 text-sm space-y-2"
-        >
-          {detail}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /**
@@ -843,7 +776,7 @@ export default function Stage1Propuesta({
           </SectionCard>
         )}
       <SectionCard
-        title="Resumen de Solicitudes de Opinión"
+        title="Resumen de Trámite de Opiniones"
         icon={MessageSquare}
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -921,7 +854,7 @@ export default function Stage1Propuesta({
       </SectionCard>
 
       <SectionCard
-        title={`Solicitud de Opiniones (${counts.total})`}
+        title={`Trámite de Opiniones (${counts.total})`}
         icon={Users}
         action={
           canManage && GENERATION_STATUSES.includes(processStatus) ? (
@@ -1110,7 +1043,7 @@ export default function Stage1Propuesta({
                           </div>
                           <div>
                             <span className="text-xs font-semibold uppercase text-gray-500">
-                              Enviado:
+                              Fecha envío:
                             </span>{" "}
                             <span className="text-gray-800">
                               {req.sent_at
@@ -1120,15 +1053,16 @@ export default function Stage1Propuesta({
                                 : "—"}
                             </span>
                           </div>
-                          <div></div>
-                          <div>
-                            <span className="text-xs font-semibold uppercase text-gray-500">
-                              N° ADESA:
-                            </span>{" "}
-                            <span className="text-gray-800">
-                              {req.adesa_number || "—"}
-                            </span>
-                          </div>
+                          {(req.sent_via === "ADESA" || Boolean(req.adesa_number)) && (
+                            <div>
+                              <span className="text-xs font-semibold uppercase text-gray-500">
+                                N° ADESA:
+                              </span>{" "}
+                              <span className="text-gray-800">
+                                {req.adesa_number || "—"}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       }
                     />
@@ -1141,7 +1075,9 @@ export default function Stage1Propuesta({
             {respondedRequests.length > 0 && (
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-                  Respuestas Recibidas ({respondedRequests.length})
+                  {pendingRequests.length === 0
+                    ? `Opiniones Tramitadas (${respondedRequests.length})`
+                    : `Respuestas Recibidas (${respondedRequests.length})`}
                 </h3>
                 <div className="divide-y divide-gray-100">
                   {respondedRequests.map((req) => (
@@ -1155,21 +1091,14 @@ export default function Stage1Propuesta({
                         )
                       }
                       subline={
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                          {req.response_date && (
-                            <span>
-                              F. Respuesta: {formatDateOnly(req.response_date)}
-                            </span>
-                          )}
-                          {(oficioDocumentLabel(documents, req.id) ??
-                            req.oficio_number) && (
-                            <span>
-                              Oficio:{" "}
-                              {oficioDocumentLabel(documents, req.id) ??
-                                req.oficio_number}
-                            </span>
-                          )}
-                        </div>
+                        (oficioDocumentLabel(documents, req.id) ??
+                          req.oficio_number) ? (
+                          <span className="text-xs text-gray-500">
+                            Oficio:{" "}
+                            {oficioDocumentLabel(documents, req.id) ??
+                              req.oficio_number}
+                          </span>
+                        ) : null
                       }
                       actions={null}
                       detail={
@@ -1192,7 +1121,7 @@ export default function Stage1Propuesta({
                           </div>
                           <div>
                             <span className="text-xs font-semibold uppercase text-gray-500">
-                              Enviado:
+                              Fecha envío:
                             </span>{" "}
                             <span className="text-gray-800">
                               {req.sent_at
@@ -1212,14 +1141,16 @@ export default function Stage1Propuesta({
                                 : "—"}
                             </span>
                           </div>
-                          <div>
-                            <span className="text-xs font-semibold uppercase text-gray-500">
-                              N° ADESA:
-                            </span>{" "}
-                            <span className="text-gray-800">
-                              {req.adesa_number || "—"}
-                            </span>
-                          </div>
+                          {(req.sent_via === "ADESA" || Boolean(req.adesa_number)) && (
+                            <div>
+                              <span className="text-xs font-semibold uppercase text-gray-500">
+                                N° ADESA:
+                              </span>{" "}
+                              <span className="text-gray-800">
+                                {req.adesa_number || "—"}
+                              </span>
+                            </div>
+                          )}
                           {req.observations && (
                             <div className="col-span-2">
                               <span className="text-xs font-semibold uppercase text-gray-500">

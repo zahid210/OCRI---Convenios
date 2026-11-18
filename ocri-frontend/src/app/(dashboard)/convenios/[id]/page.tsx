@@ -1,14 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState, use } from 'react';
+import { useCallback, useEffect, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { getDeliverables, getProcessStatus } from '@/lib/api';
+import { getAdendas, getDeliverables, getProcessStatus } from '@/lib/api';
 import {
     AlertTriangle,
     ArrowLeft,
     Loader2,
 } from 'lucide-react';
-import { Deliverable, ProcessStatusResponse } from '@/types/agreements';
+import { Adenda, Deliverable, ProcessStatusResponse } from '@/types/agreements';
 import { useUser } from '@/components/user-provider';
 import { canManage } from '@/lib/auth';
 import Stage1Propuesta from '@/components/agreements/process/Stage1Propuesta';
@@ -44,7 +44,9 @@ export default function ConvenioDetailPage({
 
     const [status, setStatus] = useState<ProcessDetail | null>(null);
     const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
+    const [adendas, setAdendas] = useState<Adenda[]>([]);
     const [isLoadingDeliverables, setIsLoadingDeliverables] = useState(false);
+    const hasLoadedDeliverablesRef = useRef(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -60,9 +62,16 @@ export default function ConvenioDetailPage({
                 data.agreement.process_status,
             );
             if (needsDeliverables) {
-                setIsLoadingDeliverables(true);
-                const list = (await getDeliverables(agreementId)) as Deliverable[];
+                if (!hasLoadedDeliverablesRef.current) {
+                    setIsLoadingDeliverables(true);
+                }
+                const [list, adendaList] = await Promise.all([
+                    getDeliverables(agreementId) as Promise<Deliverable[]>,
+                    getAdendas(agreementId) as Promise<Adenda[]>,
+                ]);
                 setDeliverables(list);
+                setAdendas(adendaList);
+                hasLoadedDeliverablesRef.current = true;
             }
         } catch (err: unknown) {
             const message =
@@ -173,8 +182,11 @@ export default function ConvenioDetailPage({
                     agreementId={agreementId}
                     processStatus={agreement.process_status}
                     deliverables={deliverables}
+                    adendas={adendas}
                     isLoadingDeliverables={isLoadingDeliverables}
                     canManage={manage}
+                    currentEndDate={agreement.end_date}
+                    currentResponsables={agreement.responsables}
                     onRefresh={loadData}
                 />
             )}

@@ -139,6 +139,13 @@ export class DeliverablesService {
 
     if (!allRegistered || !hasFinalReport) return false;
 
+    const openAdendasCount = tx.adendas
+      ? await tx.adendas.count({
+          where: { agreement_id: agreementId, status: 'EN_OPINIONES' },
+        })
+      : 0;
+    if (openAdendasCount > 0) return false;
+
     validateTransition('EN_SEGUIMIENTO', 'SEGUIMIENTO_CONCLUIDO');
 
     const now = new Date();
@@ -189,7 +196,7 @@ export class DeliverablesService {
     const type = deliverable.type as SolicitudType;
     const agreement = deliverable.agreements;
     const tramiteCode = agreement.tramite_code ?? '';
-    const seq = tramiteCode.split('-').pop() ?? '000';
+    const seq = tramiteCode.split('-')[0] || '000';
     // B7-6 · El año del N° de oficio se deriva del convenio (`NNNN-YYYY`), no
     // del reloj del servidor: una solicitud sobre un convenio 2025 debe seguir
     // numerándose con 2025 aunque se emita en 2026.
@@ -692,11 +699,13 @@ export class DeliverablesService {
     const agreement = await this.getAgreementOrThrow(agreementId);
     this.assertInMonitoring(agreement.process_status);
 
-    // Los informes solo se habilitan una vez aprobado el Plan de Trabajo.
-    const plan = await this.prisma.deliverables.findFirst({
+    // Los informes solo se habilitan cuando todos los Planes de Trabajo
+    // (incluido el de una posible adenda de prórroga) están REGISTRADOS.
+    const plans = await this.prisma.deliverables.findMany({
       where: { agreement_id: BigInt(agreementId), type: 'PLAN_DE_TRABAJO' },
+      select: { status: true },
     });
-    if (!plan || plan.status !== 'REGISTRADO') {
+    if (plans.length === 0 || plans.some((p) => p.status !== 'REGISTRADO')) {
       throw new BadRequestException(
         'Los informes se habilitan cuando el Plan de Trabajo ha sido aprobado y registrado (estado REGISTRADO).',
       );
@@ -816,7 +825,7 @@ export class DeliverablesService {
 
   async submitDeliverable(
     deliverableId: number,
-    file: UploadFile,
+    filesOrFile: UploadFile | UploadFile[],
     userId?: number,
   ) {
     const deliverable = await this.prisma.deliverables.findUnique({
@@ -847,13 +856,14 @@ export class DeliverablesService {
       );
     }
 
-    if (!file) {
-      throw new BadRequestException('Debe adjuntar el archivo del entregable.');
+    const files = Array.isArray(filesOrFile) ? filesOrFile : [filesOrFile];
+    if (files.length === 0 || !files[0]) {
+      throw new BadRequestException(
+        'Debe adjuntar al menos un archivo de respuesta del entregable.',
+      );
     }
 
     const isCorrection = deliverable.status === 'OBSERVADO';
-
-    const originalName = normalizeUploadName(file.originalname);
 
     // Si existían versiones previas de respuesta (ENTRADA) para este entregable,
     // se retiran en la transacción y se purgan de OBS después del commit para no
@@ -863,17 +873,36 @@ export class DeliverablesService {
       select: { id: true, file_path: true },
     });
 
-    // Sube el archivo ANTES de la transacción: no se mantiene un lock de BD
-    // durante el I/O de red; si la transacción falla, se purga el objeto.
-    const relPath = await storeUploadedDocument(
-      this.storage,
-      file,
-      deliverable.agreements?.tramite_code ?? '',
-      deliverable.agreements?.created_at ?? null,
-      previousDocs.length > 0
-        ? { ignorePaths: previousDocs.map((d) => d.file_path) }
-        : undefined,
-    );
+    const ignorePaths = previousDocs.map((d) => d.file_path);
+    const uploadedEntries: Array<{
+      relPath: string;
+      originalName: string;
+    }> = [];
+
+    // Sube los archivos ANTES de la transacción: no se mantiene un lock de BD
+    // durante el I/O de red; si la transacción o una subida posterior falla, se purgan.
+    try {
+      for (const file of files) {
+        const originalName = normalizeUploadName(file.originalname);
+        const relPath = await storeUploadedDocument(
+          this.storage,
+          file,
+          deliverable.agreements?.tramite_code ?? '',
+          deliverable.agreements?.created_at ?? null,
+          ignorePaths.length > 0 ? { ignorePaths } : undefined,
+        );
+        uploadedEntries.push({ relPath, originalName });
+      }
+    } catch (err) {
+      for (const item of uploadedEntries) {
+        try {
+          await this.storage.removeRel(item.relPath);
+        } catch {
+          // best-effort
+        }
+      }
+      throw err;
+    }
 
     const updated = await this.prisma
       .$transaction(async (tx) => {
@@ -889,35 +918,42 @@ export class DeliverablesService {
           : null;
 
         const nextVersion = deliverable.version + 1;
+        const now = new Date();
 
-        await tx.documents.create({
-          data: {
-            agreements: { connect: { id: deliverable.agreement_id } },
-            deliverables: { connect: { id: deliverable.id } },
-            name: deliverable.title,
-            file_path: relPath,
-            original_name: originalName,
-            extension: extname(originalName).replace(/^\./, '').slice(0, 10),
-            document_types: docType
-              ? { connect: { id: docType.id } }
-              : undefined,
-            direction: 'ENTRADA',
-            stage: 'ETAPA_3_SEGUIMIENTO',
-            uploaded_by:
-              userId != null ? { connect: { id: BigInt(userId) } } : undefined,
-            created_at: new Date(),
-            updated_at: new Date(),
-          },
-        });
+        for (const item of uploadedEntries) {
+          await tx.documents.create({
+            data: {
+              agreements: { connect: { id: deliverable.agreement_id } },
+              deliverables: { connect: { id: deliverable.id } },
+              name: deliverable.title,
+              file_path: item.relPath,
+              original_name: item.originalName,
+              extension: extname(item.originalName)
+                .replace(/^\./, '')
+                .slice(0, 10),
+              document_types: docType
+                ? { connect: { id: docType.id } }
+                : undefined,
+              direction: 'ENTRADA',
+              stage: 'ETAPA_3_SEGUIMIENTO',
+              uploaded_by:
+                userId != null
+                  ? { connect: { id: BigInt(userId) } }
+                  : undefined,
+              created_at: now,
+              updated_at: now,
+            },
+          });
+        }
 
         const d = await tx.deliverables.update({
           where: { id: deliverable.id },
           data: {
             status: 'REGISTRADO',
             version: isCorrection ? { increment: 1 } : undefined,
-            submitted_at: new Date(),
-            registered_at: new Date(),
-            updated_at: new Date(),
+            submitted_at: now,
+            registered_at: now,
+            updated_at: now,
           },
         });
 
@@ -925,11 +961,12 @@ export class DeliverablesService {
           tx,
           deliverable.agreement_id,
           'ENTREGABLE_REGISTRADO',
-          `OCRI recibió y registró: ${deliverable.title} (versión ${isCorrection ? nextVersion : 1}).`,
+          `OCRI recibió y registró: ${deliverable.title} (${uploadedEntries.length} archivo(s), versión ${isCorrection ? nextVersion : 1}).`,
           userId,
           {
             deliverable_type: deliverable.type,
-            original_name: originalName,
+            files_count: uploadedEntries.length,
+            original_names: uploadedEntries.map((e) => e.originalName),
             version: isCorrection ? nextVersion : 1,
           },
         );
@@ -946,7 +983,7 @@ export class DeliverablesService {
               data: {
                 process_status: 'EN_SEGUIMIENTO',
                 stage: 'ETAPA_3_SEGUIMIENTO',
-                updated_at: new Date(),
+                updated_at: now,
               },
             });
             await this.logEvent(
@@ -964,18 +1001,21 @@ export class DeliverablesService {
         return d;
       })
       .catch(async (err) => {
-        // El archivo ya estaba en OBS: si la transacción falla, se purga.
-        try {
-          await this.storage.removeRel(relPath);
-        } catch {
-          // best-effort: si el borrado falla queda un objeto huérfano.
+        // Los archivos ya estaban en OBS: si la transacción falla, se purgan.
+        for (const item of uploadedEntries) {
+          try {
+            await this.storage.removeRel(item.relPath);
+          } catch {
+            // best-effort: si el borrado falla queda un objeto huérfano.
+          }
         }
         throw err;
       });
 
     // Purga de las respuestas previas reemplazadas en OBS después del commit.
+    const newPathSet = new Set(uploadedEntries.map((e) => e.relPath));
     for (const prev of previousDocs) {
-      if (prev.file_path && prev.file_path !== relPath) {
+      if (prev.file_path && !newPathSet.has(prev.file_path)) {
         try {
           await this.storage.removeRel(prev.file_path);
         } catch {
@@ -1008,11 +1048,11 @@ export class DeliverablesService {
     deliverableType: string,
   ) {
     if (deliverableType === 'PLAN_DE_TRABAJO') return;
-    const plan = await this.prisma.deliverables.findFirst({
+    const plans = await this.prisma.deliverables.findMany({
       where: { agreement_id: agreementId, type: 'PLAN_DE_TRABAJO' },
       select: { status: true },
     });
-    if (!plan || plan.status !== 'REGISTRADO') {
+    if (plans.length === 0 || plans.some((p) => p.status !== 'REGISTRADO')) {
       throw new BadRequestException(
         'Los informes se habilitan cuando el Plan de Trabajo ha sido aprobado y registrado (estado REGISTRADO).',
       );
@@ -1111,6 +1151,7 @@ export class DeliverablesService {
     }
 
     const now = new Date();
+    let observedSalidaPaths: string[] = [];
 
     const result = await this.prisma.$transaction(async (tx) => {
       if (decision === 'APPROVED') {
@@ -1180,6 +1221,24 @@ export class DeliverablesService {
           data: { status: 'OBSERVADO', updated_at: now },
         });
 
+        // Al observar la solicitud (SOLICITADO / ACEPTADO), se retira el oficio
+        // de solicitud observado para que no siga apareciendo hasta que se
+        // cargue o genere uno corregido.
+        if (deliverable.status !== 'RECIBIDO') {
+          const prevSalida = await tx.documents.findMany({
+            where: { deliverable_id: deliverable.id, direction: 'SALIDA' },
+            select: { id: true, file_path: true },
+          });
+          if (prevSalida.length > 0) {
+            observedSalidaPaths = prevSalida
+              .map((d) => d.file_path)
+              .filter(Boolean);
+            await tx.documents.deleteMany({
+              where: { id: { in: prevSalida.map((d) => d.id) } },
+            });
+          }
+        }
+
         await tx.deliverable_observations.create({
           data: {
             deliverable_id: deliverable.id,
@@ -1205,7 +1264,75 @@ export class DeliverablesService {
       });
     });
 
+    for (const relPath of observedSalidaPaths) {
+      try {
+        await this.storage.removeRel(relPath);
+      } catch {
+        // best-effort cleanup en S3
+      }
+    }
+
     return serializeBigInt(result);
+  }
+
+  // ─── E3 · Eliminar informe (semestral o final) ─────────────────────────────
+
+  async deleteDeliverable(deliverableId: number, userId?: number) {
+    const deliverable = await this.prisma.deliverables.findUnique({
+      where: { id: BigInt(deliverableId) },
+      include: {
+        agreements: { select: { id: true, process_status: true } },
+        documents: { select: { id: true, file_path: true } },
+      },
+    });
+
+    if (!deliverable) {
+      throw new NotFoundException(`Entregable #${deliverableId} no encontrado`);
+    }
+
+    if (deliverable.type === 'PLAN_DE_TRABAJO') {
+      throw new BadRequestException(
+        'El Plan de Trabajo no puede eliminarse desde seguimiento.',
+      );
+    }
+
+    if (deliverable.agreements.process_status !== 'EN_SEGUIMIENTO') {
+      throw new BadRequestException(
+        `Solo se pueden eliminar informes mientras el convenio está EN_SEGUIMIENTO. Estado actual: ${deliverable.agreements.process_status}`,
+      );
+    }
+
+    const filePaths = deliverable.documents
+      .map((d) => d.file_path)
+      .filter(Boolean);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.deliverables.delete({
+        where: { id: deliverable.id },
+      });
+
+      await this.logEvent(
+        tx,
+        deliverable.agreement_id,
+        'INFORME_ELIMINADO',
+        `OCRI eliminó el entregable "${deliverable.title}".`,
+        userId,
+        {
+          deliverable_id: Number(deliverable.id),
+          deliverable_type: deliverable.type,
+        },
+      );
+    });
+
+    for (const relPath of filePaths) {
+      try {
+        await this.storage.removeRel(relPath);
+      } catch {
+        // best-effort cleanup en S3
+      }
+    }
+
+    return serializeBigInt({ deleted: true, id: deliverableId });
   }
 
   // ─── E3 · Conclusión manual del seguimiento ────────────────────────────────
@@ -1242,6 +1369,20 @@ export class DeliverablesService {
         if (!hasFinal) {
           throw new BadRequestException(
             'No se puede concluir el seguimiento sin haber solicitado y registrado el Informe Final.',
+          );
+        }
+
+        const openAdendas = tx.adendas
+          ? await tx.adendas.count({
+              where: {
+                agreement_id: BigInt(agreementId),
+                status: 'EN_OPINIONES',
+              },
+            })
+          : 0;
+        if (openAdendas > 0) {
+          throw new BadRequestException(
+            'No se puede concluir el seguimiento: existe una adenda en curso pendiente de registro o cancelación.',
           );
         }
 

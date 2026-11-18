@@ -19,6 +19,7 @@ import {
 import {
   UploadFile,
   DOC_TYPE_EXTENSIONS,
+  adendaOpinionDir,
   normalizeUploadName,
   opinionDir,
   storePath,
@@ -186,7 +187,11 @@ export class ProcessService {
     actorUserId?: number,
   ) {
     const allRequests = await tx.opinion_requests.findMany({
-      where: { agreement_id: agreementId },
+      where: {
+        agreement_id: agreementId,
+        stage: 'ETAPA_1_PROPUESTA',
+        adenda_id: null,
+      },
       select: { status: true, response_date: true },
     });
 
@@ -222,7 +227,11 @@ export class ProcessService {
    */
   private async assertOpinionsResolved(agreementId: number, action: string) {
     const opinionRequests = await this.prisma.opinion_requests.findMany({
-      where: { agreement_id: BigInt(agreementId) },
+      where: {
+        agreement_id: BigInt(agreementId),
+        stage: 'ETAPA_1_PROPUESTA',
+        adenda_id: null,
+      },
     });
 
     if (opinionRequests.length === 0) {
@@ -354,6 +363,7 @@ export class ProcessService {
       userId?: number;
       now: Date;
       opinionRequestId?: bigint;
+      adendaId?: bigint;
     },
   ) {
     const docType = await tx.document_types.findUnique({
@@ -367,6 +377,9 @@ export class ProcessService {
         agreements: { connect: { id: opts.agreementId } },
         ...(opts.opinionRequestId != null
           ? { opinion_requests: { connect: { id: opts.opinionRequestId } } }
+          : {}),
+        ...(opts.adendaId != null
+          ? { adendas: { connect: { id: opts.adendaId } } }
           : {}),
         name: opts.name ?? docType?.name ?? opts.fallbackName ?? opts.code,
         file_path: relPath,
@@ -401,6 +414,8 @@ export class ProcessService {
         process_status: true,
         validity_status: true,
         stage: true,
+        start_date: true,
+        end_date: true,
         rectorate_decision: true,
         notified_solicitante_at: true,
         published_at: true,
@@ -434,7 +449,11 @@ export class ProcessService {
     }
 
     const opinionRequests = await this.prisma.opinion_requests.findMany({
-      where: { agreement_id: BigInt(agreementId) },
+      where: {
+        agreement_id: BigInt(agreementId),
+        stage: 'ETAPA_1_PROPUESTA',
+        adenda_id: null,
+      },
       include: { dependencias: { select: { code: true, name: true } } },
       orderBy: [{ response_date: 'asc' }, { created_at: 'asc' }],
     });
@@ -527,6 +546,8 @@ export class ProcessService {
       where: {
         agreement_id: BigInt(agreementId),
         dependencia_id: { in: dependenciaIds.map((id) => BigInt(id)) },
+        stage: 'ETAPA_1_PROPUESTA',
+        adenda_id: null,
       },
     });
 
@@ -705,6 +726,7 @@ export class ProcessService {
       include: {
         agreements: true,
         dependencias: { select: { name: true, code: true } },
+        adendas: { select: { id: true, correlative: true, type: true } },
       },
     });
 
@@ -759,11 +781,18 @@ export class ProcessService {
       request.dependencias?.code?.trim() ||
       request.dependencias?.name?.trim() ||
       'DEP';
-    const targetOpinionDir = opinionDir(
-      request.agreements.tramite_code,
-      request.agreements.created_at,
-      depCode,
-    );
+    const targetOpinionDir = request.adendas
+      ? adendaOpinionDir(
+          request.agreements.tramite_code,
+          request.agreements.created_at,
+          request.adendas.correlative,
+          depCode,
+        )
+      : opinionDir(
+          request.agreements.tramite_code,
+          request.agreements.created_at,
+          depCode,
+        );
 
     let uploadedRelPath: string | undefined;
     const updated = await this.withStoredFile(
@@ -821,12 +850,15 @@ export class ProcessService {
           await this.persistUploadedDocument(tx, file, relPath, {
             agreementId: request.agreement_id,
             code: 'OFICIO_RESPUESTA_OPINION',
-            name: `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
+            name: request.adendas
+              ? `Opinión Adenda N° ${String(request.adendas.correlative).padStart(2, '0')} - ${request.dependencias?.name ?? 'Dependencia'}`
+              : `Opinión - ${request.dependencias?.name ?? 'Dependencia'}`,
             direction: 'ENTRADA',
-            stage: 'ETAPA_1_PROPUESTA',
+            stage: request.stage,
             userId,
             now: new Date(),
             opinionRequestId: BigInt(opinionRequestId),
+            adendaId: request.adenda_id ?? undefined,
           });
         }
 
@@ -848,20 +880,20 @@ export class ProcessService {
             toValue: 'RESPONDIDA',
             opinionRequestId: BigInt(opinionRequestId),
           },
-          undefined,
+          request.stage,
           tx,
         );
 
-        // Las opiniones se consideran completas solo cuando todas fueron
-        // finalmente validadas (o canceladas), no cuando están simplemente
-        // respondidas. Así el expediente para Rectorado recién se habilita
-        // al validar la última opinión.
-        await this.advanceToOpinionesCompletas(
-          tx,
-          request.agreement_id,
-          'Todas las opiniones fueron recibidas. OCRI coordina y recopila la información para elaborar el expediente técnico.',
-          userId,
-        );
+        // Las opiniones de Etapa 1 completan OPINIONES_COMPLETAS al validarse;
+        // las opiniones de adenda (Etapa 3) no alteran el estado de Etapa 1.
+        if (request.stage !== 'ETAPA_3_SEGUIMIENTO' && !request.adenda_id) {
+          await this.advanceToOpinionesCompletas(
+            tx,
+            request.agreement_id,
+            'Todas las opiniones fueron recibidas. OCRI coordina y recopila la información para elaborar el expediente técnico.',
+            userId,
+          );
+        }
 
         return result;
       },
@@ -981,9 +1013,13 @@ export class ProcessService {
           tx,
         );
 
-        // Al validar la última opinión pendiente, el proceso pasa a
+        // Al validar la última opinión pendiente de Etapa 1, el proceso pasa a
         // OPINIONES_COMPLETAS y se habilita el Expediente para Rectorado.
-        if (dto.valid) {
+        if (
+          dto.valid &&
+          request.stage !== 'ETAPA_3_SEGUIMIENTO' &&
+          !request.adenda_id
+        ) {
           await this.advanceToOpinionesCompletas(
             tx,
             request.agreement_id,
@@ -1051,12 +1087,14 @@ export class ProcessService {
           tx,
         );
 
-        await this.advanceToOpinionesCompletas(
-          tx,
-          request.agreement_id,
-          'Todas las solicitudes de opinión quedaron resueltas (validadas o canceladas).',
-          userId,
-        );
+        if (request.stage !== 'ETAPA_3_SEGUIMIENTO' && !request.adenda_id) {
+          await this.advanceToOpinionesCompletas(
+            tx,
+            request.agreement_id,
+            'Todas las solicitudes de opinión quedaron resueltas (validadas o canceladas).',
+            userId,
+          );
+        }
 
         return result;
       },
@@ -1104,32 +1142,38 @@ export class ProcessService {
           tx,
         );
 
-        const remaining = await tx.opinion_requests.findMany({
-          where: { agreement_id: request.agreement_id },
-          select: { status: true },
-        });
-
-        if (remaining.length === 0) {
-          const current = await tx.agreements.findUnique({
-            where: { id: request.agreement_id },
-            select: { process_status: true },
+        if (request.stage !== 'ETAPA_3_SEGUIMIENTO' && !request.adenda_id) {
+          const remaining = await tx.opinion_requests.findMany({
+            where: {
+              agreement_id: request.agreement_id,
+              stage: 'ETAPA_1_PROPUESTA',
+              adenda_id: null,
+            },
+            select: { status: true },
           });
-          if (current?.process_status === 'OPINIONES_EN_CURSO') {
-            await tx.agreements.update({
+
+          if (remaining.length === 0) {
+            const current = await tx.agreements.findUnique({
               where: { id: request.agreement_id },
-              data: {
-                process_status: 'RECEPCIONADA',
-                updated_at: new Date(),
-              },
+              select: { process_status: true },
             });
+            if (current?.process_status === 'OPINIONES_EN_CURSO') {
+              await tx.agreements.update({
+                where: { id: request.agreement_id },
+                data: {
+                  process_status: 'RECEPCIONADA',
+                  updated_at: new Date(),
+                },
+              });
+            }
+          } else {
+            await this.advanceToOpinionesCompletas(
+              tx,
+              request.agreement_id,
+              'Todas las solicitudes de opinión restantes se encuentran validadas.',
+              userId,
+            );
           }
-        } else {
-          await this.advanceToOpinionesCompletas(
-            tx,
-            request.agreement_id,
-            'Todas las solicitudes de opinión restantes se encuentran validadas.',
-            userId,
-          );
         }
       },
       { maxWait: 10000, timeout: 30000 },
@@ -1168,6 +1212,9 @@ export class ProcessService {
       include: {
         dependencias: { select: { name: true, code: true } },
         agreements: { select: { title: true, tramite_code: true } },
+        adendas: {
+          select: { correlative: true, type: true, description: true },
+        },
       },
     });
 
@@ -1197,7 +1244,27 @@ export class ProcessService {
       year: 'numeric',
     });
 
-    const asunto = `OPINI&Oacute;N SOBRE EL PROYECTO DE ACUERDO DE COOPERACI&Oacute;N "${title}"`;
+    const adendaTypeLabel: Record<string, string> = {
+      ADENDA_PRORROGA: 'Prórroga de Vigencia',
+      ADENDA_MODIFICACION: 'Modificación y Ampliación',
+    };
+    const adendaNum = request.adendas
+      ? String(request.adendas.correlative).padStart(2, '0')
+      : '';
+    const adendaKind = request.adendas
+      ? (adendaTypeLabel[request.adendas.type] ?? 'Adenda')
+      : '';
+
+    const asunto = request.adendas
+      ? `OPINI&Oacute;N SOBRE ADENDA N&deg; ${adendaNum} (${escapeHtml(adendaKind.toUpperCase())}) DEL CONVENIO "${title}"`
+      : `OPINI&Oacute;N SOBRE EL PROYECTO DE ACUERDO DE COOPERACI&Oacute;N "${title}"`;
+
+    const bodyParagraph = request.adendas
+      ? `<p>Luego de un atento y cordial saludo me dirijo a usted para comunicarle que, en el marco del seguimiento del convenio <strong>${title}</strong>, se viene tramitando la <strong>Adenda N&deg; ${adendaNum} (${escapeHtml(adendaKind)})</strong>${request.adendas.description ? ` con el objeto de: ${escapeHtml(request.adendas.description)}` : ''}; por lo que remito a su despacho la documentaci&oacute;n pertinente para que se sirva emitir su opini&oacute;n t&eacute;cnica y/o legal sobre la procedencia y factibilidad de suscribir dicha adenda.</p>`
+      : `<p>Luego de un atento y cordial saludo me dirijo a usted para comunicarle que se ha recibido de Rectorado el
+        <strong>${title}</strong> y habiendo tomado conocimiento y revisado el proyecto, remito a su despacho para que
+        se sirva emitir su opini&oacute;n sobre la conveniencia y factibilidad de la firma del
+        mencionado convenio.</p>`;
 
     const img = (uri: string, alt: string) =>
       uri ? `<img src="${uri}" alt="${alt}"/>` : '';
@@ -1238,10 +1305,7 @@ export class ProcessService {
         <div class="subject-content">&nbsp;</div>
       </div>
       <div class="body-text">
-        <p>Luego de un atento y cordial saludo me dirijo a usted para comunicarle que se ha recibido de Rectorado el
-        <strong>${title}</strong> y habiendo tomado conocimiento y revisado el proyecto, remito a su despacho para que
-        se sirva emitir su opini&oacute;n sobre la conveniencia y factibilidad de la firma del
-        mencionado convenio.</p>
+        ${bodyParagraph}
       </div>
       <div class="closing">
         Sin otro en particular, propicio la ocasi&oacute;n para expresarle las muestras de mi consideraci&oacute;n y estima personal.
@@ -1398,6 +1462,7 @@ export class ProcessService {
       include: {
         agreements: true,
         dependencias: { select: { name: true, code: true } },
+        adendas: { select: { id: true, correlative: true, type: true } },
       },
     });
 
@@ -1432,11 +1497,18 @@ export class ProcessService {
       request.dependencias?.code?.trim() ||
       request.dependencias?.name?.trim() ||
       'DEP';
-    const targetOpinionDir = opinionDir(
-      request.agreements?.tramite_code,
-      request.agreements?.created_at,
-      depCode,
-    );
+    const targetOpinionDir = request.adendas
+      ? adendaOpinionDir(
+          request.agreements?.tramite_code,
+          request.agreements?.created_at,
+          request.adendas.correlative,
+          depCode,
+        )
+      : opinionDir(
+          request.agreements?.tramite_code,
+          request.agreements?.created_at,
+          depCode,
+        );
 
     // El número de oficio se sobrescribe dentro de `renderOficioOpinionPdf`
     // (ver `applyOficioNumberToBody`), para que opinión, rectorado y solicitud
@@ -1475,8 +1547,13 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: BigInt(agreementId) } },
               opinion_requests: { connect: { id: BigInt(opinionRequestId) } },
+              ...(request.adenda_id != null
+                ? { adendas: { connect: { id: request.adenda_id } } }
+                : {}),
               name:
-                'Oficio de Solicitud de Opinión - ' +
+                (request.adendas
+                  ? `Oficio de Solicitud de Opinión Adenda N° ${String(request.adendas.correlative).padStart(2, '0')} - `
+                  : 'Oficio de Solicitud de Opinión - ') +
                 (request.dependencias?.name ?? 'Dependencia'),
               file_path: newPath,
               original_name: basename(filename),
@@ -1485,7 +1562,7 @@ export class ProcessService {
                 ? { connect: { id: docType.id } }
                 : undefined,
               direction: 'SALIDA',
-              stage: 'ETAPA_1_PROPUESTA',
+              stage: request.stage,
               uploaded_by:
                 userId != null
                   ? { connect: { id: BigInt(userId) } }
@@ -1531,6 +1608,8 @@ export class ProcessService {
 
           if (
             !isCorrection &&
+            request.stage === 'ETAPA_1_PROPUESTA' &&
+            !request.adenda_id &&
             request.agreements.process_status === 'RECEPCIONADA'
           ) {
             await this.applyTransition(
@@ -1600,6 +1679,7 @@ export class ProcessService {
       include: {
         agreements: true,
         dependencias: { select: { name: true, code: true } },
+        adendas: { select: { id: true, correlative: true, type: true } },
       },
     });
 
@@ -1650,11 +1730,14 @@ export class ProcessService {
       request.dependencias?.code?.trim() ||
       request.dependencias?.name?.trim() ||
       'DEP';
-    const targetOpinionDir = opinionDir(
-      agreement.tramite_code,
-      agreement.created_at,
-      depCode,
-    );
+    const targetOpinionDir = request.adendas
+      ? adendaOpinionDir(
+          agreement.tramite_code,
+          agreement.created_at,
+          request.adendas.correlative,
+          depCode,
+        )
+      : opinionDir(agreement.tramite_code, agreement.created_at, depCode);
 
     // Se consulta siempre cualquier oficio previo de esta solicitud para
     // retirarlo en la transacción y permitir reutilizar el nombre original en OBS.
@@ -1698,7 +1781,13 @@ export class ProcessService {
             data: {
               agreements: { connect: { id: BigInt(request.agreement_id) } },
               opinion_requests: { connect: { id: BigInt(opinionRequestId) } },
-              name: 'Oficio de Solicitud de Opinión - ' + dependenciaName,
+              ...(request.adenda_id != null
+                ? { adendas: { connect: { id: request.adenda_id } } }
+                : {}),
+              name:
+                (request.adendas
+                  ? `Oficio de Solicitud de Opinión Adenda N° ${String(request.adendas.correlative).padStart(2, '0')} - `
+                  : 'Oficio de Solicitud de Opinión - ') + dependenciaName,
               file_path: relPath,
               original_name: originalName,
               extension: 'pdf',
@@ -1706,7 +1795,7 @@ export class ProcessService {
                 ? { connect: { id: docType.id } }
                 : undefined,
               direction: 'SALIDA',
-              stage: 'ETAPA_1_PROPUESTA',
+              stage: request.stage,
               uploaded_by:
                 userId != null
                   ? { connect: { id: BigInt(userId) } }
@@ -1770,7 +1859,12 @@ export class ProcessService {
             tx,
           );
 
-          if (!isCorrection && agreement.process_status === 'RECEPCIONADA') {
+          if (
+            !isCorrection &&
+            request.stage === 'ETAPA_1_PROPUESTA' &&
+            !request.adenda_id &&
+            agreement.process_status === 'RECEPCIONADA'
+          ) {
             await this.applyTransition(
               tx,
               request.agreement_id,

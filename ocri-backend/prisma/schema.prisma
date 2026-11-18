@@ -97,6 +97,17 @@ enum deliverable_status {
   REGISTRADO
 }
 
+enum adenda_type {
+  ADENDA_PRORROGA
+  ADENDA_MODIFICACION
+}
+
+enum adenda_status {
+  EN_OPINIONES
+  REGISTRADA
+  CANCELADA
+}
+
 // ─── Usuarios y catálogos ────────────────────────────────────────────────────
 
 model users {
@@ -213,6 +224,7 @@ model agreements {
   process_events   process_events[]
   deliverables     deliverables[]
   responsables     agreement_responsables[]
+  adendas          adendas[]
 
   @@index([agreement_type_id], map: "agreements_agreement_type_id_foreign")
   @@index([end_date], map: "agreements_end_date_index")
@@ -256,6 +268,7 @@ model documents {
   stage              process_stage?
   opinion_request_id BigInt?             @db.UnsignedBigInt
   deliverable_id     BigInt?             @db.UnsignedBigInt
+  adenda_id          BigInt?             @db.UnsignedBigInt
   uploaded_by_id     BigInt?             @db.UnsignedBigInt
   created_at         DateTime?           @default(now()) @db.Timestamp(0)
   updated_at         DateTime?           @default(now()) @updatedAt @db.Timestamp(0)
@@ -264,21 +277,24 @@ model documents {
   document_types   document_types?   @relation(fields: [document_type_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   opinion_requests opinion_requests? @relation(fields: [opinion_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   deliverables     deliverables?     @relation(fields: [deliverable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  adendas          adendas?          @relation(fields: [adenda_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   uploaded_by      users?            @relation(fields: [uploaded_by_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([document_type_id])
   @@index([opinion_request_id])
   @@index([deliverable_id])
+  @@index([adenda_id])
   @@index([uploaded_by_id], map: "documents_uploaded_by_id_fkey")
   @@index([agreement_id, stage])
 }
 
-// ─── E1: Solicitudes de opinión a dependencias ──────────────────────────────
+// ─── E1 / E3: Solicitudes de opinión a dependencias ─────────────────────────
 
 model opinion_requests {
   id             BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
   agreement_id   BigInt                 @db.UnsignedBigInt
   dependencia_id BigInt                 @db.UnsignedBigInt
+  adenda_id      BigInt?                @db.UnsignedBigInt
   stage          process_stage          @default(ETAPA_1_PROPUESTA)
   status         opinion_request_status @default(GENERADA)
 
@@ -296,13 +312,16 @@ model opinion_requests {
 
   agreements     agreements       @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   dependencias   dependencias     @relation(fields: [dependencia_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  adendas        adendas?         @relation(fields: [adenda_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   documents      documents[]
   process_events process_events[]
 
-  @@unique([agreement_id, dependencia_id, stage])
+  @@unique([adenda_id, dependencia_id])
+  @@index([agreement_id, dependencia_id, stage])
   @@index([response_date])
   @@index([status, due_at])
   @@index([dependencia_id])
+  @@index([adenda_id])
 }
 
 // ─── Auditoría del proceso ──────────────────────────────────────────────────
@@ -390,6 +409,32 @@ model deliverable_observations {
 
   @@index([deliverable_id])
   @@index([created_by_id], map: "deliverable_observations_created_by_id_fkey")
+}
+
+// ─── E3: Adendas al convenio durante el seguimiento ─────────────────────────
+
+model adendas {
+  id                 BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  agreement_id       BigInt        @db.UnsignedBigInt
+  correlative        Int
+  type               adenda_type
+  status             adenda_status @default(EN_OPINIONES)
+  description        String?       @db.Text
+  resolution_number  String?       @db.VarChar(255)
+  previous_end_date  DateTime?     @db.Date
+  new_end_date       DateTime?     @db.Date
+  requires_work_plan Boolean       @default(false)
+  requested_at       DateTime      @default(now()) @db.Timestamp(0)
+  registered_at      DateTime?     @db.Timestamp(0)
+  created_at         DateTime      @default(now()) @db.Timestamp(0)
+  updated_at         DateTime      @updatedAt @db.Timestamp(0)
+
+  agreements       agreements         @relation(fields: [agreement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  opinion_requests opinion_requests[]
+  documents        documents[]
+
+  @@unique([agreement_id, correlative])
+  @@index([agreement_id, status])
 }
 
 // ─── Configuración ──────────────────────────────────────────────────────────

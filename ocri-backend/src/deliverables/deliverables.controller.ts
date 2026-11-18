@@ -2,16 +2,21 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
   Post,
   Req,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { FLOW_ROLES } from '../auth/role-sets';
@@ -103,16 +108,32 @@ export class DeliverablesController {
 
   @Roles(...FLOW_ROLES)
   @Post('deliverables/:id/submit')
-  @UseInterceptors(FileInterceptor('file', safeMulterOptions()))
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'files', maxCount: 20 },
+        { name: 'file', maxCount: 1 },
+      ],
+      safeMulterOptions(),
+    ),
+  )
   submitDeliverable(
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: UploadFile | undefined,
+    @UploadedFiles()
+    uploaded: { files?: UploadFile[]; file?: UploadFile[] } | undefined,
     @Req() req: AuthenticatedRequest,
   ) {
-    if (!file) {
-      throw new BadRequestException('Debe adjuntar el archivo del entregable.');
+    const allFiles = [...(uploaded?.files ?? []), ...(uploaded?.file ?? [])];
+    if (allFiles.length === 0) {
+      throw new BadRequestException(
+        'Debe adjuntar al menos un archivo de respuesta del entregable.',
+      );
     }
-    return this.deliverablesService.submitDeliverable(id, file, req.user?.id);
+    return this.deliverablesService.submitDeliverable(
+      id,
+      allFiles,
+      req.user?.id,
+    );
   }
 
   // ─── E3 · La contraparte acepta la solicitud del entregable ────────────────
@@ -189,6 +210,17 @@ export class DeliverablesController {
       body.observations,
       req.user?.id,
     );
+  }
+
+  // ─── E3 · Eliminar informe (semestral o final) ─────────────────────────────
+
+  @Roles(...FLOW_ROLES)
+  @Delete('deliverables/:id')
+  deleteDeliverable(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.deliverablesService.deleteDeliverable(id, req.user?.id);
   }
 
   // ─── E3 · Conclusión manual del seguimiento ────────────────────────────────

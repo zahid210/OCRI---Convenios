@@ -321,6 +321,7 @@ describe('DeliverablesService', () => {
           ),
         ),
         findFirst: jest.fn(() => Promise.resolve({ status: 'SOLICITADO' })),
+        findMany: jest.fn(() => Promise.resolve([{ status: 'SOLICITADO' }])),
       };
 
       await expect(service.acceptRequest(15, 1)).rejects.toThrow(

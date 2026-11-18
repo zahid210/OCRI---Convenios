@@ -132,6 +132,11 @@ export const DOCUMENT_TYPES: readonly DocumentTypeSeed[] = [
     name: 'Oficio de Solicitud de Informe Final',
     direction: 'SALIDA',
   },
+  {
+    code: 'ADENDA_FIRMADA',
+    name: 'Adenda de Convenio Firmada',
+    direction: 'ENTRADA',
+  },
 ];
 
 /** Tipos de convenio iniciales. `agreement_types` no tiene unique por nombre. */

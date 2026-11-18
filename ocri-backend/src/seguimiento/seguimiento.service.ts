@@ -36,6 +36,12 @@ export interface TrackingRow {
   entregables_registrados: number;
   plan_trabajo: EntregableRow | null;
   informes: EntregableRow[];
+  adendas?: Array<{
+    id: number;
+    correlative: number;
+    type: string;
+    status: string;
+  }>;
   sin_entregables: boolean;
   pendiente_completar: boolean;
   progreso: number;
@@ -137,11 +143,18 @@ export class SeguimientoService {
           };
         };
       };
-    }>,
+    }> & {
+      adendas?: Array<{
+        id: bigint;
+        correlative: number;
+        type: string;
+        status: string;
+      }>;
+    },
   ): TrackingRow {
     const deliverables = a.deliverables ?? [];
-    const planTrabajo =
-      deliverables.find((d) => d.type === 'PLAN_DE_TRABAJO') ?? null;
+    const workPlans = deliverables.filter((d) => d.type === 'PLAN_DE_TRABAJO');
+    const planTrabajo = workPlans[workPlans.length - 1] ?? null;
     const informes = deliverables.filter((d) => d.type !== 'PLAN_DE_TRABAJO');
 
     const registrados = deliverables.filter(
@@ -161,6 +174,12 @@ export class SeguimientoService {
       entregables_registrados: registrados,
       plan_trabajo: planTrabajo ? this.buildEntregable(planTrabajo) : null,
       informes: informes.map((d) => this.buildEntregable(d)),
+      adendas: (a.adendas ?? []).map((ad) => ({
+        id: Number(ad.id),
+        correlative: ad.correlative,
+        type: ad.type,
+        status: ad.status,
+      })),
       sin_entregables: total === 0,
       pendiente_completar: total > 0 && registrados < total,
       progreso: total
@@ -214,6 +233,15 @@ export class SeguimientoService {
                 where: { direction: 'SALIDA' },
                 select: { id: true },
               },
+            },
+          },
+          adendas: {
+            orderBy: { correlative: 'asc' },
+            select: {
+              id: true,
+              correlative: true,
+              type: true,
+              status: true,
             },
           },
         },

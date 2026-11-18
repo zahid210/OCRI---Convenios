@@ -5,6 +5,8 @@ import {
     AlertTriangle,
     Ban,
     Check,
+    ChevronDown,
+    ChevronUp,
     Clock,
     FileText,
     MessageSquare,
@@ -13,9 +15,12 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import {
+    AdendaStatus,
+    AdendaType,
     Agreement,
     DeliverableStatus,
     DeliverableType,
+    OpinionRequest,
     ProcessStage,
     ProcessStatus,
     ProcessStatusResponse,
@@ -119,6 +124,29 @@ export const DELIVERABLE_TYPE_LABELS: Record<DeliverableType, string> = {
     PLAN_DE_TRABAJO: 'Plan de Trabajo',
     INFORME_SEMESTRAL: 'Informe Semestral',
     INFORME_FINAL: 'Informe Final',
+};
+
+export const ADENDA_TYPE_LABELS: Record<AdendaType, string> = {
+    ADENDA_PRORROGA: 'Prórroga de Vigencia',
+    ADENDA_MODIFICACION: 'Modificación y Ampliación',
+};
+
+export const ADENDA_STATUS_META: Record<
+    AdendaStatus,
+    { label: string; color: string }
+> = {
+    EN_OPINIONES: {
+        label: 'En opiniones',
+        color: 'bg-blue-50 text-blue-700 border-blue-200',
+    },
+    REGISTRADA: {
+        label: 'Registrada',
+        color: 'bg-green-50 text-green-700 border-green-200',
+    },
+    CANCELADA: {
+        label: 'No suscrita',
+        color: 'bg-red-50 text-red-700 border-red-200',
+    },
 };
 
 /**
@@ -540,5 +568,73 @@ export function FilePicker({
                 <p className="mt-1 text-xs text-gray-500 truncate">{file.name}</p>
             )}
         </>
+    );
+}
+
+/**
+ * Fila expandible reutilizable para una solicitud de opinión (Etapa 1 y Adendas).
+ */
+export function OpinionRequestRow({
+    request,
+    expanded,
+    onToggle,
+    extraBadge,
+    subline,
+    actions,
+    detail,
+}: {
+    request: OpinionRequest;
+    expanded: boolean;
+    onToggle: () => void;
+    extraBadge?: ReactNode;
+    subline?: ReactNode;
+    actions?: ReactNode;
+    detail?: ReactNode;
+}) {
+    return (
+        <div className="py-4">
+            <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={expanded}
+                aria-controls={`opinion-${request.id}`}
+                className="flex items-center gap-3 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                onClick={onToggle}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onToggle();
+                    }
+                }}
+            >
+                <OpinionStatusIcon status={request.status} sentAt={request.sent_at} />
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm text-gray-800">
+                            {request.dependencias?.name ?? 'Dependencia'}
+                        </span>
+                        {extraBadge}
+                    </div>
+                    {subline}
+                </div>
+                <div className="flex items-center gap-2">
+                    {actions}
+                    {expanded ? (
+                        <ChevronUp className="h-4 w-4 text-gray-400" />
+                    ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                    )}
+                </div>
+            </div>
+
+            {expanded && (
+                <div
+                    id={`opinion-${request.id}`}
+                    className="mt-3 ml-6 p-4 bg-surface border border-gray-200 text-sm space-y-2"
+                >
+                    {detail}
+                </div>
+            )}
+        </div>
     );
 }

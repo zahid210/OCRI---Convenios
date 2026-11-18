@@ -20,6 +20,7 @@ import { SeedDataModule } from './seed-data/seed-data.module';
 import { AppConfigModule } from './app-config/app-config.module';
 import { ProcessModule } from './process/process.module';
 import { DeliverablesModule } from './deliverables/deliverables.module';
+import { AdendasModule } from './adendas/adendas.module';
 import { StorageModule } from './common/storage/storage.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -42,6 +43,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     AppConfigModule,
     ProcessModule,
     DeliverablesModule,
+    AdendasModule,
     StorageModule,
   ],
   controllers: [AppController],

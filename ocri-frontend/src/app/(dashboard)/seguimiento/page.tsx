@@ -14,6 +14,8 @@ import {
   Eye,
 } from "lucide-react";
 import {
+  ADENDA_STATUS_META,
+  ADENDA_TYPE_LABELS,
   DELIVERABLE_TYPE_LABELS,
   deliverableBadge,
 } from "@/components/agreements/process/shared";
@@ -348,7 +350,7 @@ export default function SeguimientoPage() {
                                     </span>
                                     {d.submitted_at && (
                                       <span className="px-2 py-0.5 border bg-purple-50 text-purple-700 border-purple-200 text-[11px]">
-                                        Enviado: {d.submitted_at}
+                                        Recibido: {d.submitted_at}
                                       </span>
                                     )}
                                     {d.registered_at && (
@@ -358,6 +360,26 @@ export default function SeguimientoPage() {
                                     )}
                                   </div>
                                 ))}
+                                {(row.adendas ?? []).map((ad) => {
+                                  const adMeta = ADENDA_STATUS_META[ad.status];
+                                  return (
+                                    <div
+                                      key={`adenda-${ad.id}`}
+                                      className="border border-gray-200 bg-white p-3 flex flex-wrap items-center gap-2"
+                                    >
+                                      <span className="text-sm font-medium text-gray-800 flex-1">
+                                        Adenda N°{" "}
+                                        {String(ad.correlative).padStart(2, "0")}{" "}
+                                        · {ADENDA_TYPE_LABELS[ad.type]}
+                                      </span>
+                                      <span
+                                        className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase border ${adMeta.color}`}
+                                      >
+                                        {adMeta.label}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </td>

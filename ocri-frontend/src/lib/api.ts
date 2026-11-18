@@ -573,9 +573,15 @@ export async function requestReport(
 }
 
 /** Responsable/envía un Informe o Corrección (archivo) */
-export async function submitDeliverable(deliverableId: number, file: File) {
+export async function submitDeliverable(
+  deliverableId: number,
+  files: File | File[],
+) {
   const formData = new FormData();
-  formData.append("file", file);
+  const list = Array.isArray(files) ? files : [files];
+  for (const file of list) {
+    formData.append("files", file);
+  }
   return fetchApi(`/agreements/deliverables/${deliverableId}/submit`, {
     method: "POST",
     body: formData,
@@ -639,9 +645,85 @@ export async function evaluateDeliverable(
   });
 }
 
+/** OCRI elimina un informe (semestral o final) durante EN_SEGUIMIENTO */
+export async function deleteDeliverable(deliverableId: number) {
+  return fetchApi(`/agreements/deliverables/${deliverableId}`, {
+    method: "DELETE",
+  });
+}
+
 /** OCRI finaliza el seguimiento del convenio */
 export async function completeMonitoring(agreementId: number) {
   return fetchApi(`/agreements/${agreementId}/complete-monitoring`, {
     method: "POST",
+  });
+}
+
+/* ============================================================================
+ * HELPERS PARA ADENDAS (ETAPA 3 · SEGUIMIENTO)
+ * ============================================================================ */
+
+export async function getAdendas(agreementId: number) {
+  return fetchApi(`/agreements/${agreementId}/adendas`);
+}
+
+export async function createAdenda(
+  agreementId: number,
+  data: {
+    type: "ADENDA_PRORROGA" | "ADENDA_MODIFICACION";
+    description?: string;
+    dependencia_ids: number[];
+  },
+) {
+  return fetchApi(`/agreements/${agreementId}/adendas`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function addAdendaOpinions(
+  adendaId: number,
+  dependenciaIds: number[],
+) {
+  return fetchApi(`/adendas/${adendaId}/opinions`, {
+    method: "POST",
+    body: JSON.stringify({ dependencia_ids: dependenciaIds }),
+  });
+}
+
+export async function registerAdenda(
+  adendaId: number,
+  payload: {
+    resolution_number: string;
+    new_end_date?: string;
+    responsables?: Array<{
+      name: string;
+      role?: string;
+      side: "UNCP" | "CONTRAPARTE";
+      email?: string;
+      phone?: string;
+    }>;
+  },
+  file: File,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("resolution_number", payload.resolution_number);
+  if (payload.new_end_date) {
+    formData.append("new_end_date", payload.new_end_date);
+  }
+  if (payload.responsables && payload.responsables.length > 0) {
+    formData.append("responsables_json", JSON.stringify(payload.responsables));
+  }
+  return fetchApi(`/adendas/${adendaId}/register`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function cancelAdenda(adendaId: number, reason?: string) {
+  return fetchApi(`/adendas/${adendaId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
   });
 }

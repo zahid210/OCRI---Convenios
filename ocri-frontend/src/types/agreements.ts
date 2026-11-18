@@ -232,6 +232,12 @@ export interface SeguimientoRow {
     entregables_registrados: number;
     plan_trabajo: SeguimientoEntregable | null;
     informes: SeguimientoEntregable[];
+    adendas?: Array<{
+        id: number;
+        correlative: number;
+        type: AdendaType;
+        status: AdendaStatus;
+    }>;
     sin_entregables: boolean;
     pendiente_completar: boolean;
     progreso: number;
@@ -377,6 +383,33 @@ export interface Deliverable {
     updated_at: string;
     observations?: DeliverableObservation[];
     documents?: AgreementDocument[];
+}
+
+// ─── E3: Adendas en seguimiento ─────────────────────────────────────────────
+
+export type AdendaType =
+    | 'ADENDA_PRORROGA'
+    | 'ADENDA_MODIFICACION';
+
+export type AdendaStatus = 'EN_OPINIONES' | 'REGISTRADA' | 'CANCELADA';
+
+export interface Adenda {
+    id: number;
+    agreement_id: number;
+    correlative: number;
+    type: AdendaType;
+    status: AdendaStatus;
+    description?: string | null;
+    resolution_number?: string | null;
+    previous_end_date?: string | null;
+    new_end_date?: string | null;
+    requires_work_plan: boolean;
+    requested_at: string;
+    registered_at?: string | null;
+    created_at: string;
+    updated_at: string;
+    opinion_requests: OpinionRequest[];
+    documents: AgreementDocument[];
 }
 
 // ─── Notificaciones ─────────────────────────────────────────────────────────
