@@ -49,11 +49,11 @@ export default function SeguimientoDetailPage({
                     setIsLoadingDeliverables(true);
                 }
                 const [list, adendaList] = await Promise.all([
-                    getDeliverables(agreementId) as Promise<Deliverable[]>,
-                    getAdendas(agreementId) as Promise<Adenda[]>,
+                    getDeliverables(agreementId),
+                    getAdendas(agreementId),
                 ]);
-                setDeliverables(list);
-                setAdendas(adendaList);
+                setDeliverables(list as Deliverable[]);
+                setAdendas(adendaList as Adenda[]);
                 hasLoadedDeliverablesRef.current = true;
             }
         } catch (err: unknown) {
