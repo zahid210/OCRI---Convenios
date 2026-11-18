@@ -1,3 +1,4 @@
+// noinspection JSUnresolvedReference,DuplicatedCode
 const { renderImage, renderTable } = require('../components');
 const {
   BASE_PT,
@@ -318,8 +319,7 @@ function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
     const emojiLeadW = emojiInfo ? (/^\s+/.test(text) ? doc.widthOfString(' ') : 0) : 0;
     const emojiTrailW = emojiInfo && /\s+$/.test(text) ? doc.widthOfString(' ') : 0;
 
-    const runLineHeight = lineHeightValue(s, size, tag);
-    const contentH = runLineHeight;
+    const contentH = lineHeightValue(s, size, tag);
     const measuredTextHeight = emojiInfo ? size : doc.heightOfString(text, { lineGap: 0 });
     const boxH = contentH + padT + padB + border * 2;
 
@@ -759,7 +759,7 @@ async function renderNodeImpl(node, ctx) {
       .toLowerCase();
     const borderLeftWidth =
       styleNumber(styles, 'border-left-width', null) ??
-      (styles['border-left'] ? parsePx(styles['border-left'].split(' ')[0], 0) : 0);
+      (styles['border-left'] ? parsePx(String(styles['border-left']).split(' ')[0], 0) : 0);
     const borderLeftColor = styleColor(styles, 'border-left-color', '#333333');
     const borderLeftPaint = ['none', 'transparent'].includes(
       String(borderLeftColor || '')

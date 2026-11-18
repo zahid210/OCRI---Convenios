@@ -10,7 +10,7 @@ const API_URL = API_BASE.trim().replace(/\/+$/, "");
 // Todo el backend vive bajo /api (setGlobalPrefix). Convierte un endpoint
 // relativo del frontend ("/auth/login") en la ruta del API ("/api/auth/login").
 function apiPath(endpoint: string): string {
-  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+  if (/^https?:\/\//.test(endpoint)) {
     return endpoint;
   }
   if (endpoint === "/api" || endpoint.startsWith("/api/")) return endpoint;
@@ -297,13 +297,6 @@ export async function validateOpinionRequest(
   });
 }
 
-/** Cancela una solicitud de opinión en curso (todas las solicitudes deben estar validadas para avanzar a OPINIONES_COMPLETAS) */
-export async function cancelOpinionRequest(requestId: number) {
-  return fetchApi(`/process/opinion-requests/${requestId}/cancel`, {
-    method: "POST",
-  });
-}
-
 /** Elimina una solicitud de opinión (solo si está en estado GENERADA) */
 export async function deleteOpinionRequest(requestId: number) {
   return fetchApi(`/process/opinion-requests/${requestId}`, {
@@ -455,11 +448,6 @@ export async function sendToRectorado(agreementId: number) {
   });
 }
 
-/** Obtiene las dependencias para emisión de opiniones */
-export async function getDefaultOpinionTargets() {
-  return fetchApi("/dependencias");
-}
-
 /** Obtiene todas las dependencias para emisión de opiniones */
 export async function getActiveOpinionTargets() {
   return fetchApi("/dependencias");
@@ -547,16 +535,6 @@ export async function getDeliverables(agreementId: number) {
 export async function requestWorkPlan(agreementId: number) {
   return fetchApi(`/agreements/${agreementId}/request-workplan`, {
     method: "POST",
-  });
-}
-
-/** Responsable envía el Plan de Trabajo (archivo) */
-export async function submitWorkPlan(agreementId: number, file: File) {
-  const formData = new FormData();
-  formData.append("file", file);
-  return fetchApi(`/agreements/${agreementId}/submit-workplan`, {
-    method: "POST",
-    body: formData,
   });
 }
 

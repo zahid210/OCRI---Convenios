@@ -18,8 +18,6 @@ export const VIEWER_VISIBLE_STATUSES = [
   'SEGUIMIENTO_CONCLUIDO',
 ] as const;
 
-export type ViewerVisibleStatus = (typeof VIEWER_VISIBLE_STATUSES)[number];
-
 /** ¿El rol debe ver únicamente convenios formalizados? */
 export function isRestrictedRole(role?: string | null): boolean {
   return role === 'viewer';

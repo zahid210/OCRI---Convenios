@@ -243,15 +243,6 @@ export interface SeguimientoRow {
     progreso: number;
 }
 
-export interface SeguimientoSummary {
-    total: number;
-    por_estado: Record<string, number>;
-    con_pendientes: number;
-    sin_entregables: number;
-    total_entregables: number;
-    entregables_registrados: number;
-}
-
 // ─── Usuarios ────────────────────────────────────────────────────────────────
 
 export interface UserItem {
@@ -272,14 +263,6 @@ export interface Dependencia {
     created_at?: string;
     updated_at?: string;
     _count?: { opinion_requests?: number };
-}
-
-export interface DocumentType {
-    id: number;
-    code: string;
-    name: string;
-    direction: 'ENTRADA' | 'SALIDA' | 'INTERNO';
-    is_active: boolean;
 }
 
 export interface OpinionRequest {

@@ -1,3 +1,4 @@
+// noinspection DuplicatedCode,JSUnusedGlobalSymbols
 const { BASE_PT, mergeStyles, styleNumber } = require('./style');
 const { selectFontForInline } = require('./text');
 const { Layout } = require('./layout');
@@ -144,7 +145,7 @@ function shrinkWidths(widths, minWidths, available) {
 function parseFlexGrow(styles) {
   const grow = styles ? styles['flex-grow'] : null;
   if (grow != null) {
-    const num = parseFloat(grow);
+    const num = parseFloat(String(grow));
     if (Number.isFinite(num)) return num;
   }
   const flex = styles ? styles.flex : null;

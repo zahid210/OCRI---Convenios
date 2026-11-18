@@ -1,5 +1,3 @@
-export type UserRole = 'admin' | 'viewer' | 'asistente' | 'procesador';
-
 export interface CurrentUser {
     id: number;
     name: string;

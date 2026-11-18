@@ -1,3 +1,4 @@
+// noinspection JSUnresolvedReference,JSUnusedGlobalSymbols
 const { Layout } = require('./layout');
 
 function pageTopMargin(layout) {

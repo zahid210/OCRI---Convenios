@@ -1,3 +1,4 @@
+// noinspection DuplicatedCode,JSUnusedGlobalSymbols
 const { Resvg } = require('@resvg/resvg-js');
 const { PX_TO_PT, mergeStyles, styleNumber, styleColor, textAlign, parsePx } = require('./style');
 

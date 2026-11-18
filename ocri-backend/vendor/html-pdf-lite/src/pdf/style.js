@@ -117,10 +117,19 @@ function computedMargins(styles, tag, { percentBase = null } = {}) {
   return { mt, mb };
 }
 
+/**
+ * @param {*} val
+ * @param {number|null} [fallback]
+ */
 function parsePx(val, fallback = 0) {
   return parsePxWithOptions(val, fallback, { base: BASE_PT });
 }
 
+/**
+ * @param {*} val
+ * @param {number|null} [fallback]
+ * @param {Object} [opts]
+ */
 function parsePxWithOptions(val, fallback = 0, { base = BASE_PT, percentBase = null } = {}) {
   if (val == null) return fallback;
   if (typeof val === 'number' && Number.isFinite(val)) return val;
@@ -214,7 +223,7 @@ function parseColor(val, fallback = '#000000') {
         }
       }
       if (alphaOut != null && alphaOut <= 0) return 'transparent';
-      return `#${rgb.map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+      return `#${rgb.map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
     }
   }
 
@@ -277,6 +286,7 @@ function textDecorations(styles) {
   };
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = {
   BASE_PT,
   BODY_LH,

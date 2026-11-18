@@ -1,4 +1,5 @@
 "use client";
+// noinspection DuplicatedCode
 
 import { useState, useEffect, Fragment, type SyntheticEvent } from "react";
 import Link from "next/link";

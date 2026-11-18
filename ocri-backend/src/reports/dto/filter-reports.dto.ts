@@ -22,8 +22,6 @@ export const REPORT_STATUSES = [
   'Sin Fecha',
 ] as const;
 
-export type ReportStatus = (typeof REPORT_STATUSES)[number];
-
 /** Recorta espacios y convierte "" en undefined para que @IsOptional actúe. */
 const normalizeOptionalString = ({ value }: { value: unknown }) => {
   if (typeof value !== 'string') return value;

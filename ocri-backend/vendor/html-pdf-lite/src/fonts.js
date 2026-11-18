@@ -94,6 +94,7 @@ function isFontSupported(filePath) {
   if (supportCache.has(filePath)) return supportCache.get(filePath);
   let ok;
   try {
+    // noinspection JSCheckFunctionSignatures
     const font = fontkit.openSync(filePath);
     ok = !!font && typeof font.createSubset === 'function';
   } catch (err) {
@@ -113,6 +114,7 @@ function fontSupportsText(filePath, text) {
 
   let ok;
   try {
+    // noinspection JSCheckFunctionSignatures
     const font = fontkit.openSync(filePath);
     ok = chars.every((ch) => {
       const glyph = font.glyphForCodePoint(ch.codePointAt(0));

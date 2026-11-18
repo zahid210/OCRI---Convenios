@@ -1,4 +1,5 @@
 "use client";
+// noinspection DuplicatedCode
 
 import { useState, useEffect, type SyntheticEvent } from "react";
 import { UserItem, PaginatedResponse } from "@/types/agreements";

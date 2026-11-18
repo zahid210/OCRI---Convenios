@@ -1,4 +1,5 @@
 "use client";
+// noinspection DuplicatedCode
 
 import { useEffect, useRef, useState } from "react";
 import { FileText, Loader2, X } from "lucide-react";

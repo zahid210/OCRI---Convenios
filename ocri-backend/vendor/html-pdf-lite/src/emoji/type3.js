@@ -142,7 +142,7 @@ class EmojiType3Registry {
    * repeated graphemes / glyphs reuse the same image XObject. Call this for
    * every distinct emoji in the document before rendering, then use the
    * synchronous lookup() in the draw path.
-   * @returns {Promise<info|null>}
+   * @returns {Promise<Object|null>}
    */
   async prepare(grapheme) {
     if (!this.enabled) return null;
@@ -204,6 +204,7 @@ class EmojiType3Registry {
     charProcRef.end(Buffer.from(charProcBody, 'latin1'));
 
     sub.charProcs[procName] = charProcRef;
+    // noinspection JSCheckFunctionSignatures
     sub.differences.push(procName);
     sub.widths.push(widthUnits);
     sub.toUni.push({ code, hex: toUtf16Hex(grapheme) });
@@ -242,7 +243,7 @@ class EmojiType3Registry {
 
     const dy = (ascender / 1000) * size;
     const yFlipped = doc.page.height - yTop - dy;
-    const hex = info.code.toString(16).padStart(2, '0');
+    const hex = Number(info.code).toString(16).padStart(2, '0');
 
     doc.save();
     doc.transform(1, 0, 0, -1, 0, doc.page.height);

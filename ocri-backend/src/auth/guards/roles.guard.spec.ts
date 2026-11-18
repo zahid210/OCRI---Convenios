@@ -15,23 +15,15 @@ describe('RolesGuard', () => {
   // Controladores con la misma metadata que los reales, para ejercitar el guard
   // sin levantar la aplicación ni tocar la base de datos.
   @Roles(...CREATOR_ROLES)
-  class SoloCreacion {
-    crear() {}
-  }
+  class SoloCreacion {}
 
   @Roles(...FLOW_ROLES)
-  class SoloFlujo {
-    avanzar() {}
-  }
+  class SoloFlujo {}
 
   @Roles('admin')
-  class SoloAdmin {
-    borrar() {}
-  }
+  class SoloAdmin {}
 
-  class SinRestriccion {
-    leer() {}
-  }
+  class SinRestriccion {}
 
   type ControllerClass = new (...args: never[]) => object;
 

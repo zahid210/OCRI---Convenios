@@ -96,7 +96,8 @@ async function makePdf(json, options = {}) {
   doc.on('data', (data) => {
     buffers.push(data);
   });
-  const outputStream = options.outputPath ? fs.createWriteStream(options.outputPath) : null;
+  const outPath = options['outputPath'];
+  const outputStream = outPath ? fs.createWriteStream(outPath) : null;
   if (outputStream) {
     doc.pipe(outputStream);
   }
@@ -163,18 +164,18 @@ async function makePdf(json, options = {}) {
   const runtime = { namedDestinations: new Set() };
   await renderNode(json, { doc, layout, options, runtime });
   if (doc._emoji) doc._emoji.finalize();
-  const docDone = new globalThis.Promise((resolve, reject) => {
+  const docDone = new Promise((resolve, reject) => {
     doc.on('end', resolve);
     doc.on('error', reject);
   });
   const streamDone = outputStream
-    ? new globalThis.Promise((resolve, reject) => {
+    ? new Promise((resolve, reject) => {
         outputStream.on('finish', resolve);
         outputStream.on('error', reject);
       })
-    : globalThis.Promise.resolve();
+    : Promise.resolve();
   doc.end();
-  await globalThis.Promise.all([docDone, streamDone]);
+  await Promise.all([docDone, streamDone]);
   return Buffer.concat(buffers);
 }
 

@@ -1,15 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { renderPdfFromHtml } from 'html-pdf-lite';
 import { PNG } from 'pngjs';
-import {
-  agreementDir,
-  oficioSolicitudFilename,
-  opinionDir,
-} from './uploads.config';
+import { agreementDir } from './uploads.config';
 import { StorageService } from './storage/storage.service';
 import { sanitizeOficioHtml } from './sanitize-oficio-html';
 import { renderListMarkersForPdf } from './oficio-lists';
@@ -141,153 +137,6 @@ export class PdfMergerService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
   ) {}
-
-  /**
-   * Genera un PDF de "Oficio de Solicitud de Opinión" para una dependencia.
-   * Retorna la ruta relativa del archivo generado.
-   */
-  async generateOficioSolicitud(
-    agreementId: number,
-    dependenciaName: string,
-    oficioNumber: string,
-    tramiteCode: string,
-    directedTo?: string,
-    createdAt?: Date | string | null,
-  ): Promise<string> {
-    const pdf = await PDFDocument.create();
-    const font = await pdf.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    const page = pdf.addPage([612, 792]);
-    const { width } = page.getSize();
-
-    let y = 720;
-
-    page.drawText('UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU', {
-      x:
-        width / 2 -
-        fontBold.widthOfTextAtSize(
-          'UNIVERSIDAD NACIONAL DEL CENTRO DEL PERU',
-          14,
-        ) /
-          2,
-      y,
-      size: 14,
-      font: fontBold,
-      color: rgb(0.11, 0.35, 0.25),
-    });
-    y -= 20;
-    page.drawText(
-      'Oficina de Coordinación de Relaciones Interinstitucionales - OCRI',
-      {
-        x:
-          width / 2 -
-          font.widthOfTextAtSize(
-            'Oficina de Coordinación de Relaciones Interinstitucionales - OCRI',
-            10,
-          ) /
-            2,
-        y,
-        size: 10,
-        font,
-        color: rgb(0.4, 0.4, 0.4),
-      },
-    );
-    y -= 10;
-    page.drawText('─'.repeat(70), {
-      x: 60,
-      y,
-      size: 8,
-      font,
-      color: rgb(0.7, 0.7, 0.7),
-    });
-    y -= 30;
-
-    page.drawText(`Oficio N° ${oficioNumber}`, {
-      x: 60,
-      y,
-      size: 11,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
-    y -= 18;
-    page.drawText(
-      `Lima, ${new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })}`,
-      {
-        x: 60,
-        y,
-        size: 10,
-        font,
-        color: rgb(0.2, 0.2, 0.2),
-      },
-    );
-    y -= 30;
-
-    const destLine = directedTo
-      ? `Señor(a) ${directedTo}`
-      : `Señor(a) Responsable de ${dependenciaName}`;
-    page.drawText(destLine, {
-      x: 60,
-      y,
-      size: 10,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
-    y -= 15;
-    page.drawText(dependenciaName, {
-      x: 60,
-      y,
-      size: 10,
-      font,
-      color: rgb(0.2, 0.2, 0.2),
-    });
-    y -= 30;
-
-    page.drawText('ASUNTO: Solicitud de Opinión Técnica', {
-      x: 60,
-      y,
-      size: 10,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
-    y -= 30;
-
-    const bodyLines = [
-      `Por medio del presente, la Oficina de Coordinación de Relaciones Interinstitucionales`,
-      `(OCRI) de la Universidad Nacional del Centro del Perú solicita a usted emitir su opinión`,
-      `técnica respecto al convenio de cooperación interinstitucional que se está`,
-      `evaluando.`,
-      '',
-      `Se adjunta la documentación pertinente para su revisión. Agradeceremos`,
-      `remitir su respuesta en el plazo establecido.`,
-      '',
-      `Sin otro particular, se despide cordialmente.`,
-    ];
-
-    for (const line of bodyLines) {
-      if (line === '') {
-        y -= 12;
-        continue;
-      }
-      page.drawText(line, {
-        x: 60,
-        y,
-        size: 10,
-        font,
-        color: rgb(0.1, 0.1, 0.1),
-      });
-      y -= 15;
-    }
-
-    const mergedBytes = await pdf.save();
-    const filename = oficioSolicitudFilename(dependenciaName);
-    const relPath = await this.storage.putUnique(
-      opinionDir(tramiteCode, createdAt ?? null, dependenciaName),
-      filename,
-      Buffer.from(mergedBytes),
-    );
-    this.logger.log(`Oficio de solicitud generado: ${relPath}`);
-    return relPath;
-  }
 
   /**
    * Fusiona todos los archivos PDF del convenio en un solo PDF (Expediente

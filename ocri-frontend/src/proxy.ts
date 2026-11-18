@@ -169,15 +169,13 @@ function roleAllowed(role: string | undefined, pathname: string): boolean {
         if (pathname === "/institutions" || pathname.startsWith("/institutions/")) return false;
         if (pathname === "/reports" || pathname.startsWith("/reports/")) return false;
         if (pathname === "/dependencias" || pathname.startsWith("/dependencias/")) return false;
-        if (pathname === "/users" || pathname.startsWith("/users/")) return false;
-        return true;
+        return pathname !== "/users" && !pathname.startsWith("/users/");
     }
 
     // Viewer: solo lectura de bandejas y consultas (sin alta ni administración).
     if (pathname === "/propuestas/create" || pathname.startsWith("/propuestas/create/")) return false;
     if (pathname === "/dependencias" || pathname.startsWith("/dependencias/")) return false;
-    if (pathname === "/users" || pathname.startsWith("/users/")) return false;
-    return true;
+    return pathname !== "/users" && !pathname.startsWith("/users/");
 }
 
 /** Vacia las cookies de sesión en la respuesta (token inválido o caducado). */

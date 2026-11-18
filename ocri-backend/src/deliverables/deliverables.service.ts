@@ -477,11 +477,7 @@ export class DeliverablesService {
    * `SOLICITADO` y aún no existe ningún documento de solicitud: el reemplazo
    * de un oficio ya adjuntado sigue pasando por `generateRequestDocument`.
    */
-  async cargarSolicitud(
-    deliverableId: number,
-    file: UploadFile,
-    userId?: number,
-  ) {
+  private async loadActiveDeliverableWithAgreement(deliverableId: number) {
     const deliverable = await this.prisma.deliverables.findUnique({
       where: { id: BigInt(deliverableId) },
       include: {
@@ -500,6 +496,16 @@ export class DeliverablesService {
       deliverable.agreement_id,
       deliverable.type,
     );
+    return deliverable;
+  }
+
+  async cargarSolicitud(
+    deliverableId: number,
+    file: UploadFile,
+    userId?: number,
+  ) {
+    const deliverable =
+      await this.loadActiveDeliverableWithAgreement(deliverableId);
 
     if (
       deliverable.status !== 'SOLICITADO' &&
@@ -829,24 +835,8 @@ export class DeliverablesService {
     userId?: number,
     responseDate?: string,
   ) {
-    const deliverable = await this.prisma.deliverables.findUnique({
-      where: { id: BigInt(deliverableId) },
-      include: {
-        agreements: {
-          select: { tramite_code: true, created_at: true },
-        },
-      },
-    });
-
-    if (!deliverable) {
-      throw new NotFoundException(`Entregable #${deliverableId} no encontrado`);
-    }
-
-    await this.assertInMonitoringByDeliverable(deliverable.agreement_id);
-    await this.assertWorkPlanRegisteredIfReport(
-      deliverable.agreement_id,
-      deliverable.type,
-    );
+    const deliverable =
+      await this.loadActiveDeliverableWithAgreement(deliverableId);
 
     if (
       deliverable.status !== 'ACEPTADO' &&

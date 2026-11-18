@@ -44,6 +44,16 @@ const EMPTY_FILTERS: ReportFilters = {
   institutionType: "",
 };
 
+function buildFilterQuery(f: ReportFilters): string {
+  const params = new URLSearchParams();
+  if (f.status) params.set("status", f.status);
+  if (f.country) params.set("country", f.country);
+  if (f.typeId) params.set("agreement_type_id", f.typeId);
+  if (f.institutionType) params.set("institution_type", f.institutionType);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export default function ReportsPage() {
   const router = useRouter();
   const toast = useToast();
@@ -118,15 +128,7 @@ export default function ReportsPage() {
         setLoading(true);
         setError(null);
 
-        const params = new URLSearchParams();
-        if (activeFilters.status) params.set("status", activeFilters.status);
-        if (activeFilters.country) params.set("country", activeFilters.country);
-        if (activeFilters.typeId)
-          params.set("agreement_type_id", activeFilters.typeId);
-        if (activeFilters.institutionType)
-          params.set("institution_type", activeFilters.institutionType);
-        const query = params.toString();
-        const suffix = query ? `?${query}` : "";
+        const suffix = buildFilterQuery(activeFilters);
 
         const [
           summaryRes,
@@ -190,16 +192,9 @@ export default function ReportsPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const params = new URLSearchParams();
-      if (activeFilters.status) params.set("status", activeFilters.status);
-      if (activeFilters.country) params.set("country", activeFilters.country);
-      if (activeFilters.typeId)
-        params.set("agreement_type_id", activeFilters.typeId);
-      if (activeFilters.institutionType)
-        params.set("institution_type", activeFilters.institutionType);
-      const query = params.toString();
+      const suffix = buildFilterQuery(activeFilters);
       await downloadFile(
-        `/reports/export${query ? `?${query}` : ""}`,
+        `/reports/export${suffix}`,
         "reporte_convenios.xlsx",
       );
     } catch (err) {

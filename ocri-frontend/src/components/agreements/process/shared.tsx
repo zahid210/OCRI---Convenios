@@ -22,7 +22,6 @@ import {
     DeliverableStatus,
     DeliverableType,
     OpinionRequest,
-    ProcessStage,
     ProcessStatus,
     ProcessStatusResponse,
 } from '@/types/agreements';
@@ -30,18 +29,6 @@ import {
 /** Respuesta de estado con el convenio extendido (campos usados por Etapas 2 y 3) */
 export type ProcessDetail = Omit<ProcessStatusResponse, 'agreement'> & {
     agreement: ProcessStatusResponse['agreement'] & Partial<Agreement>;
-};
-
-export const STAGE_ORDER: ProcessStage[] = [
-    'ETAPA_1_PROPUESTA',
-    'ETAPA_2_REGISTRO',
-    'ETAPA_3_SEGUIMIENTO',
-];
-
-export const STAGE_LABELS: Record<ProcessStage, string> = {
-    ETAPA_1_PROPUESTA: 'Etapa 1 · Propuesta',
-    ETAPA_2_REGISTRO: 'Etapa 2 · Registro',
-    ETAPA_3_SEGUIMIENTO: 'Etapa 3 · Seguimiento',
 };
 
 export const PROCESS_STATUS_LABELS: Record<ProcessStatus, string> = {

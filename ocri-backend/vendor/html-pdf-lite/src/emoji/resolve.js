@@ -25,16 +25,17 @@ function detectColorFormat(font) {
   if (!font) return null;
   const tables = (font.directory && font.directory.tables) || {};
   if (tables.sbix || font.sbix) return 'sbix';
-  const hasColr = !!(tables.COLR || font.COLR);
-  const hasCpal = !!(tables.CPAL || font.CPAL);
+  const hasColr = !!(tables['COLR'] || font['COLR']);
+  const hasCpal = !!(tables['CPAL'] || font['CPAL']);
   // COLR requires CPAL; without a palette the spec says ignore COLR.
   if (hasColr && hasCpal) {
-    const version = font.COLR && typeof font.COLR.version === 'number' ? font.COLR.version : 0;
+    const colrTable = font['COLR'];
+    const version = colrTable && typeof colrTable.version === 'number' ? colrTable.version : 0;
     if (version === 0) return 'colrv0';
     if (DEBUG()) console.warn('[emoji] COLR v' + version + ' is not supported (only v0)');
     return null;
   }
-  if (DEBUG() && (tables.CBDT || tables.CBLC || tables['SVG '])) {
+  if (DEBUG() && (tables['CBDT'] || tables['CBLC'] || tables['SVG '])) {
     console.warn('[emoji] CBDT/CBLC/SVG color tables are not supported by fontkit');
   }
   return null;
@@ -44,6 +45,7 @@ function openFontFile(filePath) {
   if (!fontkit || !filePath) return null;
   let font;
   try {
+    // noinspection JSCheckFunctionSignatures
     font = fontkit.openSync(filePath);
   } catch (err) {
     if (DEBUG()) console.warn('[emoji] openSync failed for', filePath, err.message || err);
@@ -122,4 +124,5 @@ async function resolveEmojiFont(options = {}) {
   return null;
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = { resolveEmojiFont, detectColorFormat, openFontFile };

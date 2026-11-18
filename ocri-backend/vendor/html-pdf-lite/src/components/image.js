@@ -1,3 +1,4 @@
+// noinspection DuplicatedCode
 const fs = require('fs');
 const path = require('path');
 const { mergeStyles, styleNumber, styleColor, parsePx, textAlign, PX_TO_PT } = require('../pdf/style');

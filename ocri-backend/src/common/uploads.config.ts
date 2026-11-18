@@ -244,12 +244,6 @@ export function normalizeUploadName(name: string): string {
   }
 }
 
-export interface UploadedFileLike {
-  originalname: string;
-  mimetype: string;
-  size: number;
-}
-
 /**
  * Un archivo tal como lo entrega multer con `memoryStorage`: los bytes viven en
  * el buffer y no existe `path` ni `filename` en disco. Es lo que espera

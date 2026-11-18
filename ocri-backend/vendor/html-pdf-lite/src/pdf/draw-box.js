@@ -1,3 +1,4 @@
+// noinspection JSUnresolvedReference
 /**
  * Draw a box with optional background, per-side borders, and border-radius.
  *

@@ -244,7 +244,3 @@ export function DropdownMenuLabel({
 export function DropdownMenuSeparator({ className }: { className?: string }) {
   return <div className={cn("-mx-1 my-1 h-px bg-slate-800", className)} />;
 }
-
-export function DropdownMenuGroup({ children }: { children: React.ReactNode }) {
-  return <div className="space-y-0.5">{children}</div>;
-}

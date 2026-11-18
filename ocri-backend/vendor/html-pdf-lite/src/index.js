@@ -43,7 +43,7 @@ async function renderPdfFromHtml(html, options = {}) {
     allowScripts: options.allowScripts,
   });
 
-  const pdfBuffer = await makePdf(tree, {
+  return makePdf(tree, {
     fonts: options.fonts,
     ignoreInvalidImages: options.ignoreInvalidImages,
     imgLoadTimeoutMs: options.imgLoadTimeoutMs,
@@ -58,7 +58,6 @@ async function renderPdfFromHtml(html, options = {}) {
     autoDownloadEmojiFont: options.autoDownloadEmojiFont,
     emojiFontCacheDir: options.emojiFontCacheDir,
   });
-  return pdfBuffer;
 }
 
 module.exports = { renderPdfFromHtml };

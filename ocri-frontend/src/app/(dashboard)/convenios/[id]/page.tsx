@@ -1,4 +1,5 @@
 'use client';
+// noinspection DuplicatedCode
 
 import { useCallback, useEffect, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';

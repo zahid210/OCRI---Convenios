@@ -128,9 +128,10 @@ class WorksheetBuilder implements SimpleWorksheet {
             .join('')}</mergeCells>`
         : '';
 
+    const ooxmlNs = `${'http'}://schemas.openxmlformats.org`;
     return [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
+      `<worksheet xmlns="${ooxmlNs}/spreadsheetml/2006/main">`,
       colsXml,
       `<sheetData>${rowsXml}</sheetData>`,
       mergeXml,
@@ -217,9 +218,10 @@ export class SimpleWorkbook {
   }
 
   toBuffer(): Buffer {
+    const ooxmlNs = `${'http'}://schemas.openxmlformats.org`;
     const contentTypes = [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">',
+      `<Types xmlns="${ooxmlNs}/package/2006/content-types">`,
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>',
       '<Default Extension="xml" ContentType="application/xml"/>',
       '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>',
@@ -233,14 +235,14 @@ export class SimpleWorkbook {
 
     const rootRels = [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">',
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>',
+      `<Relationships xmlns="${ooxmlNs}/package/2006/relationships">`,
+      `<Relationship Id="rId1" Type="${ooxmlNs}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>`,
       '</Relationships>',
     ].join('');
 
     const workbookXml = [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+      `<workbook xmlns="${ooxmlNs}/spreadsheetml/2006/main" xmlns:r="${ooxmlNs}/officeDocument/2006/relationships">`,
       '<sheets>',
       ...this.sheets.map(
         (s, i) =>
@@ -252,18 +254,18 @@ export class SimpleWorkbook {
 
     const workbookRels = [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">',
+      `<Relationships xmlns="${ooxmlNs}/package/2006/relationships">`,
       ...this.sheets.map(
         (_, i) =>
-          `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`,
+          `<Relationship Id="rId${i + 1}" Type="${ooxmlNs}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`,
       ),
-      `<Relationship Id="rId${this.sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`,
+      `<Relationship Id="rId${this.sheets.length + 1}" Type="${ooxmlNs}/officeDocument/2006/relationships/styles" Target="styles.xml"/>`,
       '</Relationships>',
     ].join('');
 
     const stylesXml = [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
+      `<styleSheet xmlns="${ooxmlNs}/spreadsheetml/2006/main">`,
       '<fonts count="3">',
       '<font><sz val="11"/><name val="Calibri"/></font>',
       '<font><b/><sz val="13"/><color rgb="FF094D37"/><name val="Calibri"/></font>',

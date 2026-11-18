@@ -53,8 +53,7 @@ function isEmojiGrapheme(grapheme) {
   // Single text-default codepoint with no emoji presentation -> treat as text.
   if (cps.length === 1 && TEXT_DEFAULT.has(cps[0])) return false;
   // Text-default base requires VS16 to count as emoji.
-  if (TEXT_DEFAULT.has(cps[0]) && !cps.includes(VS16)) return false;
-  return true;
+  return !TEXT_DEFAULT.has(cps[0]) || cps.includes(VS16);
 }
 
 /**
@@ -105,4 +104,5 @@ function hasEmoji(text) {
   return splitEmojiRuns(str).some((r) => r.isEmoji);
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = { splitEmojiRuns, hasEmoji, isEmojiGrapheme };

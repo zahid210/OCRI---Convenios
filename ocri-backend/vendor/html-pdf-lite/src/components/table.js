@@ -705,6 +705,7 @@ async function renderTable(node, ctx, tableStyles = {}) {
   }
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = {
   renderTable,
   _tableInternals: {
