@@ -323,23 +323,23 @@ describe('ProcessService · respondOpinionRequest (corrección RESPONDIDA)', () 
 
     buildService('ENVIADA', 0);
 
-    const module = await Test.createTestingModule({
+    const mod = await Test.createTestingModule({
       providers: [
-        ProcessService,
-        { provide: PrismaService, useValue: prisma },
-        { provide: AppConfigService, useValue: {} },
-        { provide: PdfMergerService, useValue: {} },
         { provide: StorageService, useValue: { putUnique, removeRel } },
+        { provide: PdfMergerService, useValue: {} },
+        { provide: AppConfigService, useValue: {} },
+        { provide: PrismaService, useValue: prisma },
+        ProcessService,
       ],
     }).compile();
 
-    service = module.get(ProcessService);
+    service = mod.get(ProcessService);
     logEvent = jest
       .spyOn(
         service as unknown as { logEvent: () => Promise<void> },
         'logEvent',
       )
-      .mockResolvedValue(undefined);
+      .mockImplementation(() => Promise.resolve());
   });
 
   afterEach(() => logEvent.mockRestore());

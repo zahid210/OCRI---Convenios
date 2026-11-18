@@ -108,16 +108,15 @@ function DeliverableCard({
 
   const handleDownloadDocument = async (doc: (typeof documents)[number]) => {
     try {
-      const endpoint = `/resoluciones/by-id/${doc.id}`;
       await downloadFile(
-        endpoint,
+        `/resoluciones/by-id/${doc.id}`,
         fileName(doc.original_name, doc.name || ""),
       );
       toast.success("Descarga iniciada.");
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Error al descargar el documento";
-      toast.error(message);
+      toast.error(
+        err instanceof Error ? err.message : "Error al descargar el documento",
+      );
     }
   };
 

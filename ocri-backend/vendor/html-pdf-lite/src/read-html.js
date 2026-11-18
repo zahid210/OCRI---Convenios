@@ -253,9 +253,8 @@ async function collectCssRules(doc, { fetchExternal = true, externalCssTimeoutMs
 
   const styleTags = Array.from(doc.querySelectorAll('style'));
   let order = 0;
-  for (const tag of styleTags) {
-    const parsed = css.parse(tag.textContent || '', { silent: true });
-    if (!parsed || !parsed.stylesheet) continue;
+  const appendParsedStylesheet = (parsed) => {
+    if (!parsed || !parsed.stylesheet) return;
     for (const rule of parsed.stylesheet.rules || []) {
       if (rule.type === 'page') {
         const decls = [];
@@ -287,6 +286,11 @@ async function collectCssRules(doc, { fetchExternal = true, externalCssTimeoutMs
         });
       }
     }
+  };
+
+  for (const tag of styleTags) {
+    const parsed = css.parse(tag.textContent || '', { silent: true });
+    appendParsedStylesheet(parsed);
   }
 
   if (fetchExternal) {
@@ -310,37 +314,7 @@ async function collectCssRules(doc, { fetchExternal = true, externalCssTimeoutMs
           cssText = fs.readFileSync(localPath, 'utf8');
         }
         const parsed = css.parse(cssText || '', { silent: true });
-        for (const rule of parsed.stylesheet.rules || []) {
-          if (rule.type === 'page') {
-            const decls = [];
-            (rule.declarations || [])
-              .filter((d) => d.type === 'declaration')
-              .forEach((d) => {
-                const expanded = expandShorthand({ property: d.property, value: d.value, important: !!d.important });
-                expanded.forEach((ex) => decls.push(ex));
-              });
-            decls.forEach((decl) => {
-              page[decl.property] = decl.value;
-            });
-            continue;
-          }
-          if (rule.type !== 'rule') continue;
-          for (const sel of rule.selectors || []) {
-            const decls = [];
-            (rule.declarations || [])
-              .filter((d) => d.type === 'declaration')
-              .forEach((d) => {
-                const expanded = expandShorthand({ property: d.property, value: d.value, important: !!d.important });
-                expanded.forEach((ex) => decls.push(ex));
-              });
-            rules.push({
-              selector: sel,
-              specificity: calcSpecificity(sel),
-              declarations: decls,
-              order: order++,
-            });
-          }
-        }
+        appendParsedStylesheet(parsed);
       } catch (err) {
         if (process.env.HTML_TO_PDF_DEBUG === '1') console.warn('[css-fetch] failed for', href, err.message || err);
       }

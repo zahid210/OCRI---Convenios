@@ -165,12 +165,12 @@ async function makePdf(json, options = {}) {
   await renderNode(json, { doc, layout, options, runtime });
   if (doc._emoji) doc._emoji.finalize();
   const docDone = new Promise((resolve, reject) => {
-    doc.on('end', resolve);
+    doc.on('end', () => resolve(undefined));
     doc.on('error', reject);
   });
   const streamDone = outputStream
     ? new Promise((resolve, reject) => {
-        outputStream.on('finish', resolve);
+        outputStream.on('finish', () => resolve(undefined));
         outputStream.on('error', reject);
       })
     : Promise.resolve();

@@ -127,11 +127,11 @@ async function renderInlineSvg(node, ctx) {
     width = height * aspect;
   }
 
-  if (!width) width = Math.min(maxW, 300 * PX_TO_PT);
-  if (!height) height = aspect ? width / aspect : width * 0.6;
-
-  width = Math.max(minW, Math.min(width, maxWidthStyle));
-  height = Math.max(minH, Math.min(height, maxH));
+  const fallbackW = Math.min(maxW, 300 * PX_TO_PT);
+  const rawW = width || fallbackW;
+  const rawH = height || (aspect ? rawW / aspect : rawW * 0.6);
+  width = Math.min(Math.max(minW, rawW), maxWidthStyle);
+  height = Math.min(Math.max(minH, rawH), maxH);
 
   const shouldCapToContent = !(widthSpecified && heightSpecified);
   if (shouldCapToContent && width > maxW) {
@@ -208,4 +208,5 @@ async function renderInlineSvg(node, ctx) {
   layout.cursorToNextLine(totalHeight);
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = { renderInlineSvg, serializeSvg, parseViewBox, parseAttrDimension };

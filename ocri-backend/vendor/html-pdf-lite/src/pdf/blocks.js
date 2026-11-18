@@ -122,13 +122,13 @@ async function renderList(node, ctx, ordered = false) {
         const dash = Math.max(2, lineW * 2);
         doc
           .save()
-          .dash(dash, { space: dash })
+          ['dash'](dash, { space: dash })
           .lineWidth(lineW)
           .strokeColor(borderBottomColor)
           .moveTo(layout.x, y)
           .lineTo(layout.x + layout.contentWidth(), y)
           .stroke()
-          .undash()
+          ['undash']()
           .restore();
       } else {
         doc
@@ -171,7 +171,7 @@ async function renderPre(node, ctx, styles) {
   const lineGap = 0;
   const padding = styleNumber(styles, 'padding', 0);
 
-  if (!measureOnly) doc.font('Courier').fontSize(fs).fillColor('#000');
+  if (!measureOnly) doc.font('Courier').fontSize(fs)['fillColor']('#000');
 
   const h =
     doc.heightOfString(breakWideText(doc, codeText, layout.contentWidth() - padding * 2), {

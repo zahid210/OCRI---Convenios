@@ -477,7 +477,7 @@ function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
         if (item.bg && String(item.bg).toLowerCase() !== 'transparent' && item.w > 0 && item.boxH > 0) {
           if (item.radius > 0) {
             const r = Math.min(item.radius, item.w / 2, item.boxH / 2);
-            doc.save().roundedRect(pieceX, y + yOffset, item.w, item.boxH, r).fill(item.bg).restore();
+            doc.save()['roundedRect'](pieceX, y + yOffset, item.w, item.boxH, r).fill(item.bg).restore();
           } else {
             doc.save().rect(pieceX, y + yOffset, item.w, item.boxH).fill(item.bg).restore();
           }
@@ -489,7 +489,7 @@ function renderInlineRuns(runs, ctx, { baseStyles, align, lineGap, tag }) {
               .save()
               .lineWidth(item.border)
               .strokeColor(item.borderPaint || '#333333')
-              .roundedRect(pieceX, y + yOffset, item.w, item.boxH, r)
+              ['roundedRect'](pieceX, y + yOffset, item.w, item.boxH, r)
               .stroke()
               .restore();
           } else {
@@ -812,12 +812,11 @@ async function renderNodeImpl(node, ctx) {
         layout.contentWidth = () => availableWidth;
         layout.y = startY + paddingTop;
         renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
-        layout.y = layout.y + paddingBottom;
+        layout.y += paddingBottom;
         layout.x = prevX;
         layout.contentWidth = prevCW;
         finishBlock();
-        applyPageBreakAfter(styles, ctx, node);
-        return;
+        return applyPageBreakAfter(styles, ctx, node);
       }
       layout.ensureSpace(boxH);
 
@@ -986,17 +985,15 @@ async function renderNodeImpl(node, ctx) {
     // Encabezados de texto plano (sin subrayado inferior): cuando no caben en lo
     // que queda de la hoja actual se pagan por renglón en la hoja siguiente.
     if (!measureOnly && !borderBottom && totalHeight > remainingHeight(doc, layout)) {
-      const startYForSplit = layout.y;
-      const prevX = layout.x;
-      const prevCW = layout.contentWidth;
-      layout.y = startYForSplit + paddingTop;
+      const savedX = layout.x;
+      const savedCW = layout.contentWidth;
+      layout.y += paddingTop;
       renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
-      layout.y = layout.y + paddingBottom;
-      layout.x = prevX;
-      layout.contentWidth = prevCW;
+      layout.y += paddingBottom;
+      layout.x = savedX;
+      layout.contentWidth = savedCW;
       finishBlock();
-      applyPageBreakAfter(styles, ctx, node);
-      return;
+      return applyPageBreakAfter(styles, ctx, node);
     }
     layout.ensureSpace(totalHeight);
 
@@ -1067,11 +1064,13 @@ async function renderNodeImpl(node, ctx) {
     const letterSpacing = styleNumber(styles, 'letter-spacing', 0, { baseSize: size });
     const wordSpacing = styleNumber(styles, 'word-spacing', 0, { baseSize: size });
     const pctW = layout.contentWidth();
-    const padding = styleNumber(styles, 'padding', 0, { percentBase: pctW });
-    const paddingTop = styleNumber(styles, 'padding-top', padding, { percentBase: pctW });
-    const paddingBottom = styleNumber(styles, 'padding-bottom', padding, { percentBase: pctW });
-    const paddingLeft = styleNumber(styles, 'padding-left', padding, { percentBase: pctW });
-    const paddingRight = styleNumber(styles, 'padding-right', padding, { percentBase: pctW });
+    const basePad = styleNumber(styles, 'padding', 0, { percentBase: pctW });
+    const [paddingTop, paddingBottom, paddingLeft, paddingRight] = [
+      styleNumber(styles, 'padding-top', basePad, { percentBase: pctW }),
+      styleNumber(styles, 'padding-bottom', basePad, { percentBase: pctW }),
+      styleNumber(styles, 'padding-left', basePad, { percentBase: pctW }),
+      styleNumber(styles, 'padding-right', basePad, { percentBase: pctW }),
+    ];
     const bg = styleColor(styles, 'background-color', null);
     const borderLeftWidth = styleNumber(styles, 'border-left-width', 0);
     const borderLeftColor = styleColor(styles, 'border-left-color', '#333333');
@@ -1082,13 +1081,12 @@ async function renderNodeImpl(node, ctx) {
 
     selectFontForInline(doc, styles, false, false, size, plain);
     const availableWidth = layout.contentWidth() - paddingLeft - paddingRight;
-    const hasLinks = runs.some((r) => r.href);
-    const runsHaveEmoji = doc._emoji && runs.some((r) => r.isEmoji);
-    const runsHaveSubSup = runs.some((r) => r.subscript || r.superscript);
-    // Emoji and sub/superscript must go through the manual line-breaker — the
-    // continued-text auto-wrap path can't position Type 3 glyphs or baseline
-    // shifts.
-    const renderRunsAsGroup = !hasLinks && (align !== 'left' || runs.length > 1 || runsHaveEmoji || runsHaveSubSup);
+    const renderRunsAsGroup =
+      !runs.some((r) => r.href) &&
+      (align !== 'left' ||
+        runs.length > 1 ||
+        Boolean(doc._emoji && runs.some((r) => r.isEmoji)) ||
+        runs.some((r) => r.subscript || r.superscript));
     const h = renderRunsAsGroup
       ? renderInlineRunsAt(runs, ctx, {
           baseStyles: styles,
@@ -1113,16 +1111,15 @@ async function renderNodeImpl(node, ctx) {
     // empujar el bloque completo a la siguiente hoja (hueco en blanco) y desbordar
     // el margen inferior (texto pegado al borde). Solo para texto plano sin fondo/borde.
     if (!useInlineBoxes && !measureOnly && !bg && !borderLeft && boxHeight > remainingHeight(doc, layout)) {
-      const startYForSplit = layout.y;
-      const prevX = layout.x;
-      const prevCW = layout.contentWidth;
-      layout.x = layout.x + paddingLeft;
+      const origX = layout.x;
+      const origCW = layout.contentWidth;
+      layout.x = origX + paddingLeft;
       layout.contentWidth = () => availableWidth;
-      layout.y = startYForSplit + paddingTop;
+      layout.y += paddingTop;
       renderInlineRuns(runs, ctx, { baseStyles: styles, align, lineGap: gap, tag });
-      layout.y = layout.y + paddingBottom;
-      layout.x = prevX;
-      layout.contentWidth = prevCW;
+      layout.y += paddingBottom;
+      layout.x = origX;
+      layout.contentWidth = origCW;
       finishBlock();
       applyPageBreakAfter(styles, ctx, node);
       return;
@@ -1546,7 +1543,7 @@ async function renderNodeImpl(node, ctx) {
                   width: layout.contentWidth(),
                   measureOnly: true,
                 })
-              : doc.heightOfString(breakWideText(doc, _plain, layout.contentWidth(), _ls), {
+              : doc['heightOfString'](breakWideText(doc, _plain, layout.contentWidth(), _ls), {
                   width: layout.contentWidth(),
                   align,
                   lineGap: gap,
@@ -1584,10 +1581,12 @@ async function renderNodeImpl(node, ctx) {
           const hasLineBreaks = plain.includes('\n');
           const allSameStyle = !runs.some((r) => r.bold || r.italic || r.href);
           const hasLinks = runs.some((r) => r.href);
-          const runsHaveEmoji = doc._emoji && runs.some((r) => r.isEmoji);
-          const runsHaveSubSup = runs.some((r) => r.subscript || r.superscript);
           const renderRunsAsGroup =
-            !hasLinks && (align !== 'left' || runs.length > 1 || runsHaveEmoji || runsHaveSubSup);
+            !hasLinks &&
+            (align !== 'left' ||
+              runs.length > 1 ||
+              Boolean(doc._emoji && runs.some((r) => r.isEmoji)) ||
+              runs.some((r) => r.subscript || r.superscript));
           const h = renderRunsAsGroup
             ? renderInlineRunsAt(runs, ctx, {
                 baseStyles: styles,

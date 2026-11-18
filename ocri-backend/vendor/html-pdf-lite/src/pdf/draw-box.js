@@ -2,7 +2,7 @@
 /**
  * Draw a box with optional background, per-side borders, and border-radius.
  *
- * @param {PDFDocument} doc  PDFKit document instance.
+ * @param {any} doc  PDFKit document instance.
  * @param {number} x        Left edge.
  * @param {number} y        Top edge.
  * @param {number} w        Total width.
@@ -40,7 +40,7 @@ function drawBox(doc, x, y, w, h, { bg, borderTop, borderRight, borderBottom, bo
   if (useRounded) {
     const rr = Math.min(r, w / 2, h / 2);
     if (bg) {
-      doc.save().roundedRect(x, y, w, h, rr).fill(bg).restore();
+      doc.save()['roundedRect'](x, y, w, h, rr).fill(bg).restore();
     }
     if (uniformPresent) {
       // Common case: all four borders identical — one clean rounded stroke.
@@ -53,7 +53,7 @@ function drawBox(doc, x, y, w, h, { bg, borderTop, borderRight, borderBottom, bo
         .save()
         .lineWidth(strokeWidth)
         .strokeColor(present[0].color || '#333333')
-        .roundedRect(x + inset, y + inset, insetW, insetH, insetR)
+        ['roundedRect'](x + inset, y + inset, insetW, insetH, insetR)
         .stroke()
         .restore();
     } else if (anyBorderWidth) {
@@ -91,7 +91,7 @@ function drawBox(doc, x, y, w, h, { bg, borderTop, borderRight, borderBottom, bo
  * right owns the top-right, bottom owns the bottom-right, left owns the
  * bottom-left). Where an adjacent side is absent the edge simply ends square.
  *
- * @param {PDFDocument} doc
+ * @param {any} doc
  * @param {number} x
  * @param {number} y
  * @param {number} w
@@ -102,6 +102,7 @@ function drawBox(doc, x, y, w, h, { bg, borderTop, borderRight, borderBottom, bo
  * @param {{width:number,color:string|null}} bBottom
  * @param {{width:number,color:string|null}} bLeft
  */
+// noinspection JSUnresolvedReference
 function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom, bLeft) {
   const hasT = bTop.width > 0;
   const hasR = bRight.width > 0;
@@ -118,7 +119,7 @@ function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom
     if (side.width <= 0) return;
     doc.save().lineWidth(side.width).strokeColor(side.color || '#333333');
     build(Math.max(0, side.width / 2));
-    doc.stroke().restore();
+    doc['stroke']().restore();
   };
 
   // Top edge: from after the top-left corner to before the top-right corner,
@@ -129,12 +130,12 @@ function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom
     const endX = hasR ? cTR.x : x + w - inset;
     if (hasT && hasL) {
       // Top-left arc from left edge up to the start of the top run.
-      doc.moveTo(x + inset, cTL.y);
+      doc['moveTo'](x + inset, cTL.y);
       quarterArcImpl(doc, cTL.x, cTL.y, rr, inset, 'tl');
     } else {
-      doc.moveTo(startX, ty);
+      doc['moveTo'](startX, ty);
     }
-    doc.lineTo(endX, ty);
+    doc['lineTo'](endX, ty);
   });
 
   // Right edge: owns the top-right arc.
@@ -143,12 +144,12 @@ function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom
     const startY = hasT ? cTR.y : y + inset;
     const endY = hasB ? cBR.y : y + h - inset;
     if (hasR && hasT) {
-      doc.moveTo(cTR.x, y + inset);
+      doc['moveTo'](cTR.x, y + inset);
       quarterArcImpl(doc, cTR.x, cTR.y, rr, inset, 'tr');
     } else {
-      doc.moveTo(rx, startY);
+      doc['moveTo'](rx, startY);
     }
-    doc.lineTo(rx, endY);
+    doc['lineTo'](rx, endY);
   });
 
   // Bottom edge: owns the bottom-right arc.
@@ -157,12 +158,12 @@ function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom
     const startX = hasR ? cBR.x : x + w - inset;
     const endX = hasL ? cBL.x : x + inset;
     if (hasB && hasR) {
-      doc.moveTo(x + w - inset, cBR.y);
+      doc['moveTo'](x + w - inset, cBR.y);
       quarterArcImpl(doc, cBR.x, cBR.y, rr, inset, 'br');
     } else {
-      doc.moveTo(startX, by);
+      doc['moveTo'](startX, by);
     }
-    doc.lineTo(endX, by);
+    doc['lineTo'](endX, by);
   });
 
   // Left edge: owns the bottom-left arc.
@@ -171,12 +172,12 @@ function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom
     const startY = hasB ? cBL.y : y + h - inset;
     const endY = hasT ? cTL.y : y + inset;
     if (hasL && hasB) {
-      doc.moveTo(cBL.x, y + h - inset);
+      doc['moveTo'](cBL.x, y + h - inset);
       quarterArcImpl(doc, cBL.x, cBL.y, rr, inset, 'bl');
     } else {
-      doc.moveTo(lx, startY);
+      doc['moveTo'](lx, startY);
     }
-    doc.lineTo(lx, endY);
+    doc['lineTo'](lx, endY);
   });
 }
 
@@ -185,7 +186,7 @@ function drawAsymmetricRoundedBorders(doc, x, y, w, h, rr, bTop, bRight, bBottom
  * approximation, traced along a circle of radius (radius - inset) centred at
  * (cx, cy). The arc connects the two straight runs meeting at one corner.
  *
- * @param {PDFDocument} doc
+ * @param {any} doc
  * @param {number} cx  Corner centre X (on the outer path).
  * @param {number} cy  Corner centre Y (on the outer path).
  * @param {number} radius  Outer corner radius.
@@ -198,16 +199,16 @@ function quarterArcImpl(doc, cx, cy, radius, inset, corner) {
   const k = 0.5522847498 * rad;
   if (corner === 'tl') {
     // from left edge (cx-rad, cy) up to top edge (cx, cy-rad)
-    doc.bezierCurveTo(cx - rad, cy - k, cx - k, cy - rad, cx, cy - rad);
+    doc['bezierCurveTo'](cx - rad, cy - k, cx - k, cy - rad, cx, cy - rad);
   } else if (corner === 'tr') {
     // from top edge (cx, cy-rad) to right edge (cx+rad, cy)
-    doc.bezierCurveTo(cx + k, cy - rad, cx + rad, cy - k, cx + rad, cy);
+    doc['bezierCurveTo'](cx + k, cy - rad, cx + rad, cy - k, cx + rad, cy);
   } else if (corner === 'br') {
     // from right edge (cx+rad, cy) to bottom edge (cx, cy+rad)
-    doc.bezierCurveTo(cx + rad, cy + k, cx + k, cy + rad, cx, cy + rad);
+    doc['bezierCurveTo'](cx + rad, cy + k, cx + k, cy + rad, cx, cy + rad);
   } else {
     // 'bl': from bottom edge (cx, cy+rad) to left edge (cx-rad, cy)
-    doc.bezierCurveTo(cx - k, cy + rad, cx - rad, cy + k, cx - rad, cy);
+    doc['bezierCurveTo'](cx - k, cy + rad, cx - rad, cy + k, cx - rad, cy);
   }
   return doc;
 }

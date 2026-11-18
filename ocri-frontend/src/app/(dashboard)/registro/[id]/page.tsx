@@ -17,17 +17,16 @@ export default function RegistroDetailPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    const resolvedParams = use(params);
-    const agreementId = Number(resolvedParams.id);
+    const { id } = use(params);
     const router = useRouter();
     const user = useUser();
     const manage = canManage(user);
+    const agreementId = Number.parseInt(id, 10);
+    const hasValidId = agreementId > 0 && Number.isInteger(agreementId);
 
-    const hasValidId = Number.isInteger(agreementId) && agreementId > 0;
-
-    const [status, setStatus] = useState<ProcessDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [status, setStatus] = useState<ProcessDetail | null>(null);
 
     const loadData = useCallback(async () => {
         try {

@@ -9,22 +9,21 @@ describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const mod: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    // Reproduce la configuración de bootstrap(): el API vive bajo /api con el
-    // mismo pipeline de validación que producción.
-    app.useGlobalPipes(
+    const instance = mod.createNestApplication<INestApplication<App>>();
+    instance.setGlobalPrefix('api');
+    instance.useGlobalPipes(
       new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
         transform: true,
+        forbidNonWhitelisted: true,
+        whitelist: true,
       }),
     );
-    app.setGlobalPrefix('api');
-    await app.init();
+    await instance.init();
+    app = instance;
   });
 
   it('/api/health (GET) should return ok status', () => {

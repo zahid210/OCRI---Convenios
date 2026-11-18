@@ -19,21 +19,20 @@ export default function SeguimientoDetailPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    const resolvedParams = use(params);
-    const agreementId = Number(resolvedParams.id);
+    const { id } = use(params);
     const router = useRouter();
     const user = useUser();
     const manage = canManage(user);
+    const agreementId = Number.parseInt(id, 10);
+    const hasValidId = agreementId > 0 && Number.isInteger(agreementId);
 
-    const hasValidId = Number.isInteger(agreementId) && agreementId > 0;
-
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [status, setStatus] = useState<ProcessDetail | null>(null);
     const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
     const [adendas, setAdendas] = useState<Adenda[]>([]);
     const [isLoadingDeliverables, setIsLoadingDeliverables] = useState(false);
     const hasLoadedDeliverablesRef = useRef(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
         try {
@@ -42,19 +41,16 @@ export default function SeguimientoDetailPage({
             )) as ProcessStatusResponse;
             setStatus(data as unknown as ProcessDetail);
 
-            const needsDeliverables = ETAPA3_STATUSES.includes(
-                data.agreement.process_status,
-            );
-            if (needsDeliverables) {
+            if (ETAPA3_STATUSES.includes(data.agreement.process_status)) {
                 if (!hasLoadedDeliverablesRef.current) {
                     setIsLoadingDeliverables(true);
                 }
-                const [list, adendaList] = await Promise.all([
+                const [rawDeliverables, rawAdendas] = await Promise.all([
                     getDeliverables(agreementId),
                     getAdendas(agreementId),
                 ]);
-                setDeliverables(list as Deliverable[]);
-                setAdendas(adendaList as Adenda[]);
+                setDeliverables(rawDeliverables as Deliverable[]);
+                setAdendas(rawAdendas as Adenda[]);
                 hasLoadedDeliverablesRef.current = true;
             }
         } catch (err: unknown) {

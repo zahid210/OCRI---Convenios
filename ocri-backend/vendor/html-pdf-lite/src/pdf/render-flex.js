@@ -64,6 +64,16 @@ function collectLineRuns(node, parentStyles, isInlineDisplay, mergeStylesFn) {
   return lines;
 }
 
+function horizontalChrome(styles) {
+  const padding = styleNumber(styles, 'padding', 0);
+  const padL = styleNumber(styles, 'padding-left', padding);
+  const padR = styleNumber(styles, 'padding-right', padding);
+  const borderWidth = styleNumber(styles, 'border-width', 0);
+  const borderL = styleNumber(styles, 'border-left-width', borderWidth);
+  const borderR = styleNumber(styles, 'border-right-width', borderWidth);
+  return padL + padR + borderL + borderR;
+}
+
 function estimateNodeWidth(node, doc, isInlineDisplay) {
   if (!node) return 0;
   if (node.type === 'text') {
@@ -74,19 +84,13 @@ function estimateNodeWidth(node, doc, isInlineDisplay) {
   }
   if (node.type !== 'element') return 0;
   const styles = mergeStyles(node);
-  const padding = styleNumber(styles, 'padding', 0);
-  const padL = styleNumber(styles, 'padding-left', padding);
-  const padR = styleNumber(styles, 'padding-right', padding);
-  const borderWidth = styleNumber(styles, 'border-width', 0);
-  const borderL = styleNumber(styles, 'border-left-width', borderWidth);
-  const borderR = styleNumber(styles, 'border-right-width', borderWidth);
+  const chromeW = horizontalChrome(styles);
   const lines = collectLineRuns(node, styles, isInlineDisplay, mergeStyles);
   let maxWidth = 0;
   for (const line of lines) {
     maxWidth = Math.max(maxWidth, measureLineWidth(line, doc));
   }
-  const widthEps = 1;
-  return maxWidth + padL + padR + borderL + borderR + widthEps;
+  return maxWidth + chromeW + 1;
 }
 
 function estimateNodeMinWidth(node, doc, isInlineDisplay, containerWidth = null) {
@@ -97,12 +101,7 @@ function estimateNodeMinWidth(node, doc, isInlineDisplay, containerWidth = null)
   }
   if (node.type !== 'element') return 0;
   const styles = mergeStyles(node);
-  const padding = styleNumber(styles, 'padding', 0);
-  const padL = styleNumber(styles, 'padding-left', padding);
-  const padR = styleNumber(styles, 'padding-right', padding);
-  const borderWidth = styleNumber(styles, 'border-width', 0);
-  const borderL = styleNumber(styles, 'border-left-width', borderWidth);
-  const borderR = styleNumber(styles, 'border-right-width', borderWidth);
+  const chromeW = horizontalChrome(styles);
   const explicitWidth = styleNumber(styles, 'width', null, { percentBase: containerWidth });
   const minWidth = styleNumber(styles, 'min-width', null, { percentBase: containerWidth });
   if (explicitWidth != null) return Math.max(0, explicitWidth);
@@ -111,7 +110,7 @@ function estimateNodeMinWidth(node, doc, isInlineDisplay, containerWidth = null)
   for (const line of lines) {
     maxWidth = Math.max(maxWidth, minLineWidth(line, doc));
   }
-  return Math.max(0, minWidth ?? 0, maxWidth + padL + padR + borderL + borderR + 1);
+  return Math.max(0, minWidth ?? 0, maxWidth + chromeW + 1);
 }
 
 function shrinkWidths(widths, minWidths, available) {
@@ -368,4 +367,5 @@ async function renderFlexRow(children, ctx, { startX, startY, width, gap, rowGap
   return maxHeight;
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = { renderFlexRow, parseFlexGrow, estimateNodeWidth, measureLineWidth };

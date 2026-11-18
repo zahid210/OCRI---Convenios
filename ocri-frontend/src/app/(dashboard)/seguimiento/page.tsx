@@ -394,62 +394,69 @@ export default function SeguimientoPage() {
           </table>
         </div>
 
-        {data && (
-          <div className="px-10 py-4 bg-surface border-t border-gray-200">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-              <div className="flex items-center gap-2">
-                <span>Mostrar</span>
-                <div className="relative">
-                  <select
-                    value={perPage}
-                    onChange={(e) => {
-                      setPerPage(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-gold"
-                  >
-                    {[10, 15, 25, 50].map((count) => (
-                      <option key={count} value={count}>
-                        {count}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        {data && (() => {
+          const currentPage = data.meta.page;
+          const totalPages = data.meta.last_page;
+          const pageSizeOptions = [10, 15, 25, 50];
+          return (
+            <div className="px-10 py-4 bg-surface border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
+                <div className="flex items-center gap-2">
+                  <span>Mostrar</span>
+                  <div className="relative">
+                    <select
+                      value={perPage}
+                      onChange={(e) => {
+                        setPage(1);
+                        setPerPage(Number(e.target.value));
+                      }}
+                      className="appearance-none bg-white border border-gray-300 pl-2 pr-10 py-1 text-xs focus:outline-none focus:border-gold"
+                    >
+                      {pageSizeOptions.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  </div>
+                  <span>por página</span>
                 </div>
-                <span>por página</span>
-              </div>
 
-              <div className="flex items-center gap-3">
-                <span>
-                  Página{" "}
-                  <strong className="font-semibold text-gray-800">
-                    {data.meta.page}
-                  </strong>{" "}
-                  de{" "}
-                  <strong className="font-semibold text-gray-800">
-                    {data.meta.last_page}
-                  </strong>
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                    className="p-1.5 border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    disabled={page >= data.meta.last_page}
-                    onClick={() => setPage((p) => p + 1)}
-                    className="p-1.5 border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
+                <div className="flex items-center gap-3">
+                  <span>
+                    Página{" "}
+                    <strong className="font-semibold text-gray-800">
+                      {currentPage}
+                    </strong>{" "}
+                    de{" "}
+                    <strong className="font-semibold text-gray-800">
+                      {totalPages}
+                    </strong>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="p-1.5 border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => p + 1)}
+                      className="p-1.5 border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

@@ -97,17 +97,19 @@ function registerAnchorDestination(node, ctx) {
   if (ctx.options?.enableInternalAnchors === false) return;
   const id = node?.attrs?.id ? String(node.attrs.id).trim() : '';
   if (!id) return;
-  if (typeof ctx.doc.addNamedDestination !== 'function') return;
+  const addNamedDest = ctx.doc && ctx.doc['addNamedDestination'];
+  if (typeof addNamedDest !== 'function') return;
   const seen = ctx.runtime?.namedDestinations;
   if (seen && seen.has(id)) return;
   try {
-    ctx.doc.addNamedDestination(id, 'XYZ', null, ctx.layout.y, null);
+    addNamedDest.call(ctx.doc, id, 'XYZ', null, ctx.layout.y, null);
     if (seen) seen.add(id);
   } catch (err) {
     if (process.env.HTML_TO_PDF_DEBUG === '1') console.warn('[anchor-dest] failed for id=' + id, err.message || err);
   }
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = {
   applyPageBreakAfter,
   applyPageBreakBefore,

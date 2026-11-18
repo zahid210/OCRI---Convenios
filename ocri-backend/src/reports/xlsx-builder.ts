@@ -1,5 +1,8 @@
 import { crc32, deflateRawSync, inflateRawSync } from 'node:zlib';
 
+// noinspection HttpUrlsUsage
+const ooxmlNs = 'http://schemas.openxmlformats.org';
+
 export type CellValue = string | number | boolean | null | undefined;
 
 interface SheetRow {
@@ -128,7 +131,6 @@ class WorksheetBuilder implements SimpleWorksheet {
             .join('')}</mergeCells>`
         : '';
 
-    const ooxmlNs = `${'http'}://schemas.openxmlformats.org`;
     return [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
       `<worksheet xmlns="${ooxmlNs}/spreadsheetml/2006/main">`,
@@ -218,7 +220,6 @@ export class SimpleWorkbook {
   }
 
   toBuffer(): Buffer {
-    const ooxmlNs = `${'http'}://schemas.openxmlformats.org`;
     const contentTypes = [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
       `<Types xmlns="${ooxmlNs}/package/2006/content-types">`,

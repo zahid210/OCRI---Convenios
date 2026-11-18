@@ -21,20 +21,19 @@ export default function GenerarSolicitudModal({
   onCancel,
 }: GenerarSolicitudModalProps) {
   const toast = useToast();
-
-  const [oficioHtml, setOficioHtml] = useState("");
-  const [oficioCss, setOficioCss] = useState("");
-  const [oficioNumber, setOficioNumber] = useState("");
-  const [showEditor, setShowEditor] = useState(false);
-  const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
-  const [isSending, setIsSending] = useState(false);
-
   const onCancelRef = useRef(onCancel);
   const toastRef = useRef(toast);
 
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [oficioNumber, setOficioNumber] = useState("");
+  const [oficioHtml, setOficioHtml] = useState("");
+  const [oficioCss, setOficioCss] = useState("");
+
   useEffect(() => {
-    onCancelRef.current = onCancel;
     toastRef.current = toast;
+    onCancelRef.current = onCancel;
   });
 
   useEffect(() => {
