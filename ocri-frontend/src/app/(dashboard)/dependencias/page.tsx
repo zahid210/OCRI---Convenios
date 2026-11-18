@@ -14,7 +14,7 @@ import { Dependencia } from "@/types/agreements";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useUser } from "@/components/user-provider";
-import { isAdmin } from "@/lib/auth";
+import { canManage } from "@/lib/auth";
 import {
   Loader2,
   Plus,
@@ -247,7 +247,7 @@ export default function DependenciasPage() {
               </button>
             )}
           </div>
-          {isAdmin(user) && (
+          {canManage(user) && (
             <button
               type="button"
               onClick={() => {
@@ -289,7 +289,7 @@ export default function DependenciasPage() {
                   <th className="py-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                     Nombre
                   </th>
-                  {isAdmin(user) && (
+                  {canManage(user) && (
                     <th className="py-4 text-right pr-10 w-60"></th>
                   )}
                 </tr>
@@ -307,7 +307,7 @@ export default function DependenciasPage() {
                       </span>
                     </td>
                     <td className="py-4 text-sm text-gray-800">{dep.name}</td>
-                    {isAdmin(user) && (
+                    {canManage(user) && (
                       <td className="py-4 pr-10">
                         <div className="flex items-center justify-end gap-2">
                           <button

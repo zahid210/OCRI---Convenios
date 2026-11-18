@@ -4,7 +4,7 @@ import { useState, useEffect, type SyntheticEvent } from "react";
 import { InstitutionItem, InstitutionListResponse } from "@/types/agreements";
 import { fetcher } from "@/lib/api";
 import { useUser } from "@/components/user-provider";
-import { isAdmin } from "@/lib/auth";
+import { canManage } from "@/lib/auth";
 import InstitutionModal from "@/components/agreements/InstitutionModal";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
@@ -211,7 +211,7 @@ export default function InstitutionsIndexPage() {
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 placeholder-gray-400"
             />
           </div>
-          {isAdmin(user) && (
+          {canManage(user) && (
             <button
               type="button"
               onClick={openCreate}
@@ -318,7 +318,7 @@ export default function InstitutionsIndexPage() {
 
                     <td className="py-5 pr-10">
                       <div className="flex items-center justify-end gap-2">
-                        {isAdmin(user) && (
+                        {canManage(user) && (
                           <button
                             type="button"
                             onClick={() => openEdit(institution)}
@@ -328,7 +328,7 @@ export default function InstitutionsIndexPage() {
                             Editar
                           </button>
                         )}
-                        {isAdmin(user) && (
+                        {canManage(user) && (
                           <button
                             type="button"
                             onClick={() => handleDelete(institution)}

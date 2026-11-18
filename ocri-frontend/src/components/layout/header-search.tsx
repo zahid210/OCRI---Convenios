@@ -31,7 +31,9 @@ const DEBOUNCE_MS = 300;
 export function HeaderSearch() {
   const user = useUser();
   const canSeeInstitutions =
-    user?.role === "admin" || user?.role === "viewer";
+    user?.role === "admin" ||
+    user?.role === "procesador" ||
+    user?.role === "viewer";
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);

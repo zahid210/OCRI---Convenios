@@ -162,13 +162,11 @@ function roleAllowed(role: string | undefined, pathname: string): boolean {
         return pathname === "/propuestas/create" || pathname.startsWith("/propuestas/create/");
     }
 
-    // Procesador (Berna): el flujo completo y también el alta de propuestas,
-    // para cubrir el registro cuando el asistente no esté. Sin administración.
+    // Procesador: el flujo completo, gestión institucional y el alta de
+    // propuestas, para cubrir el registro cuando el asistente no esté. Sin administración.
     if (role === "procesador") {
         if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return false;
-        if (pathname === "/institutions" || pathname.startsWith("/institutions/")) return false;
         if (pathname === "/reports" || pathname.startsWith("/reports/")) return false;
-        if (pathname === "/dependencias" || pathname.startsWith("/dependencias/")) return false;
         return pathname !== "/users" && !pathname.startsWith("/users/");
     }
 

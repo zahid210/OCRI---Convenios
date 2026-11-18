@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { FLOW_ROLES } from '../auth/role-sets';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { DependenciasService } from './dependencias.service';
 import { CreateDependenciaDto } from './dto/create-dependencia.dto';
@@ -33,14 +34,14 @@ interface AuthenticatedRequest {
 export class DependenciasController {
   constructor(private readonly dependenciasService: DependenciasService) {}
 
-  @Roles('admin')
+  @Roles(...FLOW_ROLES)
   @Post()
   create(@Body() dto: CreateDependenciaDto, @Req() req: AuthenticatedRequest) {
     return this.dependenciasService.create(dto, req.user);
   }
 
-  // Lectura de catálogo: abierta a cualquier usuario autenticado (B8-3). Solo
-  // las mutaciones exigen admin.
+  // Lectura de catálogo: abierta a cualquier usuario autenticado (B8-3). Las
+  // mutaciones exigen rol de flujo (admin o procesador).
   @Get()
   findAll(@Query() filters: FilterDependenciasDto) {
     return this.dependenciasService.findAll({
@@ -64,7 +65,7 @@ export class DependenciasController {
     return this.dependenciasService.findOne(id);
   }
 
-  @Roles('admin')
+  @Roles(...FLOW_ROLES)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -74,7 +75,7 @@ export class DependenciasController {
     return this.dependenciasService.update(id, dto, req.user);
   }
 
-  @Roles('admin')
+  @Roles(...FLOW_ROLES)
   @Put(':id')
   updatePut(
     @Param('id', ParseIntPipe) id: number,
@@ -84,7 +85,7 @@ export class DependenciasController {
     return this.dependenciasService.update(id, dto, req.user);
   }
 
-  @Roles('admin')
+  @Roles(...FLOW_ROLES)
   @Delete(':id')
   remove(
     @Param('id', ParseIntPipe) id: number,

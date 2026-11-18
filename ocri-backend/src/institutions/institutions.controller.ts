@@ -13,7 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CREATOR_ROLES } from '../auth/role-sets';
+import { CREATOR_ROLES, FLOW_ROLES } from '../auth/role-sets';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateInstitutionDto } from './dto/create-institution.dto';
 import { FilterInstitutionsDto } from './dto/filter-institutions.dto';
@@ -78,7 +78,7 @@ export class InstitutionsController {
     return this.institutionsService.findOne(id, req.user?.role);
   }
 
-  @Roles('admin')
+  @Roles(...FLOW_ROLES)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -88,7 +88,7 @@ export class InstitutionsController {
     return this.institutionsService.update(id, updateDto, req.user);
   }
 
-  @Roles('admin')
+  @Roles(...FLOW_ROLES)
   @Put(':id')
   updatePut(
     @Param('id', ParseIntPipe) id: number,
@@ -98,7 +98,7 @@ export class InstitutionsController {
     return this.institutionsService.update(id, updateDto, req.user);
   }
 
-  @Roles('admin')
+  @Roles(...FLOW_ROLES)
   @Delete(':id')
   remove(
     @Param('id', ParseIntPipe) id: number,

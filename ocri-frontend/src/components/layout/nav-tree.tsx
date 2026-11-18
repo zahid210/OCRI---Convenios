@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/components/user-provider';
-import { isAdmin, canCreate, CurrentUser } from '@/lib/auth';
+import { isAdmin, canCreate, canManage, CurrentUser } from '@/lib/auth';
 
 type NavItem = {
     kind: 'item';
@@ -116,14 +116,14 @@ const NAV_GROUPS: NavGroup[] = [
                 title: 'Instituciones Aliadas',
                 href: '/institutions',
                 icon: Building2,
-                show: (user) => user?.role === 'admin' || user?.role === 'viewer',
+                show: (user) => user?.role !== 'asistente',
             },
             {
                 kind: 'item',
                 title: 'Dependencias UNCP',
                 href: '/dependencias',
                 icon: Network,
-                show: isAdmin,
+                show: canManage,
             },
         ],
     },
