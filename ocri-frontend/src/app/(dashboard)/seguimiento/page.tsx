@@ -301,13 +301,13 @@ export default function SeguimientoPage() {
                           </div>
                         </td>
 
-                        <td className="py-5 px-5">
+                        <td className="py-5 px-5 whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
                             <Link
                               href={`/seguimiento/${row.id}`}
-                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
+                              className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors whitespace-nowrap shrink-0"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-4 w-4 shrink-0" />
                               Ver Seguimiento
                             </Link>
                           </div>

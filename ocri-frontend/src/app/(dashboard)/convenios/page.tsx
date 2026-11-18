@@ -194,22 +194,22 @@ export default function ConveniosPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface border-b border-gray-200">
-                <th className="py-4 px-5 w-[34%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
-                  <span className="ml-10">Título / Código</span>
+                <th className="py-4 pl-10 pr-4 w-[35%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                  Título / Código
                 </th>
-                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider">
+                <th className="py-4 px-4 w-[25%] font-medium uppercase text-[11px] text-gray-600 tracking-wider">
                   Institución
                 </th>
-                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                <th className="py-4 px-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center whitespace-nowrap">
                   Vigencia
                 </th>
-                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                <th className="py-4 px-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center whitespace-nowrap">
                   Plazo
                 </th>
-                <th className="py-4 px-5 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center">
+                <th className="py-4 px-4 font-medium uppercase text-[11px] text-gray-600 tracking-wider text-center whitespace-nowrap">
                   Estado
                 </th>
-                <th className="py-4 px-5 text-right"></th>
+                <th className="py-4 pl-4 pr-8 text-right whitespace-nowrap"></th>
               </tr>
             </thead>
 
@@ -254,13 +254,13 @@ export default function ConveniosPage() {
                       onClick={() => router.push(`/convenios/${item.id}`)}
                       ariaLabel={`Abrir convenio ${item.title || item.tramite_code || item.id}`}
                     >
-                      <td className="py-5 px-5">
-                        <div className="flex items-center gap-4 ml-10">
+                      <td className="py-5 pl-10 pr-4">
+                        <div className="flex items-center gap-4">
                           <div className="p-2 bg-gray-100 border border-gray-200 text-gray-500 group-hover:text-gray-800 transition-colors shrink-0">
                             <FileText className="h-4 w-4" />
                           </div>
                           <div className="min-w-0">
-                            <div className="font-medium text-gray-800 text-sm line-clamp-2 pr-2">
+                            <div className="font-medium text-gray-800 text-sm line-clamp-2">
                               {item.title || `Convenio #${item.id}`}
                             </div>
                             {item.tramite_code && (
@@ -272,13 +272,13 @@ export default function ConveniosPage() {
                         </div>
                       </td>
 
-                      <td className="py-5 px-5">
-                        <div className="text-sm text-gray-800 line-clamp-1">
+                      <td className="py-5 px-4">
+                        <div className="text-sm text-gray-800 line-clamp-2">
                           {item.institution_name || "No especificada"}
                         </div>
                       </td>
 
-                      <td className="py-5 px-5 text-center">
+                      <td className="py-5 px-4 text-center whitespace-nowrap">
                         <div className="flex flex-col items-center gap-0.5">
                           {item.start_date && (
                             <span className="text-[10px] text-gray-400 font-mono">
@@ -301,7 +301,7 @@ export default function ConveniosPage() {
                         </div>
                       </td>
 
-                      <td className="py-5 px-5 text-center">
+                      <td className="py-5 px-4 text-center whitespace-nowrap">
                         {item.days_remaining !== null ? (
                           <span className={`text-xs font-medium ${cfg.color}`}>
                             {item.days_remaining < 0
@@ -313,24 +313,24 @@ export default function ConveniosPage() {
                         )}
                       </td>
 
-                      <td className="py-5 px-5 text-center">
+                      <td className="py-5 px-4 text-center whitespace-nowrap">
                         <div className="flex justify-center">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border ${cfg.bg} ${cfg.color} ${cfg.border}`}
+                            className={`inline-flex items-center px-2.5 py-1 uppercase text-xs border whitespace-nowrap ${cfg.bg} ${cfg.color} ${cfg.border}`}
                           >
                             {cfg.label}
                           </span>
                         </div>
                       </td>
 
-                      <td className="py-5 px-5 text-right">
+                      <td className="py-5 pl-4 pr-8 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/convenios/${item.id}`}
-                            className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors"
+                            className="inline-flex items-center gap-1.5 bg-gold hover:bg-gold-dark text-white px-3 py-1.5 text-sm transition-colors whitespace-nowrap shrink-0"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 shrink-0" />
                             Ver Detalle
                           </Link>
                         </div>
