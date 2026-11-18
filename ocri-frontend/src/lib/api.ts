@@ -576,11 +576,15 @@ export async function requestReport(
 export async function submitDeliverable(
   deliverableId: number,
   files: File | File[],
+  responseDate?: string,
 ) {
   const formData = new FormData();
   const list = Array.isArray(files) ? files : [files];
   for (const file of list) {
     formData.append("files", file);
+  }
+  if (responseDate) {
+    formData.append("response_date", responseDate);
   }
   return fetchApi(`/agreements/deliverables/${deliverableId}/submit`, {
     method: "POST",

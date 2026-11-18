@@ -701,7 +701,7 @@ export default function CreatePropuestaPage() {
           <div className="bg-surface border-b border-gray-200 px-6 py-4 flex items-center gap-2">
             <Tag className="h-4 w-4 text-gold" />
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700">
-              Objeto de la Propuesta de Convenio
+              Datos del Convenio
             </h2>
           </div>
 
@@ -720,7 +720,7 @@ export default function CreatePropuestaPage() {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="EJ: PROPUESTA CONVENIO MARCO UNCP - ESSALUD"
+                  placeholder="EJ: CONVENIO ESPECÍFICO, CONVENIO MARCO, ETC."
                   className="h-10 w-full px-3 text-sm bg-white border border-gray-300 focus:outline-none focus:border-gold text-gray-800 uppercase"
                 />
               </div>

@@ -61,7 +61,7 @@ export class DeliverablesService {
       where: { id: BigInt(agreementId) },
     });
     if (!agreement) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+      throw new NotFoundException('Convenio no encontrado');
     }
     return agreement;
   }
@@ -827,6 +827,7 @@ export class DeliverablesService {
     deliverableId: number,
     filesOrFile: UploadFile | UploadFile[],
     userId?: number,
+    responseDate?: string,
   ) {
     const deliverable = await this.prisma.deliverables.findUnique({
       where: { id: BigInt(deliverableId) },
@@ -919,6 +920,20 @@ export class DeliverablesService {
 
         const nextVersion = deliverable.version + 1;
         const now = new Date();
+        let submittedAt = now;
+        if (responseDate?.trim()) {
+          const m = responseDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (m) {
+            submittedAt = new Date(
+              Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0),
+            );
+          } else {
+            const parsed = new Date(responseDate.trim());
+            if (!Number.isNaN(parsed.getTime())) {
+              submittedAt = parsed;
+            }
+          }
+        }
 
         for (const item of uploadedEntries) {
           await tx.documents.create({
@@ -951,7 +966,7 @@ export class DeliverablesService {
           data: {
             status: 'REGISTRADO',
             version: isCorrection ? { increment: 1 } : undefined,
-            submitted_at: now,
+            submitted_at: submittedAt,
             registered_at: now,
             updated_at: now,
           },

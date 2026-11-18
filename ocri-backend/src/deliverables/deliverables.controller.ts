@@ -121,6 +121,7 @@ export class DeliverablesController {
     @Param('id', ParseIntPipe) id: number,
     @UploadedFiles()
     uploaded: { files?: UploadFile[]; file?: UploadFile[] } | undefined,
+    @Body('response_date') responseDate: string | undefined,
     @Req() req: AuthenticatedRequest,
   ) {
     const allFiles = [...(uploaded?.files ?? []), ...(uploaded?.file ?? [])];
@@ -133,6 +134,7 @@ export class DeliverablesController {
       id,
       allFiles,
       req.user?.id,
+      responseDate,
     );
   }
 

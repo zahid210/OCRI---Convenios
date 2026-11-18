@@ -101,7 +101,7 @@ export class ProcessService {
       where: { id: BigInt(agreementId) },
     });
     if (!agreement) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+      throw new NotFoundException('Convenio no encontrado');
     }
     return agreement;
   }
@@ -121,7 +121,7 @@ export class ProcessService {
       select: { process_status: true },
     });
     if (!agreement || !isVisibleToRestricted(agreement.process_status)) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+      throw new NotFoundException('Convenio no encontrado');
     }
   }
 
@@ -437,7 +437,7 @@ export class ProcessService {
     });
 
     if (!agreement) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+      throw new NotFoundException('Convenio no encontrado');
     }
 
     // El rol restringido solo accede a convenios formalizados.
@@ -445,7 +445,7 @@ export class ProcessService {
       isRestrictedRole(role) &&
       !isVisibleToRestricted(agreement.process_status)
     ) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+      throw new NotFoundException('Convenio no encontrado');
     }
 
     const opinionRequests = await this.prisma.opinion_requests.findMany({
@@ -462,11 +462,14 @@ export class ProcessService {
       total: opinionRequests.length,
       pendientes: opinionRequests.filter((r) => r.status === 'GENERADA').length,
       enviadas: opinionRequests.filter((r) => r.status === 'ENVIADA').length,
-      respondidas: opinionRequests.filter((r) => r.status === 'RESPONDIDA')
-        .length,
+      respondidas: opinionRequests.filter(
+        (r) => r.status === 'RESPONDIDA' || Boolean(r.response_date),
+      ).length,
       observadas: opinionRequests.filter((r) => r.status === 'OBSERVADA')
         .length,
-      validadas: opinionRequests.filter((r) => r.status === 'VALIDADA').length,
+      validadas: opinionRequests.filter(
+        (r) => r.status === 'VALIDADA' && !r.response_date,
+      ).length,
     };
 
     const dueDate = opinionRequests
@@ -1342,7 +1345,7 @@ export class ProcessService {
     });
 
     if (!agreement) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+      throw new NotFoundException('Convenio no encontrado');
     }
 
     const title = escapeHtml(

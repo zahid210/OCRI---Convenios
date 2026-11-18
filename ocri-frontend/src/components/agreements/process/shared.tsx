@@ -7,6 +7,7 @@ import {
     Check,
     ChevronDown,
     ChevronUp,
+    ClipboardList,
     Clock,
     FileText,
     MessageSquare,
@@ -221,9 +222,11 @@ const ENVIADA_PULSE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 export function OpinionStatusIcon({
     status,
     sentAt,
+    responded = false,
 }: {
     status: string;
     sentAt?: string | null;
+    responded?: boolean;
 }) {
     // `Date.now()` no es puro y react-hooks/purity lo rechaza en el cuerpo del
     // render, y react-hooks/set-state-in-effect prohíbe resolverlo en un
@@ -235,14 +238,20 @@ export function OpinionStatusIcon({
     const isRecent =
         sentAt == null || (!Number.isNaN(sent) && mountedAt - sent < ENVIADA_PULSE_WINDOW_MS);
 
-    const { icon: Icon, className } = OPINION_STATUS_RESUME[status] ?? {
-        icon: Clock,
-        className: 'text-gray-600',
-    };
+    const { icon: Icon, className } =
+        responded && status !== 'CANCELADA'
+            ? { icon: ClipboardList, className: 'text-green-600' }
+            : (OPINION_STATUS_RESUME[status] ?? {
+                  icon: Clock,
+                  className: 'text-gray-600',
+              });
 
     const pulsating = className.includes('animate-pulse') && isRecent;
 
-    const label = OPINION_STATUS_LABELS[status] || status;
+    const label =
+        responded && status !== 'CANCELADA'
+            ? 'Respondida'
+            : OPINION_STATUS_LABELS[status] || status;
     const title =
         status === 'ENVIADA' && !pulsating
             ? `${label} · sin respuesta de la dependencia`
@@ -607,7 +616,11 @@ export function OpinionRequestRow({
                     }
                 }}
             >
-                <OpinionStatusIcon status={request.status} sentAt={request.sent_at} />
+                <OpinionStatusIcon
+                    status={request.status}
+                    sentAt={request.sent_at}
+                    responded={Boolean(request.response_date)}
+                />
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                         <span className="font-medium text-sm text-gray-800">

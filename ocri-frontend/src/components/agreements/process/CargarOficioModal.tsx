@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, FileText, Loader2, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { DateInput } from "@/components/ui/date-input";
 import { FilePicker, ModalShell } from "./shared";
 import type { OpinionRequest } from "@/types/agreements";
 
@@ -162,11 +163,10 @@ export default function CargarOficioModal({
             <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
               Fecha de envío <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
+            <DateInput
               value={sentDate}
-              onChange={(e) => setSentDate(e.target.value)}
-              className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
+              onChange={setSentDate}
+              disabled={isUploading}
             />
           </div>
         </div>

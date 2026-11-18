@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, FileCheck, Loader2, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { DateInput } from "@/components/ui/date-input";
 import { ADENDA_TYPE_LABELS, FilePicker, ModalShell } from "./shared";
 import type { Adenda, AgreementResponsable } from "@/types/agreements";
 
@@ -184,12 +185,11 @@ export default function RegistrarAdendaModal({
               </span>
             )}
           </label>
-          <input
-            type="date"
+          <DateInput
             min={minEndDate}
             value={newEndDate}
-            onChange={(e) => setNewEndDate(e.target.value)}
-            className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
+            onChange={setNewEndDate}
+            disabled={isSubmitting}
           />
           {minEndDate && (
             <p className="text-xs text-gray-500 mt-1">

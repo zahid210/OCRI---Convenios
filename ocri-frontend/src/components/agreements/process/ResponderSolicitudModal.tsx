@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FileCheck, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { DateInput } from "@/components/ui/date-input";
 import { FilePicker, ModalShell } from "./shared";
 import type { OpinionRequest } from "@/types/agreements";
 
@@ -95,11 +96,10 @@ export default function ResponderSolicitudModal({
           <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
             Fecha de respuesta <span className="text-red-500">*</span>
           </label>
-          <input
-            type="date"
+          <DateInput
             value={respondDate}
-            onChange={(e) => setRespondDate(e.target.value)}
-            className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
+            onChange={setRespondDate}
+            disabled={isResponding}
           />
         </div>
       </div>

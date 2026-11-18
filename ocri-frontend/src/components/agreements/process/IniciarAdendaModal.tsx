@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FilePlus2, Loader2, Search, Square } from "lucide-react";
+import { FilePlus2, Loader2, Search } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { ModalShell } from "./shared";
 import type { AdendaType, Dependencia } from "@/types/agreements";
@@ -154,22 +154,10 @@ export default function IniciarAdendaModal({
         </div>
 
         <div>
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <label className="block text-xs font-semibold uppercase text-gray-500">
-              Dependencias para Solicitar Opinión{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            {selectedDeps.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setSelectedDeps([])}
-                className="inline-flex items-center gap-1 px-2 py-1 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors cursor-pointer text-xs"
-              >
-                <Square className="h-3 w-3" />
-                Limpiar
-              </button>
-            )}
-          </div>
+          <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">
+            Dependencias para Solicitar Opinión{" "}
+            <span className="text-red-500">*</span>
+          </label>
 
           <div className="relative mb-2">
             <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />

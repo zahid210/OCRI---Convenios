@@ -58,7 +58,7 @@ export class AdendasService {
       where: { id: BigInt(agreementId) },
     });
     if (!agreement) {
-      throw new NotFoundException(`Convenio #${agreementId} no encontrado`);
+      throw new NotFoundException('Convenio no encontrado');
     }
     return agreement;
   }

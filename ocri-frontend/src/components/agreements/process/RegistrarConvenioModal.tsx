@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, FileCheck, Loader2, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { DateInput } from "@/components/ui/date-input";
 import { FilePicker, ModalShell } from "./shared";
 
 interface ResponsableRow {
@@ -176,23 +177,21 @@ export default function RegistrarConvenioModal({
               <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
                 Fecha de inicio <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
+                onChange={setStartDate}
+                disabled={isRegistering}
               />
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
                 Fecha de fin <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 min={startDate || undefined}
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gold"
+                onChange={setEndDate}
+                disabled={isRegistering}
               />
             </div>
           </div>

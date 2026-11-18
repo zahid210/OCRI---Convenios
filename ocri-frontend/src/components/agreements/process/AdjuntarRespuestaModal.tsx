@@ -3,11 +3,16 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { FileUp, Loader2, Upload, UploadCloud } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { DateInput } from "@/components/ui/date-input";
 import { ModalShell } from "./shared";
 
 interface AdjuntarRespuestaModalProps {
   deliverableId: number;
-  onUpload: (deliverableId: number, files: File[]) => Promise<void>;
+  onUpload: (
+    deliverableId: number,
+    files: File[],
+    responseDate?: string,
+  ) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -26,6 +31,13 @@ export default function AdjuntarRespuestaModal({
   const toast = useToast();
 
   const [files, setFiles] = useState<File[]>([]);
+  const [responseDate, setResponseDate] = useState(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const dragDepth = useRef(0);
@@ -73,13 +85,17 @@ export default function AdjuntarRespuestaModal({
   };
 
   const handleSubmit = async () => {
+    if (!responseDate) {
+      toast.error("Debe indicar la fecha de respuesta.");
+      return;
+    }
     if (files.length === 0) {
       toast.error("Debe adjuntar al menos un documento de respuesta.");
       return;
     }
     setIsUploading(true);
     try {
-      await onUpload(deliverableId, files);
+      await onUpload(deliverableId, files, responseDate || undefined);
     } catch {
       /* el error ya se notifica en el padre; el modal permanece abierto */
     } finally {
@@ -104,7 +120,7 @@ export default function AdjuntarRespuestaModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isUploading || files.length === 0}
+            disabled={isUploading || files.length === 0 || !responseDate}
             className="px-4 py-2 text-sm bg-gold hover:bg-gold-dark text-white transition-colors disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
           >
             {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -197,6 +213,17 @@ export default function AdjuntarRespuestaModal({
             </div>
           </div>
         )}
+
+        <div>
+          <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">
+            Fecha de respuesta <span className="text-red-500">*</span>
+          </label>
+          <DateInput
+            value={responseDate}
+            onChange={setResponseDate}
+            disabled={isUploading}
+          />
+        </div>
       </div>
     </ModalShell>
   );

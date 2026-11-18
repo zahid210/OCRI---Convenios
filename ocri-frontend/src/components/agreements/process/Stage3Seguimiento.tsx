@@ -485,9 +485,10 @@ export default function Stage3Seguimiento({
   const handleAdjuntarRespuesta = async (
     deliverableId: number,
     files: File[],
+    responseDate?: string,
   ) => {
     try {
-      await submitDeliverable(deliverableId, files);
+      await submitDeliverable(deliverableId, files, responseDate);
       toast.success("Respuesta adjuntada.");
       setAdjuntarRespuestaModal(null);
       await onRefresh();
