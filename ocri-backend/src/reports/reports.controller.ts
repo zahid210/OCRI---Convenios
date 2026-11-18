@@ -15,6 +15,14 @@ export class ReportsController {
 
   // El rol viaja a cada método: los reportes agregan convenios y deben respetar
   // el confinamiento de lectura del `viewer` (Fase 5 · H5.1).
+  @Get('dashboard')
+  dashboard(
+    @Query() filter: FilterReportsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reportsService.dashboard(filter, req.user?.role);
+  }
+
   @Get('summary')
   summary(@Query() filter: FilterReportsDto, @Req() req: AuthenticatedRequest) {
     return this.reportsService.summary(filter, req.user?.role);

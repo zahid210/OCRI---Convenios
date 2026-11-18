@@ -5,20 +5,81 @@ const ooxmlNs = 'http://schemas.openxmlformats.org';
 
 export type CellValue = string | number | boolean | null | undefined;
 
-interface SheetRow {
-  cells: CellValue[];
+export type CellTone =
+  | 'default'
+  | 'center'
+  | 'right'
+  | 'bold'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'neutral';
+
+export interface StyledCell {
+  value: CellValue;
+  tone?: CellTone;
+}
+
+export type RowCellInput = CellValue | StyledCell;
+
+interface SheetCell {
+  value: CellValue;
   styleIndex: number;
+}
+
+interface SheetRow {
+  cells: SheetCell[];
   height?: number;
 }
 
 export interface SimpleWorksheet {
   readonly name: string;
-  addTitleRow(title: string): void;
+  addTitleRow(title: string, subtitle?: string): void;
   addHeaderRow(headers: string[]): void;
-  addDataRow(cells: CellValue[]): void;
-  addDataRows(rows: CellValue[][]): void;
+  addDataRow(cells: RowCellInput[]): void;
+  addDataRows(rows: RowCellInput[][]): void;
+  addTotalRow(cells: RowCellInput[]): void;
   setColumnWidth(colIndex1Based: number, width: number): void;
 }
+
+/**
+ * Índices de estilo en `xl/styles.xml` (`cellXfs`):
+ *  0: Base general
+ *  1: Banner de título institucional (fondo verde UNCP #094D37, texto blanco bold 13pt)
+ *  2: Encabezado de tabla (fondo dorado institucional #C59B27, texto blanco bold 10.5pt, centrado vertical)
+ *  3: Celda de datos par (fondo blanco, borde fino, texto izquierdo)
+ *  4: Celda de datos impar / zebra (fondo #F8FAFC, borde fino, texto izquierdo)
+ *  5: Celda de datos par centrada (fechas / códigos)
+ *  6: Celda de datos impar centrada (fechas / códigos)
+ *  7: Celda de datos par derecha (números / porcentajes, bold)
+ *  8: Celda de datos impar derecha (números / porcentajes, bold)
+ *  9: Fila de TOTAL (fondo #EDF7F3, borde superior/inferior verde #094D37, texto verde bold 11pt)
+ * 10: Fila de TOTAL derecha (fondo #EDF7F3, borde superior/inferior verde #094D37, número bold 11pt)
+ * 11: Badge Vigente / Éxito (fondo #DCFCE7, texto verde #166534 bold centrado)
+ * 12: Badge Por Vencer / Alerta (fondo #FEF3C7, texto ámbar #92400E bold centrado)
+ * 13: Badge Vencido / Peligro (fondo #FEE2E2, texto rojo #991B1B bold centrado)
+ * 14: Badge Neutro / En Trámite (fondo #F1F5F9, texto gris #334155 bold centrado)
+ * 15: Celda de datos par en negrita (expediente / métrica)
+ * 16: Celda de datos impar en negrita (expediente / métrica)
+ */
+const STYLE_IDX = {
+  TITLE: 1,
+  HEADER: 2,
+  EVEN_LEFT: 3,
+  ODD_LEFT: 4,
+  EVEN_CENTER: 5,
+  ODD_CENTER: 6,
+  EVEN_RIGHT: 7,
+  ODD_RIGHT: 8,
+  TOTAL_LEFT: 9,
+  TOTAL_RIGHT: 10,
+  BADGE_SUCCESS: 11,
+  BADGE_WARNING: 12,
+  BADGE_DANGER: 13,
+  BADGE_NEUTRAL: 14,
+  EVEN_BOLD: 15,
+  ODD_BOLD: 16,
+} as const;
 
 function escapeXml(value: string): string {
   return value
@@ -40,44 +101,115 @@ function columnLetter(col1Based: number): string {
   return out;
 }
 
+function isStyledCell(input: RowCellInput): input is StyledCell {
+  return typeof input === 'object' && input !== null && 'value' in input;
+}
+
+function resolveDataStyle(
+  tone: CellTone | undefined,
+  isOdd: boolean,
+  value: CellValue,
+): number {
+  if (tone === 'success') return STYLE_IDX.BADGE_SUCCESS;
+  if (tone === 'warning') return STYLE_IDX.BADGE_WARNING;
+  if (tone === 'danger') return STYLE_IDX.BADGE_DANGER;
+  if (tone === 'neutral') return STYLE_IDX.BADGE_NEUTRAL;
+  if (tone === 'bold') return isOdd ? STYLE_IDX.ODD_BOLD : STYLE_IDX.EVEN_BOLD;
+  if (tone === 'center')
+    return isOdd ? STYLE_IDX.ODD_CENTER : STYLE_IDX.EVEN_CENTER;
+  if (tone === 'right' || typeof value === 'number') {
+    return isOdd ? STYLE_IDX.ODD_RIGHT : STYLE_IDX.EVEN_RIGHT;
+  }
+  return isOdd ? STYLE_IDX.ODD_LEFT : STYLE_IDX.EVEN_LEFT;
+}
+
 class WorksheetBuilder implements SimpleWorksheet {
   readonly name: string;
   private readonly rows: SheetRow[] = [];
   private readonly colWidths = new Map<number, number>();
-  private readonly merges: string[] = [];
+  private readonly autoColWidths = new Map<number, number>();
+  private readonly titleRowIndices: number[] = [];
+  private maxColumns = 1;
+  private dataRowCounter = 0;
 
   constructor(name: string) {
     this.name = name;
   }
 
-  addTitleRow(title: string): void {
+  private trackCellWidth(col1Based: number, value: CellValue): void {
+    if (value === null || value === undefined) return;
+    const len = String(value).length;
+    const prev = this.autoColWidths.get(col1Based) ?? 12;
+    if (len + 5 > prev) {
+      this.autoColWidths.set(col1Based, Math.min(58, len + 5));
+    }
+  }
+
+  addTitleRow(title: string, subtitle?: string): void {
+    const fullTitle = subtitle ? `${title} — ${subtitle}` : title;
     this.rows.push({
-      cells: [title],
-      styleIndex: 1,
-      height: 24,
+      cells: [{ value: fullTitle, styleIndex: STYLE_IDX.TITLE }],
+      height: 30,
     });
-    const rowIdx = this.rows.length;
-    this.merges.push(`A${rowIdx}:E${rowIdx}`);
+    this.titleRowIndices.push(this.rows.length);
   }
 
   addHeaderRow(headers: string[]): void {
+    this.maxColumns = Math.max(this.maxColumns, headers.length);
+    headers.forEach((h, idx) => this.trackCellWidth(idx + 1, h));
     this.rows.push({
-      cells: headers,
-      styleIndex: 2,
+      cells: headers.map((h) => ({ value: h, styleIndex: STYLE_IDX.HEADER })),
+      height: 24,
     });
   }
 
-  addDataRow(cells: CellValue[]): void {
+  addDataRow(inputs: RowCellInput[]): void {
+    const isOdd = this.dataRowCounter % 2 === 1;
+    this.dataRowCounter += 1;
+    this.maxColumns = Math.max(this.maxColumns, inputs.length);
+
+    const cells: SheetCell[] = inputs.map((input, idx) => {
+      const value = isStyledCell(input) ? input.value : input;
+      const tone = isStyledCell(input) ? input.tone : undefined;
+      this.trackCellWidth(idx + 1, value);
+      return {
+        value,
+        styleIndex: resolveDataStyle(tone, isOdd, value),
+      };
+    });
+
     this.rows.push({
       cells,
-      styleIndex: 0,
+      height: 20,
     });
   }
 
-  addDataRows(rows: CellValue[][]): void {
+  addDataRows(rows: RowCellInput[][]): void {
     for (const r of rows) {
       this.addDataRow(r);
     }
+  }
+
+  addTotalRow(inputs: RowCellInput[]): void {
+    this.maxColumns = Math.max(this.maxColumns, inputs.length);
+    const cells: SheetCell[] = inputs.map((input, idx) => {
+      const value = isStyledCell(input) ? input.value : input;
+      const tone = isStyledCell(input) ? input.tone : undefined;
+      this.trackCellWidth(idx + 1, value);
+      const isRight =
+        tone === 'right' ||
+        typeof value === 'number' ||
+        (typeof value === 'string' && value.endsWith('%'));
+      return {
+        value,
+        styleIndex: isRight ? STYLE_IDX.TOTAL_RIGHT : STYLE_IDX.TOTAL_LEFT,
+      };
+    });
+
+    this.rows.push({
+      cells,
+      height: 24,
+    });
   }
 
   setColumnWidth(colIndex1Based: number, width: number): void {
@@ -85,18 +217,31 @@ class WorksheetBuilder implements SimpleWorksheet {
   }
 
   toXml(): string {
-    const colsEntries = Array.from(this.colWidths.entries()).sort(
-      (a, b) => a[0] - b[0],
+    const totalCols = Math.max(
+      this.maxColumns,
+      ...Array.from(this.colWidths.keys()),
+      ...Array.from(this.autoColWidths.keys()),
     );
+
+    const colsXmlParts: string[] = [];
+    for (let c = 1; c <= totalCols; c += 1) {
+      const w = this.colWidths.get(c) ?? this.autoColWidths.get(c) ?? 18;
+      colsXmlParts.push(
+        `<col min="${c}" max="${c}" width="${w}" customWidth="1"/>`,
+      );
+    }
     const colsXml =
-      colsEntries.length > 0
-        ? `<cols>${colsEntries
-            .map(
-              ([col, w]) =>
-                `<col min="${col}" max="${col}" width="${w}" customWidth="1"/>`,
-            )
-            .join('')}</cols>`
-        : '';
+      colsXmlParts.length > 0 ? `<cols>${colsXmlParts.join('')}</cols>` : '';
+
+    // Rellenar celdas vacías en la fila de título para que el fondo se pinte en todo el rango combinado
+    for (const titleRowIdx of this.titleRowIndices) {
+      const row = this.rows[titleRowIdx - 1];
+      if (row && row.cells.length < totalCols) {
+        while (row.cells.length < totalCols) {
+          row.cells.push({ value: '', styleIndex: STYLE_IDX.TITLE });
+        }
+      }
+    }
 
     const rowsXml = this.rows
       .map((row, idx) => {
@@ -106,17 +251,18 @@ class WorksheetBuilder implements SimpleWorksheet {
             ? ` ht="${row.height}" customHeight="1"`
             : '';
         const cellsXml = row.cells
-          .map((cell, cIdx) => {
+          .map((cellObj, cIdx) => {
             const ref = `${columnLetter(cIdx + 1)}${rNum}`;
-            const sAttr = row.styleIndex > 0 ? ` s="${row.styleIndex}"` : '';
-            if (cell === null || cell === undefined || cell === '') {
+            const sAttr =
+              cellObj.styleIndex > 0 ? ` s="${cellObj.styleIndex}"` : '';
+            const val = cellObj.value;
+            if (val === null || val === undefined || val === '') {
               return `<c r="${ref}"${sAttr} t="inlineStr"><is><t></t></is></c>`;
             }
-            if (typeof cell === 'number' && Number.isFinite(cell)) {
-              return `<c r="${ref}"${sAttr}><v>${cell}</v></c>`;
+            if (typeof val === 'number' && Number.isFinite(val)) {
+              return `<c r="${ref}"${sAttr}><v>${val}</v></c>`;
             }
-            const text =
-              typeof cell === 'boolean' ? String(cell) : String(cell);
+            const text = typeof val === 'boolean' ? String(val) : String(val);
             return `<c r="${ref}"${sAttr} t="inlineStr"><is><t xml:space="preserve">${escapeXml(text)}</t></is></c>`;
           })
           .join('');
@@ -124,16 +270,26 @@ class WorksheetBuilder implements SimpleWorksheet {
       })
       .join('');
 
+    const lastColLetter = columnLetter(Math.max(2, totalCols));
+    const merges = this.titleRowIndices.map(
+      (rIdx) => `A${rIdx}:${lastColLetter}${rIdx}`,
+    );
     const mergeXml =
-      this.merges.length > 0
-        ? `<mergeCells count="${this.merges.length}">${this.merges
+      merges.length > 0
+        ? `<mergeCells count="${merges.length}">${merges
             .map((ref) => `<mergeCell ref="${ref}"/>`)
             .join('')}</mergeCells>`
+        : '';
+
+    const sheetViewsXml =
+      this.rows.length >= 2
+        ? '<sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
         : '';
 
     return [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
       `<worksheet xmlns="${ooxmlNs}/spreadsheetml/2006/main">`,
+      sheetViewsXml,
       colsXml,
       `<sheetData>${rowsXml}</sheetData>`,
       mergeXml,
@@ -267,22 +423,58 @@ export class SimpleWorkbook {
     const stylesXml = [
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
       `<styleSheet xmlns="${ooxmlNs}/spreadsheetml/2006/main">`,
-      '<fonts count="3">',
-      '<font><sz val="11"/><name val="Calibri"/></font>',
-      '<font><b/><sz val="13"/><color rgb="FF094D37"/><name val="Calibri"/></font>',
-      '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>',
+      // Fuentes (0..8)
+      '<fonts count="9">',
+      '<font><sz val="10"/><color rgb="FF1F2937"/><name val="Calibri"/></font>', // 0: datos normal
+      '<font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>', // 1: título banner blanco
+      '<font><b/><sz val="10.5"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>', // 2: header blanco
+      '<font><b/><sz val="10"/><color rgb="FF1F2937"/><name val="Calibri"/></font>', // 3: datos bold
+      '<font><b/><sz val="10.5"/><color rgb="FF094D37"/><name val="Calibri"/></font>', // 4: total verde institucional
+      '<font><b/><sz val="10"/><color rgb="FF166534"/><name val="Calibri"/></font>', // 5: badge success (verde)
+      '<font><b/><sz val="10"/><color rgb="FF92400E"/><name val="Calibri"/></font>', // 6: badge warning (ámbar)
+      '<font><b/><sz val="10"/><color rgb="FF991B1B"/><name val="Calibri"/></font>', // 7: badge danger (rojo)
+      '<font><b/><sz val="10"/><color rgb="FF334155"/><name val="Calibri"/></font>', // 8: badge neutral (gris)
       '</fonts>',
-      '<fills count="3">',
-      '<fill><patternFill patternType="none"/></fill>',
-      '<fill><patternFill patternType="gray125"/></fill>',
-      '<fill><patternFill patternType="solid"><fgColor rgb="FF094D37"/></patternFill></fill>',
+      // Rellenos (0..9) — 0 y 1 son obligatorios por estándar OpenXML
+      '<fills count="10">',
+      '<fill><patternFill patternType="none"/></fill>', // 0
+      '<fill><patternFill patternType="gray125"/></fill>', // 1
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF094D37"/></patternFill></fill>', // 2: verde institucional UNCP (título)
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFC59B27"/></patternFill></fill>', // 3: dorado institucional UNCP (header)
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF8FAFC"/></patternFill></fill>', // 4: fila impar zebra
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFEDF7F3"/></patternFill></fill>', // 5: fila total verde suave
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFDCFCE7"/></patternFill></fill>', // 6: badge success
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/></patternFill></fill>', // 7: badge warning
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFFEE2E2"/></patternFill></fill>', // 8: badge danger
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/></patternFill></fill>', // 9: badge neutral
       '</fills>',
-      '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>',
+      // Bordes (0..3)
+      '<borders count="4">',
+      '<border><left/><right/><top/><bottom/><diagonal/></border>', // 0: sin borde
+      '<border><left style="thin"><color rgb="FFE2E8F0"/></left><right style="thin"><color rgb="FFE2E8F0"/></right><top style="thin"><color rgb="FFE2E8F0"/></top><bottom style="thin"><color rgb="FFE2E8F0"/></bottom><diagonal/></border>', // 1: grilla fina de datos
+      '<border><left style="thin"><color rgb="FFB0891E"/></left><right style="thin"><color rgb="FFB0891E"/></right><top style="medium"><color rgb="FF094D37"/></top><bottom style="medium"><color rgb="FF094D37"/></bottom><diagonal/></border>', // 2: header
+      '<border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="medium"><color rgb="FF094D37"/></top><bottom style="double"><color rgb="FF094D37"/></bottom><diagonal/></border>', // 3: fila total
+      '</borders>',
       '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>',
-      '<cellXfs count="3">',
-      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>',
-      '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>',
-      '<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center"/></xf>',
+      // Estilos de celda (0..16)
+      '<cellXfs count="17">',
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>', // 0: base
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="left" vertical="center" indent="1"/></xf>', // 1: TITLE
+      '<xf numFmtId="0" fontId="2" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>', // 2: HEADER
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>', // 3: EVEN_LEFT
+      '<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>', // 4: ODD_LEFT
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>', // 5: EVEN_CENTER
+      '<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>', // 6: ODD_CENTER
+      '<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>', // 7: EVEN_RIGHT
+      '<xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>', // 8: ODD_RIGHT
+      '<xf numFmtId="0" fontId="4" fillId="5" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>', // 9: TOTAL_LEFT
+      '<xf numFmtId="0" fontId="4" fillId="5" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>', // 10: TOTAL_RIGHT
+      '<xf numFmtId="0" fontId="5" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>', // 11: BADGE_SUCCESS
+      '<xf numFmtId="0" fontId="6" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>', // 12: BADGE_WARNING
+      '<xf numFmtId="0" fontId="7" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>', // 13: BADGE_DANGER
+      '<xf numFmtId="0" fontId="8" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>', // 14: BADGE_NEUTRAL
+      '<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>', // 15: EVEN_BOLD
+      '<xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>', // 16: ODD_BOLD
       '</cellXfs>',
       '</styleSheet>',
     ].join('');

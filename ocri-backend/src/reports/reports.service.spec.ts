@@ -96,6 +96,14 @@ describe('ReportsService', () => {
       });
     });
 
+    it("mapea 'Vigente' a fechas posteriores a hoy + 90 días (gt estricto)", async () => {
+      await service.summary({ status: 'Vigente' });
+      const { gt } = ultimoWhere().end_date as { gt: Date };
+      const ventana = gt.getTime() - hoy().getTime();
+      expect(ventana).toBeGreaterThanOrEqual(89 * 86_400_000);
+      expect(ventana).toBeLessThanOrEqual(91 * 86_400_000);
+    });
+
     it("mapea 'Por Vencer' a la ventana de aviso (hoy; hoy + 90 días)", async () => {
       await service.summary({ status: 'Por Vencer' });
       const { gte, lte } = ultimoWhere().end_date as {
@@ -400,7 +408,27 @@ describe('ReportsService', () => {
 
       const proximos = wb.getWorksheet('Próximos a Vencer');
       expect(proximos).toBeDefined();
+      expect(proximos?.getCellText(2, 1)).toBe('Expediente');
       expect(proximos?.getCellText(3, 1)).toBe('T-0001');
+    });
+  });
+
+  describe('dashboard', () => {
+    it('consulta la BD una sola vez y devuelve todos los bloques consolidados', async () => {
+      prisma.agreements.findMany.mockResolvedValue([
+        convenio({ id: 1n, end_date: enDias(45), title: 'Por vencer' }),
+        convenio({ id: 2n, end_date: enDias(200), title: 'Vigente' }),
+      ]);
+
+      const res = await service.dashboard({});
+
+      expect(prisma.agreements.findMany).toHaveBeenCalledTimes(1);
+      expect(res.summary.total).toBe(2);
+      expect(res.summary.vigentes).toBe(1);
+      expect(res.summary.proximos_a_vencer).toBe(1);
+      expect(res.byStatus).toHaveLength(REPORT_STATUSES.length);
+      expect(res.expiring).toHaveLength(1);
+      expect(res.expired).toHaveLength(0);
     });
   });
 });

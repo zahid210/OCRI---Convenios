@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, type SyntheticEvent } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ReportsSummary,
@@ -13,7 +13,9 @@ import {
   AgreementType,
 } from "@/types/agreements";
 import { fetcher, downloadFile } from "@/lib/api";
+import { useUser } from "@/components/user-provider";
 import { useToast } from "@/components/ui/toast";
+import { ClickableTableRow } from "@/components/ui/clickable-table-row";
 import {
   Download,
   Loader2,
@@ -37,6 +39,17 @@ interface ReportFilters {
   institutionType: string;
 }
 
+interface ReportsDashboardData {
+  summary: ReportsSummary;
+  byStatus: ReportStatusRow[];
+  byCountry: ReportCountryRow[];
+  byType: ReportTypeRow[];
+  byInstitutionType: ReportInstitutionTypeRow[];
+  topInstitutions: ReportInstitutionRow[];
+  expiring: ReportExpiringRow[];
+  expired: ReportExpiringRow[];
+}
+
 const EMPTY_FILTERS: ReportFilters = {
   status: "",
   country: "",
@@ -54,15 +67,150 @@ function buildFilterQuery(f: ReportFilters): string {
   return query ? `?${query}` : "";
 }
 
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return "—";
+  const [year, month, day] = dateStr.split("T")[0].split("-");
+  if (year && month && day) return `${day}/${month}/${year}`;
+  return dateStr;
+}
+
+function ReportAlertTable({
+  title,
+  rows,
+  emptyMessage,
+  dateColumnLabel,
+  badgeColumnLabel,
+  variant,
+  onSelectRow,
+}: {
+  title: string;
+  rows: ReportExpiringRow[];
+  emptyMessage: string;
+  dateColumnLabel: string;
+  badgeColumnLabel: string;
+  variant: "warning" | "danger";
+  onSelectRow: (id: number) => void;
+}) {
+  const isWarning = variant === "warning";
+
+  return (
+    <div className="border border-gray-200 bg-white shadow-sm">
+      <div className="px-5 py-3 border-b border-gray-200 bg-surface">
+        <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
+          {title}
+        </span>
+      </div>
+      <div className="overflow-x-auto max-h-[380px] overflow-y-auto">
+        <table className="w-full text-left border-collapse">
+          <thead className="sticky top-0 z-10 bg-surface">
+            <tr className="border-b border-gray-200">
+              <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
+                Expediente
+              </th>
+              <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
+                Institución
+              </th>
+              <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center whitespace-nowrap">
+                {dateColumnLabel}
+              </th>
+              <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center whitespace-nowrap">
+                {badgeColumnLabel}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="py-8 text-center text-sm text-gray-400"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <ClickableTableRow
+                  key={row.id}
+                  onClick={() => onSelectRow(row.id)}
+                  ariaLabel={`Abrir convenio ${row.expediente}`}
+                  className={`cursor-pointer transition-colors group ${
+                    isWarning ? "hover:bg-amber-50/40" : "hover:bg-red-50/40"
+                  }`}
+                >
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`text-sm font-semibold text-gray-800 transition-colors ${
+                          isWarning
+                            ? "group-hover:text-gold"
+                            : "group-hover:text-red-700"
+                        }`}
+                      >
+                        {row.expediente}
+                      </span>
+                      <ExternalLink
+                        className={`h-3 w-3 text-gray-300 transition-colors shrink-0 ${
+                          isWarning
+                            ? "group-hover:text-gold"
+                            : "group-hover:text-red-700"
+                        }`}
+                      />
+                    </div>
+                    <p
+                      className="text-xs text-gray-500 line-clamp-1 max-w-[200px]"
+                      title={row.titulo}
+                    >
+                      {row.titulo}
+                    </p>
+                  </td>
+                  <td className="py-3 px-4">
+                    <p className="text-sm text-gray-700 font-medium">
+                      {row.institucion}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {row.institucion_tipo || "—"} · {row.pais}
+                    </p>
+                  </td>
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
+                    <span className="text-xs text-gray-700 bg-gray-50 px-2 py-1 border border-gray-200 font-mono">
+                      {formatDate(row.fecha_fin)}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 text-xs font-semibold border whitespace-nowrap ${
+                        isWarning
+                          ? "bg-yellow-50 text-yellow-800 border-yellow-200"
+                          : "bg-red-50 text-red-700 border-red-200"
+                      }`}
+                    >
+                      {row.dias_restantes === null
+                        ? "—"
+                        : isWarning
+                          ? `${row.dias_restantes} días restantes`
+                          : `Hace ${Math.abs(row.dias_restantes)} días`}
+                    </span>
+                  </td>
+                </ClickableTableRow>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function ReportsPage() {
   const router = useRouter();
   const toast = useToast();
+  const user = useUser();
+  const isViewer = user?.role === "viewer";
+
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
-  const [activeFilters, setActiveFilters] =
-    useState<ReportFilters>(EMPTY_FILTERS);
 
   const [summary, setSummary] = useState<ReportsSummary | null>(null);
-  const [byStatus, setByStatus] = useState<ReportStatusRow[]>([]);
   const [byCountry, setByCountry] = useState<ReportCountryRow[]>([]);
   const [byType, setByType] = useState<ReportTypeRow[]>([]);
   const [byInstitutionType, setByInstitutionType] = useState<
@@ -78,9 +226,16 @@ export default function ReportsPage() {
   const [types, setTypes] = useState<AgreementType[]>([]);
   const [institutionTypes, setInstitutionTypes] = useState<string[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  const hasActiveFilters = Boolean(
+    filters.status ||
+      filters.country ||
+      filters.typeId ||
+      filters.institutionType,
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -125,42 +280,20 @@ export default function ReportsPage() {
 
     async function loadReports() {
       try {
-        setLoading(true);
         setError(null);
-
-        const suffix = buildFilterQuery(activeFilters);
-
-        const [
-          summaryRes,
-          byStatusRes,
-          byCountryRes,
-          byTypeRes,
-          byInstTypeRes,
-          topRes,
-          expiringRes,
-          expiredRes,
-        ] = await Promise.all([
-          fetcher<ReportsSummary>(`/reports/summary${suffix}`),
-          fetcher<ReportStatusRow[]>(`/reports/by-status${suffix}`),
-          fetcher<ReportCountryRow[]>(`/reports/by-country${suffix}`),
-          fetcher<ReportTypeRow[]>(`/reports/by-type${suffix}`),
-          fetcher<ReportInstitutionTypeRow[]>(
-            `/reports/by-institution-type${suffix}`,
-          ),
-          fetcher<ReportInstitutionRow[]>(`/reports/top-institutions${suffix}`),
-          fetcher<ReportExpiringRow[]>(`/reports/expiring${suffix}`),
-          fetcher<ReportExpiringRow[]>(`/reports/expired${suffix}`),
-        ]);
+        const suffix = buildFilterQuery(filters);
+        const res = await fetcher<ReportsDashboardData>(
+          `/reports/dashboard${suffix}`,
+        );
 
         if (isMounted) {
-          setSummary(summaryRes);
-          setByStatus(byStatusRes);
-          setByCountry(byCountryRes);
-          setByType(byTypeRes);
-          setByInstitutionType(byInstTypeRes);
-          setTopInstitutions(topRes);
-          setExpiring(expiringRes);
-          setExpired(expiredRes);
+          setSummary(res.summary);
+          setByCountry(res.byCountry);
+          setByType(res.byType);
+          setByInstitutionType(res.byInstitutionType);
+          setTopInstitutions(res.topInstitutions);
+          setExpiring(res.expiring);
+          setExpired(res.expired);
         }
       } catch (err) {
         if (isMounted) {
@@ -168,7 +301,7 @@ export default function ReportsPage() {
           setError("Ocurrió un error al cargar los reportes.");
         }
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) setInitialLoading(false);
       }
     }
 
@@ -177,22 +310,16 @@ export default function ReportsPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilters]);
-
-  const applyFilters = (e: SyntheticEvent) => {
-    e.preventDefault();
-    setActiveFilters(filters);
-  };
+  }, [filters]);
 
   const resetFilters = () => {
     setFilters(EMPTY_FILTERS);
-    setActiveFilters(EMPTY_FILTERS);
   };
 
   const handleExport = async () => {
     setExporting(true);
     try {
-      const suffix = buildFilterQuery(activeFilters);
+      const suffix = buildFilterQuery(filters);
       await downloadFile(
         `/reports/export${suffix}`,
         "reporte_convenios.xlsx",
@@ -220,22 +347,6 @@ export default function ReportsPage() {
     () => Math.max(1, ...byInstitutionType.map((t) => t.cantidad)),
     [byInstitutionType],
   );
-
-  const statusColors: Record<string, string> = Object.fromEntries([
-    ["En Trámite", "bg-gray-500 text-white border-gray-500"],
-    ["Vigente", "bg-green-700 text-white border-green-700"],
-    ["Por Vencer", "bg-yellow-500 text-white border-yellow-500"],
-    ["Vencido", "bg-red-700 text-white border-red-700"],
-    ["No Suscrito", "bg-red-200 text-red-800 border-red-200"],
-    ["Sin Fecha", "bg-gray-300 text-gray-700 border-gray-300"],
-  ]);
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "—";
-    const [year, month, day] = dateStr.split("T")[0].split("-");
-    if (year && month && day) return `${day}/${month}/${year}`;
-    return dateStr;
-  };
 
   const summaryCards = [
     {
@@ -300,21 +411,20 @@ export default function ReportsPage() {
         </button>
       </div>
 
-      <form
-        onSubmit={applyFilters}
-        className="bg-white border border-gray-200 p-4 shadow-sm space-y-4"
-      >
+      <div className="bg-white border border-gray-200 p-4 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
             Filtros del Reporte
           </span>
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
-          >
-            Limpiar filtros
-          </button>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -331,11 +441,11 @@ export default function ReportsPage() {
                 className={filterSelectClass}
               >
                 <option value="">Todos los estados</option>
-                <option value="En Trámite">En Trámite</option>
+                {!isViewer && <option value="En Trámite">En Trámite</option>}
                 <option value="Vigente">Vigente</option>
                 <option value="Por Vencer">Por Vencer</option>
                 <option value="Vencido">Vencido</option>
-                <option value="No Suscrito">No Suscrito</option>
+                {!isViewer && <option value="No Suscrito">No Suscrito</option>}
                 <option value="Sin Fecha">Sin Fecha</option>
               </select>
               <ChevronDown className="h-4 w-4 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -411,18 +521,9 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 bg-primary-active hover:bg-primary-deep text-white px-4 py-2 text-sm transition-colors cursor-pointer"
-          >
-            Aplicar Filtros
-          </button>
-        </div>
-      </form>
-
-      {loading ? (
+      {initialLoading ? (
         <div className="flex justify-center items-center py-16 text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin text-gold" />
           <span className="ml-2 text-sm">Cargando reportes...</span>
@@ -456,34 +557,6 @@ export default function ReportsPage() {
             <div className="border border-gray-200 bg-white shadow-sm">
               <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Convenios por Estado
-                </span>
-              </div>
-              <div className="p-5 space-y-3">
-                {byStatus.map((row) => (
-                  <div key={row.estado} className="flex items-center gap-3">
-                    <span className="w-32 text-sm text-gray-700">
-                      {row.estado}
-                    </span>
-                    <div className="flex-1 bg-gray-100 h-6">
-                      <div
-                        className={`h-6 ${statusColors[row.estado] || "bg-gray-500"}`}
-                        style={{
-                          width: `${summary?.total ? (row.cantidad / summary.total) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="w-10 text-right text-sm font-semibold text-gray-800">
-                      {row.cantidad}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Instituciones con más convenios (Top 10)
                 </span>
               </div>
@@ -498,7 +571,7 @@ export default function ReportsPage() {
                     >
                       <Landmark className="h-4 w-4 text-gray-400 shrink-0" />
                       <span
-                        className="w-40 truncate text-sm text-gray-700"
+                        className="w-48 truncate text-sm text-gray-700"
                         title={row.institucion}
                       >
                         {row.institucion}
@@ -519,66 +592,6 @@ export default function ReportsPage() {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Por País
-                </span>
-              </div>
-              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
-                {byCountry.length === 0 ? (
-                  <p className="text-sm text-gray-400">Sin datos.</p>
-                ) : (
-                  byCountry.map((row) => (
-                    <div key={row.pais} className="flex items-center gap-3">
-                      <Globe2 className="h-4 w-4 text-gray-400 shrink-0" />
-                      <span className="flex-1 text-sm text-gray-700">
-                        {row.pais}
-                      </span>
-                      <span className="text-sm font-semibold text-gray-800">
-                        {row.cantidad}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Por Tipo de Convenio
-                </span>
-              </div>
-              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
-                {byType.length === 0 ? (
-                  <p className="text-sm text-gray-400">Sin datos.</p>
-                ) : (
-                  byType.map((row) => (
-                    <div key={row.tipo} className="flex items-center gap-3">
-                      <FileType2 className="h-4 w-4 text-gray-400 shrink-0" />
-                      <span className="w-36 truncate text-sm text-gray-700" title={row.tipo}>
-                        {row.tipo}
-                      </span>
-                      <div className="flex-1 bg-gray-100 h-5">
-                        <div
-                          className="h-5 bg-primary-active"
-                          style={{
-                            width: `${(row.cantidad / maxByType) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="w-10 text-right text-sm font-semibold text-gray-800">
-                        {row.cantidad}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
               <div className="px-5 py-3 border-b border-gray-200 bg-surface">
@@ -586,18 +599,15 @@ export default function ReportsPage() {
                   Por Tipo de Institución
                 </span>
               </div>
-              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
+              <div className="max-h-[380px] overflow-y-auto p-5 space-y-3">
                 {byInstitutionType.length === 0 ? (
                   <p className="text-sm text-gray-400">Sin datos.</p>
                 ) : (
                   byInstitutionType.map((row) => (
-                    <div
-                      key={row.tipo}
-                      className="flex items-center gap-3"
-                    >
+                    <div key={row.tipo} className="flex items-center gap-3">
                       <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
                       <span
-                        className="w-36 truncate text-sm text-gray-700"
+                        className="w-48 truncate text-sm text-gray-700"
                         title={row.tipo}
                       >
                         {row.tipo}
@@ -622,176 +632,87 @@ export default function ReportsPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-surface flex items-center justify-between">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Próximos a Vencer
-                </span>
-                <span className="text-[11px] font-semibold text-yellow-700">
-                  {expiring.length} convenio(s)
+                  Por Tipo de Convenio
                 </span>
               </div>
-              <div className="overflow-x-auto max-h-[380px] overflow-y-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-surface">
-                    <tr className="border-b border-gray-200">
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
-                        Expediente
-                      </th>
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
-                        Institución
-                      </th>
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">
-                        Vence
-                      </th>
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">
-                        Plazo
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {expiring.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-8 text-center text-sm text-gray-400"
-                        >
-                          Sin convenios próximos a vencer.
-                        </td>
-                      </tr>
-                    ) : (
-                      expiring.map((row) => (
-                        <tr
-                          key={row.id}
-                          onClick={() => router.push(`/convenios/${row.id}`)}
-                          className="hover:bg-amber-50/40 cursor-pointer transition-colors group"
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-gray-800 group-hover:text-gold transition-colors">
-                                {row.expediente}
-                              </span>
-                              <ExternalLink className="h-3 w-3 text-gray-300 group-hover:text-gold transition-colors" />
-                            </div>
-                            <p
-                              className="text-xs text-gray-500 line-clamp-1 max-w-[200px]"
-                              title={row.titulo}
-                            >
-                              {row.titulo}
-                            </p>
-                          </td>
-                          <td className="py-3 px-4">
-                            <p className="text-sm text-gray-700 font-medium">
-                              {row.institucion}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              {row.institucion_tipo || "—"} · {row.pais}
-                            </p>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="text-xs text-gray-700 bg-gray-50 px-2 py-1 border border-gray-200 font-mono">
-                              {formatDate(row.fecha_fin)}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-yellow-50 text-yellow-800 border border-yellow-200">
-                              {row.dias_restantes !== null
-                                ? `${row.dias_restantes} días restantes`
-                                : "—"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
+                {byType.length === 0 ? (
+                  <p className="text-sm text-gray-400">Sin datos.</p>
+                ) : (
+                  byType.map((row) => (
+                    <div key={row.tipo} className="flex items-center gap-3">
+                      <FileType2 className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span
+                        className="w-48 truncate text-sm text-gray-700"
+                        title={row.tipo}
+                      >
+                        {row.tipo}
+                      </span>
+                      <div className="flex-1 bg-gray-100 h-5">
+                        <div
+                          className="h-5 bg-primary-active"
+                          style={{
+                            width: `${(row.cantidad / maxByType) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-sm font-semibold text-gray-800">
+                        {row.cantidad}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
             <div className="border border-gray-200 bg-white shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-200 bg-surface flex items-center justify-between">
+              <div className="px-5 py-3 border-b border-gray-200 bg-surface">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Vencidos
-                </span>
-                <span className="text-[11px] font-semibold text-red-700">
-                  {expired.length} convenio(s)
+                  Por País
                 </span>
               </div>
-              <div className="overflow-x-auto max-h-[380px] overflow-y-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-surface">
-                    <tr className="border-b border-gray-200">
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
-                        Expediente
-                      </th>
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider">
-                        Institución
-                      </th>
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">
-                        Venció
-                      </th>
-                      <th className="py-2 px-4 font-medium uppercase text-[10px] text-gray-600 tracking-wider text-center">
-                        Antigüedad
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {expired.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-8 text-center text-sm text-gray-400"
-                        >
-                          Sin convenios vencidos.
-                        </td>
-                      </tr>
-                    ) : (
-                      expired.map((row) => (
-                        <tr
-                          key={row.id}
-                          onClick={() => router.push(`/convenios/${row.id}`)}
-                          className="hover:bg-red-50/40 cursor-pointer transition-colors group"
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-gray-800 group-hover:text-red-700 transition-colors">
-                                {row.expediente}
-                              </span>
-                              <ExternalLink className="h-3 w-3 text-gray-300 group-hover:text-red-700 transition-colors" />
-                            </div>
-                            <p
-                              className="text-xs text-gray-500 line-clamp-1 max-w-[200px]"
-                              title={row.titulo}
-                            >
-                              {row.titulo}
-                            </p>
-                          </td>
-                          <td className="py-3 px-4">
-                            <p className="text-sm text-gray-700 font-medium">
-                              {row.institucion}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              {row.institucion_tipo || "—"} · {row.pais}
-                            </p>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="text-xs text-gray-700 bg-gray-50 px-2 py-1 border border-gray-200 font-mono">
-                              {formatDate(row.fecha_fin)}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-                              {row.dias_restantes !== null
-                                ? `Hace ${Math.abs(row.dias_restantes)} días`
-                                : "—"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div className="max-h-[340px] overflow-y-auto p-5 space-y-3">
+                {byCountry.length === 0 ? (
+                  <p className="text-sm text-gray-400">Sin datos.</p>
+                ) : (
+                  byCountry.map((row) => (
+                    <div key={row.pais} className="flex items-center gap-3">
+                      <Globe2 className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span className="flex-1 text-sm text-gray-700">
+                        {row.pais}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-800">
+                        {row.cantidad}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ReportAlertTable
+              title="Próximos a Vencer"
+              rows={expiring}
+              emptyMessage="Sin convenios próximos a vencer."
+              dateColumnLabel="Vence"
+              badgeColumnLabel="Plazo"
+              variant="warning"
+              onSelectRow={(id) => router.push(`/convenios/${id}`)}
+            />
+
+            <ReportAlertTable
+              title="Vencidos"
+              rows={expired}
+              emptyMessage="Sin convenios vencidos."
+              dateColumnLabel="Venció"
+              badgeColumnLabel="Antigüedad"
+              variant="danger"
+              onSelectRow={(id) => router.push(`/convenios/${id}`)}
+            />
           </div>
         </>
       )}
